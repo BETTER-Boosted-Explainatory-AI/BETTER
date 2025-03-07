@@ -2,3 +2,4 @@ venv
 cifar100
 imagenet
 __pycache__
+__init__.py

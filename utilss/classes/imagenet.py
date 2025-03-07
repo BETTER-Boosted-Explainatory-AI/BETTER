@@ -5,7 +5,7 @@ from .dataset import Dataset
 from globalvars import imagenet_labels
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from utils.wordnet_utils import get_synsets
+from utilss.wordnet_utils import get_synsets
 
 class ImageNet(Dataset):
     def __init__(self):

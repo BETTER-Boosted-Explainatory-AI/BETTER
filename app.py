@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
-from utils.classes.cifar100 import Cifar100
-from utils.classes.imagenet import ImageNet
+from utilss.classes.cifar100 import Cifar100
+from utilss.classes.imagenet import ImageNet
 import matplotlib.pyplot as plt
-from PIL import Image
-import numpy as np
+# from PIL import Image
+# import numpy as np
 
 
 app = FastAPI()
