@@ -29,9 +29,9 @@ def check_cifar100():
     cifar100 = Cifar100()
     cifar100.load("cifar100")
     if cifar100.x_train is not None and cifar100.y_train is not None:
-        image_id = 15  # Change this to test different image IDs
+        image_id = 43  # Change this to test different image IDs
         try:
-            image, label = cifar100.get_test_image_by_id(image_id)
+            image, label = cifar100.get_train_image_by_id(image_id)
             plt.imshow(image)
             plt.title(f"Label: {label}")
             plt.show()
@@ -39,7 +39,7 @@ def check_cifar100():
                 "message": "CIFAR-100 dataset loaded successfully",
                 "image_id": int(image_id),  # Convert to native Python int
                 "image_shape": list(image.shape),  # Convert NumPy shape to list
-                "label": int(label),  # Convert NumPy int to native Python int
+                "label": label,  
             }
         except ValueError as e:
             return {"error": str(e)}
