@@ -24,32 +24,28 @@ class Cifar100(Dataset):
         dataset_path = os.path.join("data", "datasets", name)
         if os.path.exists(dataset_path):
             print(f"Loading dataset from: {dataset_path}")
-            meta = self.unpickle(os.path.join(dataset_path, "batches.meta"))
-            self.labels = [label.decode('utf-8') for label in meta[b'label_names']]
-            print(f"Labels: {self.labels}")
 
-            # Load training data
-            train_data = []
-            train_labels = []
+            train_batch = self.unpickle(os.path.join(dataset_path, "train"))
+            print(f"Train batch keys: {train_batch.keys()}")
+            print(f"Train batch data shape: {train_batch[b'data'].shape}")
 
-            for i in range(1, 6):  # 5 training batches
-                batch = self.unpickle(os.path.join(dataset_path, f"data_batch_{i}"))
-                train_data.append(batch[b'data'])  # Append image data
-                train_labels.extend(batch[b'labels'])  # Append labels
+            self.x_train = train_batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+            self.y_train = np.array(train_batch[b'fine_labels'])
 
-            # Convert to NumPy arrays
-            self.x_train = np.vstack(train_data).reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
-            self.y_train = np.array(train_labels)
+            test_batch = self.unpickle(os.path.join(dataset_path, "test"))
+            print(f"Test batch keys: {test_batch.keys()}")
+            print(f"Test batch data shape: {test_batch[b'data'].shape}")
 
-            test_batch = self.unpickle(os.path.join(dataset_path, "test_batch"))
             self.x_test = test_batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
-            self.y_test = np.array(test_batch[b'labels'])
+            self.y_test = np.array(test_batch[b'fine_labels'])
             self.y_train_mapped = [self.label_to_class_name(label) for label in self.y_train]
             self.y_test_mapped = [self.label_to_class_name(label) for label in self.y_test]
 
             print("Dataset loaded successfully")
+            return True
         else:
             print(f"Dataset path {dataset_path} does not exist")
+            return False
     
     def one_hot_to_class_name_auto(self, one_hot_vector):
         return self.labels[np.argmax(one_hot_vector)] 

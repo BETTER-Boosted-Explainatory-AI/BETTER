@@ -1,6 +1,6 @@
 from nltk.corpus import wordnet as wn
 
-def get_synsets(folder_name):
+def convert_folder_name_to_label(folder_name):
     synsets = wn.synset_from_pos_and_offset('n', int(folder_name[1:]))
     return synsets.lemma_names()[0]
 

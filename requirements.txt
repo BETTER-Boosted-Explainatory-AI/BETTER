@@ -2,9 +2,9 @@ fastapi
 mangum
 uvicorn
 numpy
-Pillow
 matplotlib
 nltk
 tensorflow
 keras
 pytest
+scikit-learn

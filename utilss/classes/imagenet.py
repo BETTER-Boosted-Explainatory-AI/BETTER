@@ -5,15 +5,22 @@ from .dataset import Dataset
 from globalvars import imagenet_labels
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from utilss.wordnet_utils import get_synsets
+from utilss.wordnet_utils import convert_folder_name_to_label
 
 class ImageNet(Dataset):
     def __init__(self):
         super().__init__("imagenet", 1e-6, 100, imagenet_labels)
         self.train_data = []
         self.test_data = []
+        self.labels_dict = {}
 
-    def load(self, name, batch_size=64, image_size=(224, 224), num_workers=3):
+    def load_labels(self, train_files):
+        for folder_name in train_files:
+            label = convert_folder_name_to_label(folder_name)
+            self.labels_dict.update({folder_name:label})
+        print(self.labels_dict)
+
+    def load(self, name, batch_size=32, image_size=(224, 224), num_workers=2):
         dataset_path = os.path.abspath(os.path.join("data", "datasets", name))
         
         if not os.path.exists(dataset_path):
@@ -46,7 +53,7 @@ class ImageNet(Dataset):
             try:
                 img = Image.open(image_path).convert('RGB')  # Load image
                 img = img.resize(image_size)  # Resize image
-                label = get_synsets(class_folder)  # Get class name
+                label = convert_folder_name_to_label(class_folder)  # Get class name
                 return np.array(img), label
             except Exception as e:
                 print(f"Error loading {image_path}: {e}")
