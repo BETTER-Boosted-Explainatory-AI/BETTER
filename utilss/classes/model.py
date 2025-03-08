@@ -33,67 +33,37 @@ class Model:
         if self.accuracy != -1 & self.loss != -1:
             return self.accuracy
         ## cifar100 
+        x_test = preprocess_input(x_test)
         y_test = to_categorical(y_test, num_classes=100)
         self.model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
-        batch_size = 32  # Adjust the batch size as needed
-        self.loss, self.accuracy = self.model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
+        batch_size = 64  # Adjust the batch size as needed
+        self.loss, self.accuracy = self.model.evaluate(x_test, y_test, batch_size=batch_size,verbose=0)
         print(f'Model accuracy: {self.accuracy:.4f}')
         print(f'Model loss: {self.loss:.4f}')
     
-    def model_accuracy_selected(self, dataset_instance, selected_labels):
-        print("inside model_accuracy_selected")
-        
+    def model_accuracy_selected(self, dataset_instance, selected_labels):        
         x_test = dataset_instance.x_test
         y_test = dataset_instance.y_test
-        # Get predictions for all classes first
-        predictions = self.model.predict(x_test)
-        
-        # Convert integer labels to indices in the original 100-class space
-        if len(y_test.shape) == 1:  # If y_test is not one-hot encoded
-            y_test_indices = y_test
-        else:  # If y_test is already one-hot encoded
-            y_test_indices = np.argmax(y_test, axis=1)
-        
-        # Get the indices corresponding to your selected labels in CIFAR-100
-        selected_indices = []
-        for label in selected_labels:
-            # This assumes your labels are strings matching CIFAR-100 class names
-            # You may need to adjust this based on how your labels are defined
-            label_idx = dataset_instance.labels.index(label)
-            selected_indices.append(label_idx)
-        
-        # Create mask for samples with selected labels
-        mask = np.isin(y_test_indices, selected_indices)
-        
-        # Filter the test data and predictions
-        x_test_filtered = x_test[mask]
-        y_test_filtered = y_test_indices[mask]
-        predictions_filtered = predictions[mask]
-        
-        # Extract only the columns for selected classes from predictions
-        predictions_selected = predictions_filtered[:, selected_indices]
-        
-        # Map the true labels to the new range [0, len(selected_labels)-1]
-        label_mapping = {old_idx: new_idx for new_idx, old_idx in enumerate(selected_indices)}
-        y_test_mapped = np.array([label_mapping[idx] for idx in y_test_filtered])
-        
-        # Convert to one-hot encoding for the selected labels only
-        y_test_one_hot = to_categorical(y_test_mapped, num_classes=len(selected_labels))
-        
-        # Calculate accuracy manually
-        predicted_classes = np.argmax(predictions_selected, axis=1)
-        accuracy = np.mean(predicted_classes == y_test_mapped)
-        
-        # You can calculate categorical crossentropy loss manually if needed
-        # This is one way to do it
-        epsilon = 1e-10
-        predictions_selected = np.clip(predictions_selected, epsilon, 1 - epsilon)
-        predictions_selected = predictions_selected / np.sum(predictions_selected, axis=1, keepdims=True)
-        loss = -np.sum(y_test_one_hot * np.log(predictions_selected)) / y_test_one_hot.shape[0]
-        
-        print(f'Model accuracy (selected labels): {accuracy:.4f}')
-        print(f'Model loss (selected labels): {loss:.4f}')
-        return accuracy, loss
+
+        x_test = preprocess_input(x_test)
+        y_test = to_categorical(y_test, num_classes=100)
+
+        # validation for specific labels accuracy using mask
+        selected_indices = [selected_labels.index(label) for label in selected_labels]
+
+        # Create masks for train and test sets
+        test_mask = np.isin(np.argmax(y_test, axis=1), selected_indices)
+
+        # Filter x_test, and y_test
+        x_test_filtered = x_test[test_mask]
+        y_test_filtered = y_test[test_mask]
+
+        self.model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
+        test_fitlered_loss, test_filtered_accuracy = self.model.evaluate(x_test_filtered, y_test_filtered, verbose=0)
+        print(f'selected Labels accuracy: {test_filtered_accuracy:.4f}')
+        print(f'selected Labels loss: {test_fitlered_loss:.4f}')
+
+        return test_filtered_accuracy, test_fitlered_loss
 
 
     def model_f1score(self, x_test, y_test):

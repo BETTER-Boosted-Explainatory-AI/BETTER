@@ -43,7 +43,7 @@ def check_cifar100():
                 return {"message": "Failed to load CIFAR-100 dataset"}
         train_shape = cifer100_instance.x_train.shape
         test_shape = cifer100_instance.x_test.shape
-        image_id = 43  # Change this to test different image IDs
+        image_id = 19067  # Change this to test different image IDs
         image, label = cifer100_instance.get_train_image_by_id(image_id)
         original_model_filename = 'data/database/models/cifar100_resnet.keras'
         if os.path.exists(original_model_filename):
@@ -53,10 +53,10 @@ def check_cifar100():
         resnet_model = Model(original_model, 4, 0.8, original_model_filename)
         # resnet_model.model_accuracy(cifer100_instance.x_test, cifer100_instance.y_test)
         # print("Model accuracy: ", resnet_model.accuracy)
-        # selected_labels = ["pine_tree", "oak_tree", "willow_tree", "maple_tree", "forest","palm_tree", "man", "woman", "boy", "girl", "baby", "hamster", "shrew"]
-        # selected_accuracy, selected_loss = resnet_model.model_accuracy_selected(cifer100_instance, selected_labels)
-        # print("Model accuracy (selected labels): ", selected_accuracy)
-        # print("Model loss (selected labels): ", selected_loss)
+        selected_labels = ["pine_tree", "oak_tree", "willow_tree", "maple_tree", "forest","palm_tree", "man", "woman", "boy", "girl", "baby", "hamster", "shrew"]
+        selected_accuracy, selected_loss = resnet_model.model_accuracy_selected(cifer100_instance, selected_labels)
+        print("Model accuracy (selected labels): ", selected_accuracy)
+        print("Model loss (selected labels): ", selected_loss)
         plt.imshow(image)
         plt.title(f"Label: {label}")
         plt.show()
@@ -64,7 +64,7 @@ def check_cifar100():
             "message": "CIFAR-100 dataset loaded successfully",
             "train_shape": train_shape,
             "test_shape": test_shape,
-            # "model_accuracy": resnet_model.accuracy,
+            "model_accuracy": selected_accuracy,
         }
     except Exception as e:
         return {"message": f"An error occurred: {str(e)}"}
