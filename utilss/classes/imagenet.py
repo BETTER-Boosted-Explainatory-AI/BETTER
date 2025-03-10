@@ -77,14 +77,14 @@ class ImageNet(Dataset):
                     if len(images) == batch_size:
                         batch_count += 1
                         yield np.array(images), np.array(labels)
-                        print(f"Loaded batch {batch_count} from {folder}")
+                        # print(f"Loaded batch {batch_count} from {folder}")
                         images = []
                         labels = []
 
         if images:
             yield np.array(images), np.array(labels)
             batch_count += 1
-            print(f"Loaded batch {batch_count} from {folder}")
+            # print(f"Loaded batch {batch_count} from {folder}")
 
         print(f"Total images loaded from {folder}: {total_images}")
         print(f"Batch size: {batch_size}")

@@ -9,7 +9,7 @@ from tensorflow.keras.applications import ResNet50
 import tensorflow as tf
 import os
 # from PIL import Image
-# import numpy as np
+import numpy as np
 
 
 app = FastAPI()
@@ -41,65 +41,54 @@ def check_cifar100():
             cifer100_instance.load("cifar100")
             if not cifer100_instance.load("cifar100"):
                 return {"message": "Failed to load CIFAR-100 dataset"}
-        train_shape = cifer100_instance.x_train.shape
-        test_shape = cifer100_instance.x_test.shape
-        image_id = 19067  # Change this to test different image IDs
-        image, label = cifer100_instance.get_train_image_by_id(image_id)
         original_model_filename = 'data/database/models/cifar100_resnet.keras'
         if os.path.exists(original_model_filename):
             original_model = tf.keras.models.load_model(original_model_filename)
             print(f'Model {original_model_filename} has been loaded')
 
-        resnet_model = Model(original_model, 4, 0.8, original_model_filename)
-        # resnet_model.model_accuracy(cifer100_instance.x_test, cifer100_instance.y_test)
-        # print("Model accuracy: ", resnet_model.accuracy)
-        selected_labels = ["pine_tree", "oak_tree", "willow_tree", "maple_tree", "forest","palm_tree", "man", "woman", "boy", "girl", "baby", "hamster", "shrew"]
-        selected_accuracy, selected_loss = resnet_model.model_accuracy_selected(cifer100_instance, selected_labels)
-        print("Model accuracy (selected labels): ", selected_accuracy)
-        print("Model loss (selected labels): ", selected_loss)
-        plt.imshow(image)
-        plt.title(f"Label: {label}")
-        plt.show()
+            resnet_model = Model(original_model, 4, 0.8, original_model_filename)
+            resnet_model.model_f1score(cifer100_instance.x_test, cifer100_instance.y_test)
+            selected_labels = ["pine_tree", "oak_tree", "willow_tree", "maple_tree", "forest","palm_tree", "man", "woman", "boy", "girl", "baby", "hamster", "shrew"]
+            selected_f1 = resnet_model.model_f1score_selected(cifer100_instance, selected_labels)
         return {
             "message": "CIFAR-100 dataset loaded successfully",
-            "train_shape": train_shape,
-            "test_shape": test_shape,
-            "model_accuracy": selected_accuracy,
+            "f1score": resnet_model.f1score,
+            "selected_f1": selected_f1,
         }
     except Exception as e:
         return {"message": f"An error occurred: {str(e)}"}
     
-# def check_imagenet():
-#     global imagenet_instance
-#     try:
-#         if imagenet_instance is None:
-#             imagenet_instance = ImageNet()
-#             if not imagenet_instance.load("imagenet"):
-#                 return {"message": "Failed to load ImageNet dataset"}
+def check_imagenet():
+    # global imagenet_instance
+    try:
+    #     if imagenet_instance is None:
+    #         imagenet_instance = ImageNet()
+    #         if not imagenet_instance.load("imagenet"):
+    #             return {"message": "Failed to load ImageNet dataset"}
         
-#             weights = "imagenet"
-#             model_filename = "resnet50_imagenet.keras"
-#             top = 4
-#             percent = 0.8
+        weights = "imagenet"
+        model_filename = "resnet50_imagenet.keras"
+        top = 4
+        percent = 0.8
             
-#         resnet_model = Model(ResNet50(weights=weights), top, percent, model_filename)
-#         resnet_model.model_accuracy(imagenet_instance.test_data, imagenet_instance.labels)
-#         print("Model accuracy: ", resnet_model.accuracy)
-#         train_shape = (len(imagenet_instance.train_data),)  # Update to get the correct shape
-#         test_shape = (len(imagenet_instance.test_data),)  # Update to get the correct shape
-#         image_id = 66  # Change this to test different image IDs
-#         image, label = imagenet_instance.get_train_image_by_id(image_id)
-#         plt.imshow(image)
-#         plt.title(f"Label: {label}")
-#         plt.show()
-#         return {
-#             "message": "ImageNet dataset loaded successfully",
-#             "train_shape": train_shape,
-#             "test_shape": test_shape,
-#             "model_accuracy": resnet_model.accuracy,
-#         }
-#     except Exception as e:
-#         return {"message": f"An error occurred: {str(e)}"}
+        resnet_model_imagenet = Model(ResNet50(weights=weights), top, percent, model_filename)
+        resnet_model_imagenet.model_evaluate_imagenet("data/datasets/imagenet/test")
+        print("Model accuracy: ", resnet_model_imagenet.accuracy)
+        # train_shape = (len(imagenet_instance.train_data),)  # Update to get the correct shape
+        # test_shape = (len(imagenet_instance.test_data),)  # Update to get the correct shape
+        image_id = 65  # Change this to test different image IDs
+        # image, label = imagenet_instance.get_train_image_by_id(image_id)
+        # plt.imshow(image)
+        # plt.title(f"Label: {label}")
+        # plt.show()
+        return {
+            "message": "ImageNet dataset loaded successfully",
+            # "train_shape": train_shape,
+            # "test_shape": test_shape,
+            "model_accuracy": resnet_model_imagenet.accuracy,
+        }
+    except Exception as e:
+        return {"message": f"An error occurred: {str(e)}"}
     
 # @app.get("/get-image/{image_id}")
 # def get_image(image_id: int):
