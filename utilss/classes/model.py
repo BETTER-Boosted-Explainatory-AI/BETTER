@@ -6,18 +6,21 @@ import os
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from .imagenet_batch_predictor import ImageNetBatchPredictor
+from .cifar100_batch_predictor import Cifar100BatchPredictor
 import time
 
 class Model:
-    def __init__(self, model, top_k, percent, model_filename):
+    def __init__(self, model, top_k, percent, model_filename, dataset):
         self.model = model
         self.model_filename = model_filename
         self.top_k = top_k
         self.percent = percent
-        self.size = (224, 224)
+        self.size = (256, 256)
         self.accuracy = -1
         self.loss = -1
         self.f1score = -1
+        self.dataset = dataset
 
 ## Need to change the load and save models to aws s3 bucket in the future
     def load_model(self):
@@ -143,13 +146,63 @@ class Model:
         print(f'F1 Score (selected labels): {f1_filtered:.4f}')
         return f1_filtered
 
-    def predict(self, image_path, top_k=4):
-        img = tf.keras.preprocessing.image.load_img(image_path, target_size=self.size)
+    def predict(self, image_input):
+        if "cifar100" in self.dataset:
+            return self.predict_cifar100(image_input)
+        elif "imagenet" in self.dataset:
+            return self.predict_imagenet(image_input)
+        else:
+            print("Model not recognized")
+
+
+    def predict_cifar100(self, image_input):
+        expected_size = (32, 32)
+        # Assume it's a path and load the image
+        print(f"Loading image from: {image_input}")
+        print(f"Target size: {self.size}")
+        img = tf.keras.preprocessing.image.load_img(image_input, target_size=expected_size)
+        img_array = tf.keras.preprocessing.image.img_to_array(img)
+        img_array = preprocess_input(img_array)
+        img_array = np.expand_dims(img_array, axis=0)
+
+        # Make prediction
+        predictions = self.model.predict(img_array)
+
+        # Get the indices of the top k predictions
+        top_indices = np.argsort(predictions[0])[-self.top_k:][::-1]
+        
+        # Get the probabilities for those indices
+        top_probabilities = predictions[0][top_indices]
+        
+        # Combine indices and probabilities
+        results = [(idx, prob) for idx, prob in zip(top_indices, top_probabilities)]
+        
+        return results
+
+    
+    def predict_imagenet(self, image_path):
+        img = tf.keras.preprocessing.image.load_img(image_path, target_size=(224, 224))
         img_array = tf.keras.preprocessing.image.img_to_array(img)
         img_array = preprocess_input(img_array)
         img_array = np.expand_dims(img_array, axis=0)
 
         predictions = self.model.predict(img_array)
-        decoded_predictions = decode_predictions(predictions, top=top_k)
+        decoded_predictions = decode_predictions(predictions, top=self.top_k)[0]
 
         return decoded_predictions
+
+    def predict_batches(self, image_paths): 
+        if "cifar100" in self.dataset:
+            return self.predict_batches_cifar100(image_paths)
+        elif "imagenet" in self.dataset:
+            return self.predict_batches_imagenet(image_paths)
+        else:
+            print("Model not recognized")
+
+    def predict_batches_imagenet(self, image_paths):
+        batch_predictor = ImageNetBatchPredictor(self.model, batch_size=32, num_workers=2)
+        return batch_predictor.get_top_predictions(image_paths, self.top_k)
+
+    def predict_batches_cifar100(self, image_paths): 
+        batched_predictor = Cifar100BatchPredictor(self.model, batch_size=32)
+        return batched_predictor.get_top_predictions(image_paths, self.top_k)
