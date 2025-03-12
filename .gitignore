@@ -1,4 +1,5 @@
 **/.venv
+**/venv
 **/datasets/cifar100
 **/datasets/imagenet
 **/__pycache__

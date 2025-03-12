@@ -34,7 +34,23 @@ def read_root():
 
 @app.post("/graph")
 def create_graph():
-    return {"message": "Graph created"}
+    global imagenet_instance
+    try:
+        if imagenet_instance is None:
+            imagenet_instance = ImageNet()
+            if not imagenet_instance.load("imagenet"):
+                return {"message": "Failed to load ImageNet dataset"}
+            
+        weights = "imagenet"
+        model_filename = "resnet50_mini_imagenet.keras"
+        top = 4
+        percent = 0.8
+            
+        resnet_model_imagenet = Model(ResNet50(weights=weights), top, percent, model_filename, "imagenet")
+    except Exception as e:
+        return {"message": f"An error occurred: {str(e)}"}
+
+
 
 @app.get("/check-dataset")
 def check_cifar100():
