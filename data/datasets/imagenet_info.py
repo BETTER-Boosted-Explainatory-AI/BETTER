@@ -1,6 +1,6 @@
 IMAGENET_INFO = {
     "dataset": "imagenet",
-    "labels_number": 41,
+    "labels_len": 41,
     "labels": [ "Persian_cat", "tabby", "Madagascar_cat",  "Egyptian_cat", "pug", "boxer",
         "Norwich_terrier", "kuvasz", "minivan", "police_van", "sports_car", "limousine",
         "jeep", "airliner","warplane", "space_shuttle", "catamaran", "trimaran",

@@ -9,3 +9,4 @@ keras
 pytest
 scikit-learn
 pandas
+igraph

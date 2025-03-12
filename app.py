@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
-from utilss.classes.cifar100 import Cifar100
-from utilss.classes.imagenet import ImageNet
+from utilss.classes.datasets.cifar100 import Cifar100
+from utilss.classes.datasets.imagenet import ImageNet
 from utilss.classes.model import Model
 import matplotlib.pyplot as plt
 from tensorflow.keras.applications import ResNet50
@@ -31,6 +31,10 @@ cifer100_instance = None
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the BETTER API"}
+
+@app.post("/graph")
+def create_graph():
+    return {"message": "Graph created"}
 
 @app.get("/check-dataset")
 def check_cifar100():

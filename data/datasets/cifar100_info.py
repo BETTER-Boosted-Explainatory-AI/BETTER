@@ -1,5 +1,6 @@
 CIFAR100_INFO ={
-    "labels_number": 100,
+    "dataset": "cifar100",
+    "labels_len": 100,
     "labels": ["apple", "aquarium_fish", "baby", "bear", "beaver", "bed", "bee", "beetle", "bicycle", "bottle",
         "bowl", "boy", "bridge", "bus", "butterfly", "camel", "can", "castle", "caterpillar", "cattle",
         "chair", "chimpanzee", "clock", "cloud", "cockroach", "couch", "crab", "crocodile", "cup", "dinosaur",

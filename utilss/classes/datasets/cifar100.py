@@ -4,10 +4,11 @@ import numpy as np
 from .dataset import Dataset
 from globalvars import cifar100_labels
 import matplotlib.pyplot as plt
+from data.datasets.cifar100 import CIFAR100_INFO
 
 class Cifar100(Dataset):
     def __init__(self):
-        super().__init__("cifar100",1e-5, 500, cifar100_labels)
+        super().__init__(CIFAR100_INFO["dataset"], CIFAR100_INFO["threshold"], CIFAR100_INFO["infinity"], CIFAR100_INFO["labels"])
         self.x_train = None
         self.y_train = None
         self.x_test = None
@@ -52,7 +53,6 @@ class Cifar100(Dataset):
 
     def label_to_class_name(self, label):
         return self.labels[label]
-
 
     def get_train_image_by_id(self, image_id):
         # Check if the image_id is within the range of training data

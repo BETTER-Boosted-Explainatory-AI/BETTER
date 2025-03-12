@@ -2,14 +2,14 @@ import os
 import time
 from PIL import Image
 from .dataset import Dataset
-from globalvars import imagenet_labels
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from utilss.wordnet_utils import convert_folder_name_to_label
+from data.datasets.imagenet_info import IMAGENET_INFO
 
 class ImageNet(Dataset):
     def __init__(self):
-        super().__init__("imagenet", 1e-6, 100, imagenet_labels)
+        super().__init__(IMAGENET_INFO["dataset"], IMAGENET_INFO["threshold"], IMAGENET_INFO["infinity"], IMAGENET_INFO["labels"])
         self.train_data = []
         self.test_data = []
         self.labels_dict = {}
