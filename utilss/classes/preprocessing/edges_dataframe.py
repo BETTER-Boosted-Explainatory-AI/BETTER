@@ -11,8 +11,11 @@ class EdgesDataframe:
         return self.edges_df
 
     def save_dataframe(self):
-        self.edges_df.to_csv(self.df_filename, index=False)
-        print(f'Edges dataframe has been saved: {self.df_filename}')
+        try:
+            self.edges_df.to_csv(self.df_filename, index=False)
+            print(f'Edges dataframe has been saved: {self.df_filename}')
+        except Exception as e:
+            print(f'Error saving dataframe: {str(e)}')
 
     def load_dataframe(self):
         if os.path.exists(self.df_filename):

@@ -13,7 +13,7 @@ CIFAR100_INFO ={
         "train", "trout", "tulip", "turtle", "wardrobe", "whale", "willow_tree", "wolf", "woman", "worm"
     ],
     "threshold" : 1e-5,
-    "top-k" : 4,
+    "top_k" : 4,
     "percent" : 0.8,
     "infinity" : 500
 }

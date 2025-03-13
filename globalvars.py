@@ -29,3 +29,6 @@ cifar100_labels = [
     'squirrel', 'streetcar', 'sunflower', 'sweet_pepper', 'table', 'tank', 'telephone', 'television', 'tiger', 'tractor',
     'train', 'trout', 'tulip', 'turtle', 'wardrobe', 'whale', 'willow_tree', 'wolf', 'woman', 'worm'
 ]
+
+graph_types = ["similarity", "dissimilarity", "confusion_matrix"]
+heap_type = ["min", "max"]

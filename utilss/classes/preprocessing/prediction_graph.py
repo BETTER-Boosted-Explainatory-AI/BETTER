@@ -3,46 +3,44 @@ import pandas as pd
 import os
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
-from classes.datasets.cifar100_batch_predictor import Cifar100BatchPredictor
-from classes.datasets.imagenet_batch_predictor import ImageNetBatchPredictor    
-
+from utilss.classes.datasets.cifar100_batch_predictor import Cifar100BatchPredictor
+from utilss.classes.datasets.imagenet_batch_predictor import ImageNetBatchPredictor    
+from .graph_builder import GraphBuilder
 
 class PredictionGraph:
-    def __init__(self, model_filename, graph_filename, graph_type, labels):
-        """Initialize a prediction graph.
-        
-        Args:
-            filename: Path to save/load the graph
-            graph_type: Type of graph ("cifar100" or "imagenet")
-            labels: List of class labels
-        """
+    def __init__(self, model_filename, graph_filename, graph_type, labels, threshold, infinity):
         self.graph = Graph(directed=False)
         self.model_filename = model_filename
         self.graph_filename = graph_filename
         self.graph_type = graph_type
         self.graph.add_vertices(labels)
         self.labels = labels
-class GraphClass:
-    def __init__(self, filename, graph_type, labels):
-        self.graph = Graph(directed=False)
-        self.graph_filename = filename
-        self.graph_type = graph_type
-        self.graph.add_vertices(labels)
+        self.builder = GraphBuilder(graph_type, threshold, infinity)
 
     def get_graph(self):
         return self.graph
 
     def save_graph(self):
-        if not os.path.exists(self.graph_filename):
-            Graph.write_graphml(self.graph, self.graph_filename, "graphml")
-            print(f'Graph has been saved: {self.graph_filename}')
+        try:
+            if not os.path.exists(self.graph_filename):
+                Graph.write_graphml(self.graph, self.graph_filename, "graphml")
+                print(f'Graph has been saved: {self.graph_filename}')
+            else:
+                print(f'File already exists: {self.graph_filename}')
+        except Exception as e:
+            print(f'Error saving graph file: {str(e)}')
 
     def load_graph(self):
-        if os.path.exists(self.graph_filename):
-            self.graph = Graph.Read_GraphML(self.graph_filename)
-            print(f'Graph has been loaded: {self.graph_filename}')
+        try:
+            if os.path.exists(self.graph_filename):
+                self.graph = Graph.Read_GraphML(self.graph_filename)
+                print(f'Graph has been loaded: {self.graph_filename}')
+            else:
+                print(f'File not found: {self.graph_filename}')
+        except Exception as e:
+            print(f'Error loading graph file: {str(e)}')
 
-    def create_graph(self, model, top_k, threshold, infinity, labels_dict, trainset_path, batch_size=64, percent=0.8):
+    def create_graph_imagenet(self, model, top_k, labels_dict, trainset_path, batch_size=64, percent=0.8):
         """
         Create a graph using predictions from the model.
         Optimized for GPU usage with ImageNet data.
@@ -141,8 +139,8 @@ class GraphClass:
                     
                     # Only process images predicted correctly
                     correct_prediction = False
-                    for _, pred_class, _ in predictions:
-                        if pred_class == image_label:
+                    for _, pred_label, _ in predictions:
+                        if pred_label == image_label:
                             correct_prediction = True
                             break
                             
@@ -150,33 +148,24 @@ class GraphClass:
                         continue
                         
                     # Process predictions and update graph
-                    shows_categories = []
-                    for _, pred_class, pred_prob in predictions:
-                        if pred_class != image_label and pred_class in labels_dict.values() and pred_prob > threshold:
-                            # Update existing edge or add new one
-                            if self.graph.are_adjacent(image_label, pred_class):
-                                edge_id = self.graph.get_eid(image_label, pred_class)
-                                self.graph.es[edge_id]["weight"] += pred_prob
-                                edges_data.append({
-                                    "image_id": image_name,
-                                    "source": image_label,
-                                    "target": pred_class,
-                                    "target_probability": pred_prob,
-                                    "edge": "updated",
-                                    "edge_weight": self.graph.es[edge_id]["weight"]
-                                })
-                            else:
-                                self.graph.add_edge(image_label, pred_class, weight=pred_prob)
-                                edge_id = self.graph.get_eid(image_label, pred_class)
-                                edges_data.append({
-                                    "image_id": image_name,
-                                    "source": image_label,
-                                    "target": pred_class,
-                                    "target_probability": pred_prob,
-                                    "edge": "added",
-                                    "edge_weight": self.graph.es[edge_id]["weight"]
-                                })
-                            shows_categories.append(pred_class)
+                    shows_labels = []
+                    for _, pred_label, pred_prob in predictions:
+                        if pred_label not in self.labels:
+                            print(f"Warning: Prediction label '{pred_label}' not in graph labels, skipping.")
+                            continue
+                        
+                        if self.builder.should_edge_be_added(pred_label, image_label, pred_prob):                            
+                            weight = self.builder.get_edge_weight(pred_prob)
+                            if self.builder.should_edge_be_added(pred_label, image_label, pred_prob):
+                                edge_data = self.builder.update_graph(
+                                    self.graph, pred_label, image_label, pred_prob, image_name
+                                )
+                                edges_data.append(edge_data)
+                                shows_labels.append(pred_label)
+                    
+                    if self.graph_type == "dissimilarity":
+                        for label in self.labels:
+                            self.builder.update_graph_dissimilarity(self.graph, shows_labels, label, image_label)                        
                 
                 processed_count += len(batch_paths)
                 if processed_count % 1000 == 0:

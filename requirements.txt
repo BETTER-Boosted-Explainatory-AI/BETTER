@@ -10,3 +10,4 @@ pytest
 scikit-learn
 pandas
 igraph
+python-dotenv
