@@ -6,9 +6,10 @@ from concurrent.futures import ThreadPoolExecutor
 from utilss.classes.datasets.cifar100_batch_predictor import Cifar100BatchPredictor
 from utilss.classes.datasets.imagenet_batch_predictor import ImageNetBatchPredictor    
 from .graph_builder import GraphBuilder
+import time
 
 class PredictionGraph:
-    def __init__(self, model_filename, graph_filename, graph_type, labels, threshold, infinity):
+    def __init__(self, model_filename, graph_filename, graph_type, labels, threshold, infinity, dataset):
         self.graph = Graph(directed=False)
         self.model_filename = model_filename
         self.graph_filename = graph_filename
@@ -16,6 +17,7 @@ class PredictionGraph:
         self.graph.add_vertices(labels)
         self.labels = labels
         self.builder = GraphBuilder(graph_type, threshold, infinity)
+        self.dataset = dataset
 
     def get_graph(self):
         return self.graph
@@ -39,8 +41,36 @@ class PredictionGraph:
                 print(f'File not found: {self.graph_filename}')
         except Exception as e:
             print(f'Error loading graph file: {str(e)}')
+            
+    def create_graph(self, model, top_k, trainset_path=None, labels_dict=None, x_train=None, y_train_mapped=None, batch_size=64, min_confidence=0.8):
+        """
+        Create a graph based on the dataset type.
+        
+        Args:
+            model: The model to use for predictions
+            top_k: Number of top predictions to consider
+            trainset_path: Path to the ImageNet training set (required for ImageNet)
+            labels_dict: Dictionary mapping folder names to labels (required for ImageNet)
+            x_train: Training images (required for CIFAR-100)
+            y_train_mapped: Training labels (required for CIFAR-100)
+            batch_size: Batch size for predictions
+            min_confidence: Minimum confidence threshold for adding edges
+            
+        Returns:
+            DataFrame containing edge data
+        """
+        if self.dataset == "imagenet":
+            if trainset_path is None or labels_dict is None:
+                raise ValueError("trainset_path and labels_dict are required for ImageNet dataset")
+            return self.create_graph_imagenet(model, top_k, trainset_path, labels_dict, batch_size, min_confidence)
+        elif self.dataset == "cifar100":
+            if x_train is None or y_train_mapped is None:
+                raise ValueError("x_train and y_train_mapped are required for CIFAR-100 dataset")
+            return self.create_graph_cifar100(model, top_k, x_train, y_train_mapped, batch_size, min_confidence)
+        else:
+            raise ValueError(f"Unknown dataset: {self.dataset}")
 
-    def create_graph_imagenet(self, model, top_k, labels_dict, trainset_path, batch_size=64, percent=0.8):
+    def create_graph_imagenet(self, model, top_k, trainset_path, labels_dict, batch_size=64, min_confidence=0.8):
         """
         Create a graph using predictions from the model.
         Optimized for GPU usage with ImageNet data.
@@ -96,7 +126,8 @@ class PredictionGraph:
         
         total_images = len(all_image_paths)
         print(f"Total images to process: {total_images}")
-        
+        start_time = time.time()
+
         # Create a BatchPredictor if model is not already one
         if not hasattr(model, 'batch_predictor'):
             predictor = ImageNetBatchPredictor(model=model.model, batch_size=batch_size)
@@ -134,7 +165,7 @@ class PredictionGraph:
                         image_name = os.path.basename(img_path)
                     
                     # Skip if no predictions or confidence too low
-                    if not predictions or predictions[0][2] < percent:
+                    if not predictions or predictions[0][2] < min_confidence:
                         continue
                     
                     # Only process images predicted correctly
@@ -156,7 +187,7 @@ class PredictionGraph:
                         
                         if self.builder.should_edge_be_added(pred_label, image_label, pred_prob):                            
                             weight = self.builder.get_edge_weight(pred_prob)
-                            if self.builder.should_edge_be_added(pred_label, image_label, pred_prob):
+                            if self.builder.should_edge_be_added(pred_label, image_label, weight):
                                 edge_data = self.builder.update_graph(
                                     self.graph, pred_label, image_label, pred_prob, image_name
                                 )
@@ -164,12 +195,110 @@ class PredictionGraph:
                                 shows_labels.append(pred_label)
                     
                     if self.graph_type == "dissimilarity":
-                        for label in self.labels:
-                            self.builder.update_graph_dissimilarity(self.graph, shows_labels, label, image_label)                        
+                        for show_label in self.labels:
+                            self.builder.add_infinity_edges(self.graph, shows_labels, show_label, image_label)                        
                 
                 processed_count += len(batch_paths)
                 if processed_count % 1000 == 0:
                     print(f"Processed {processed_count}/{total_images} images")
+        
+        end_time = time.time()
+        print(f"Graph creation completed in {end_time - start_time:.2f} seconds")
+        
+        edges_dataframe = pd.DataFrame(edges_data)
+        print(f"Graph creation complete. {len(edges_dataframe)} edges created.")
+        return edges_dataframe
+
+    def create_graph_cifar100(self, model, top_k, x_train, y_train_mapped, batch_size=64, min_confidence=0.8):
+        """
+        Create a graph using predictions from the model.
+        Optimized for CIFAR-100 data.
+        """
+        edges_data = []
+        processed_count = 0
+        total_images = len(x_train)
+        print(f"Total CIFAR-100 images to process: {total_images}")
+        start_time = time.time()
+        
+        # Create a predictor if needed
+        if not hasattr(model, 'batch_predictor'):
+            predictor = Cifar100BatchPredictor(model=model.model, batch_size=batch_size)
+        else:
+            predictor = model.batch_predictor
+            predictor.batch_size = batch_size
+        
+        print("Processing CIFAR-100 batch predictions")
+        # Process images in batches
+        for i in range(0, total_images, batch_size):
+            # Get current batch
+            batch_end = min(i + batch_size, total_images)
+            batch_images = x_train[i:batch_end]
+            batch_labels = y_train_mapped[i:batch_end]
+            
+            # Get predictions for this batch - directly from model without trying to load images
+            batch_preds = model.model.predict(batch_images)
+            
+            # Process each prediction
+            for j in range(len(batch_images)):
+                image_idx = i + j
+                true_label = batch_labels[j]
+                predictions = batch_preds[j]
+                
+                # Get top k predictions
+                top_indices = np.argsort(predictions)[-top_k:][::-1]
+                top_predictions = []
+                
+                for rank, idx in enumerate(top_indices):
+                    # Convert label index to label name (if applicable)
+                    if hasattr(model, 'class_names'):
+                        pred_label = model.class_names[idx]
+                    else:
+                        # Assumes the labels are the same as indices - modify as needed
+                        pred_label = self.labels[idx] if idx < len(self.labels) else str(idx)
+                        
+                    pred_prob = float(predictions[idx])
+                    top_predictions.append((rank, pred_label, pred_prob))
+                
+                # Skip if confidence too low
+                if not top_predictions or top_predictions[0][2] < min_confidence:
+                    continue
+                
+                # Check if the true label is in the top predictions
+                correct_prediction = False
+                for _, pred_label, _ in top_predictions:
+                    if pred_label == true_label:
+                        correct_prediction = True
+                        break
+                        
+                if not correct_prediction:
+                    continue
+                
+                # Process predictions and update graph
+                shows_labels = []
+                for _, pred_label, pred_prob in top_predictions:
+                    if pred_label not in self.labels:
+                        print(f"Warning: Prediction label '{pred_label}' not in graph labels, skipping.")
+                        continue
+                    
+                    if self.builder.should_edge_be_added(pred_label, true_label, pred_prob):
+                        weight = self.builder.get_edge_weight(pred_prob)
+                        if self.builder.should_edge_be_added(pred_label, true_label, weight):
+                            edge_data = self.builder.update_graph(
+                                self.graph, pred_label, true_label, pred_prob, f"image_{image_idx}"
+                            )
+                            edges_data.append(edge_data)
+                            shows_labels.append(pred_label)
+                
+                if self.graph_type == "dissimilarity":
+                    for show_label in self.labels:
+                        self.builder.add_infinity_edges(self.graph, shows_labels, show_label, true_label)
+            
+            processed_count += len(batch_images)
+            if processed_count % 1000 == 0:
+                print(f"Processed {processed_count}/{total_images} images")
+        
+        end_time = time.time()
+        print(f"Graph creation completed in {end_time - start_time:.2f} seconds")
         
         edges_dataframe = pd.DataFrame(edges_data)
         print(f"Graph creation complete. {len(edges_dataframe)} edges created.")

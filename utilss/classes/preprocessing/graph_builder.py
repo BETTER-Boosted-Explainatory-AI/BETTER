@@ -36,7 +36,7 @@ class GraphBuilder:
         
         return edge_data
     
-    def update_graph_dissimilarity(self, graph, shows_labels, label, target_label):
+    def add_infinity_edges(self, graph, shows_labels, label, target_label):
         if label not in shows_labels:
             if graph.are_adjacent(target_label, label):
                 edge_id = graph.get_eid(target_label, label)

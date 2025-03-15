@@ -14,6 +14,6 @@ CIFAR100_INFO ={
     ],
     "threshold" : 1e-5,
     "top_k" : 4,
-    "percent" : 0.8,
-    "infinity" : 500
+    "min_confidence" : 0.8,
+    "infinity" : 500,
 }

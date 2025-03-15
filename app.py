@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.applications import ResNet50
 import tensorflow as tf
 
+from routers.hierarchical_clusters_router import hierarchical_clusters_router
+
 # from PIL import Image
 import numpy as np
 
@@ -42,38 +44,42 @@ cifer100_instance = None
 
 FOLDER_PATH = os.getenv("PATH")
 
+
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the BETTER API"}
 
 
-@app.get("/graph")
-def create_graph():
+app.include_router(hierarchical_clusters_router)
 
-    imagenet_dataset = DatasetFactory.create_dataset(IMAGENET_INFO["dataset"])
-    imagenet_dataset.load(IMAGENET_INFO["dataset"])
+# @app.get("/graph")
+# def create_graph():
+
+#     imagenet_dataset = DatasetFactory.create_dataset(IMAGENET_INFO["dataset"])
+#     imagenet_dataset.load(IMAGENET_INFO["dataset"])
     
-    try:
-        graph_types = ["similarity", "dissimilarity", "confusion_matrix"]
-        heap_type = ["min", "max"]
+#     try:
+#         graph_types = ["similarity", "dissimilarity", "confusion_matrix"]
+#         heap_type = ["min", "max"]
         
-        weights = "imagenet"
-        model_filename = f'data/graphs/resnet50_mini_imagenet.keras'
-        dataframe_filename = f'data/graphs/edges_{graph_types[1]}_mini_imagenet.csv'
-        graph_filename = f'data/graphs/graph_{graph_types[1]}_mini_imagenet.graphml'
-        trainset_path = 'data/datasets/imagenet/train'
+#         weights = "imagenet"
+#         model_filename = f'data/graphs/resnet50_mini_imagenet.keras'
+#         dataframe_filename = f'data/graphs/edges_{graph_types[1]}_mini_imagenet.csv'
+#         graph_filename = f'data/graphs/graph_{graph_types[1]}_mini_imagenet.graphml'
+#         trainset_path = 'data/datasets/imagenet/train'
 
-        resnet_model_imagenet = Model(
-            ResNet50(weights=weights), IMAGENET_INFO["top_k"], IMAGENET_INFO["percent"], model_filename, IMAGENET_INFO["dataset"]
-        )
+#         resnet_model_imagenet = Model(
+#             ResNet50(weights=weights), IMAGENET_INFO["top_k"], IMAGENET_INFO["min_confidence"], model_filename, IMAGENET_INFO["dataset"]
+#         )
 
-        count_grpah = PredictionGraph(model_filename, graph_filename, graph_types[1], IMAGENET_INFO["labels"], IMAGENET_INFO["threshold"], IMAGENET_INFO["infinity"])
-        edges_df_temp = count_grpah.create_graph_imagenet(resnet_model_imagenet,IMAGENET_INFO["top_k"] ,IMAGENET_INFO["labels_dict"], trainset_path)
-        edges_df = EdgesDataframe(resnet_model_imagenet, dataframe_filename, edges_df_temp)
-        count_grpah.save_graph()
-        edges_df.save_dataframe()
-    except Exception as e:
-        return {"message": f"An error occurred: {str(e)}"}
+#         count_grpah = PredictionGraph(model_filename, graph_filename, graph_types[1], IMAGENET_INFO["labels"], IMAGENET_INFO["threshold"], IMAGENET_INFO["infinity"])
+#         edges_df_temp = count_grpah.create_graph_imagenet(resnet_model_imagenet,IMAGENET_INFO["top_k"], trainset_path, IMAGENET_INFO["labels_dict"])
+#         edges_df = EdgesDataframe(resnet_model_imagenet, dataframe_filename, edges_df_temp)
+#         count_grpah.save_graph()
+#         edges_df.save_dataframe()
+#     except Exception as e:
+#         return {"message": f"An error occurred: {str(e)}"}
 
 
 @app.get("/check-dataset")

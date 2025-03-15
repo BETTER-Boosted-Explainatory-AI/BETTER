@@ -89,6 +89,7 @@ IMAGENET_INFO = {
     },
     "threshold": 1e-6,
     "top_k": 4,
-    "percent": 0.8,
+    "min_confidence": 0.8,
     "infinity": 100,
+    "directory_path": "data/datasets/imagenet",
 }

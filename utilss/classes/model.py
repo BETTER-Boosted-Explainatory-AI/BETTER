@@ -11,11 +11,11 @@ from .datasets.cifar100_batch_predictor import Cifar100BatchPredictor
 import time
 
 class Model:
-    def __init__(self, model, top_k, percent, model_filename, dataset):
+    def __init__(self, model, top_k, min_confidence, model_filename, dataset):
         self.model = model
         self.model_filename = model_filename
         self.top_k = top_k
-        self.percent = percent
+        self.min_confidence = min_confidence
         self.size = (256, 256)
         self.accuracy = -1
         self.loss = -1
