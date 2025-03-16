@@ -13,7 +13,7 @@ from utilss.classes.model import Model
 from utilss.classes.datasets.dataset_factory import DatasetFactory
 from utilss.classes.preprocessing.prediction_graph import PredictionGraph
 from utilss.classes.preprocessing.edges_dataframe import EdgesDataframe
-from utilss.classes.heap_processor import HeapGraphProcessor
+from utilss.classes.preprocessing.heap_processor import HeapGraphProcessor
 
 import matplotlib.pyplot as plt
 from tensorflow.keras.applications import ResNet50

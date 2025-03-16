@@ -1,13 +1,10 @@
 from utilss.classes.union_find import UnionFind
-from utilss.classes.heap_processor import HeapGraphProcessor
+from utilss.classes.preprocessing.heap_processor import HeapGraphProcessor
 import heapq
 
-def _create_uf(graph, labels, heap_type):
-    heap_processor = HeapGraphProcessor(heap_type, labels)
-    heap_processor.process_edges(graph)
-    
+def _create_uf(heap, labels, heap_type):        
     uf = UnionFind(labels, heap_type)
-    temp_heap = heap_processor.get_heap_copy()
+    temp_heap = heap
     merge_list = []
     uf.max_weight = max(abs(weight) for weight, _, _ in temp_heap)
 
