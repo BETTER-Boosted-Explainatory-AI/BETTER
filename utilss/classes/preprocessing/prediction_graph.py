@@ -215,7 +215,9 @@ class PredictionGraph:
         Optimized for CIFAR-100 data.
         """
         edges_data = []
-        processed_count = 0
+        batch_images = []
+        batch_labels = []
+        
         total_images = len(x_train)
         print(f"Total CIFAR-100 images to process: {total_images}")
         start_time = time.time()
@@ -227,79 +229,51 @@ class PredictionGraph:
             predictor = model.batch_predictor
             predictor.batch_size = batch_size
         
-        print("Processing CIFAR-100 batch predictions")
-        # Process images in batches
-        for i in range(0, total_images, batch_size):
-            # Get current batch
-            batch_end = min(i + batch_size, total_images)
-            batch_images = x_train[i:batch_end]
-            batch_labels = y_train_mapped[i:batch_end]
-            
-            # Get predictions for this batch - directly from model without trying to load images
-            batch_preds = model.model.predict(batch_images)
-            
-            # Process each prediction
-            for j in range(len(batch_images)):
-                image_idx = i + j
-                true_label = batch_labels[j]
-                predictions = batch_preds[j]
-                
-                # Get top k predictions
-                top_indices = np.argsort(predictions)[-top_k:][::-1]
-                top_predictions = []
-                
-                for rank, idx in enumerate(top_indices):
-                    # Convert label index to label name (if applicable)
-                    if hasattr(model, 'class_names'):
-                        pred_label = model.class_names[idx]
-                    else:
-                        # Assumes the labels are the same as indices - modify as needed
-                        pred_label = self.labels[idx] if idx < len(self.labels) else str(idx)
+        for i, image in enumerate(x_train):
+            true_label = y_train_mapped[i]
+
+            # Add image and label to the batch
+            batch_images.append(image)
+            batch_labels.append(true_label)
+
+            # When the batch is full, or it's the last image, predict the top predictions
+            if len(batch_images) == predictor.batch_size or i == len(x_train) - 1:
+                # Perform the batch prediction
+                top_predictions_batch = predictor.get_top_predictions(batch_images, top_k)
+
+                # Iterate over each image in the batch and process predictions
+                for j, top_predictions in enumerate(top_predictions_batch):
+                    # Process the top predictions for each image
+                    if top_predictions[0][2] > min_confidence:
+                        filtered_predictions = top_predictions[:top_k]
                         
-                    pred_prob = float(predictions[idx])
-                    top_predictions.append((rank, pred_label, pred_prob))
-                
-                # Skip if confidence too low
-                if not top_predictions or top_predictions[0][2] < min_confidence:
-                    continue
-                
-                # Check if the true label is in the top predictions
-                correct_prediction = False
-                for _, pred_label, _ in top_predictions:
-                    if pred_label == true_label:
-                        correct_prediction = True
-                        break
+                        shows_labels = []
+                        for _, pred_label, pred_prob in filtered_predictions:
+                            if pred_label not in self.labels:
+                                print(f"Warning: Prediction label '{pred_label}' not in graph labels, skipping.")
+                                continue
+                            
+                            if self.builder.should_edge_be_added(pred_label, true_label, pred_prob):
+                                weight = self.builder.get_edge_weight(pred_prob)
+                                if self.builder.should_edge_be_added(pred_label, true_label, weight):
+                                    edge_data = self.builder.update_graph(
+                                        self.graph, pred_label, true_label, pred_prob, i
+                                    )
+                                    edges_data.append(edge_data)
+                                    shows_labels.append(pred_label)
                         
-                if not correct_prediction:
-                    continue
-                
-                # Process predictions and update graph
-                shows_labels = []
-                for _, pred_label, pred_prob in top_predictions:
-                    if pred_label not in self.labels:
-                        print(f"Warning: Prediction label '{pred_label}' not in graph labels, skipping.")
-                        continue
-                    
-                    if self.builder.should_edge_be_added(pred_label, true_label, pred_prob):
-                        weight = self.builder.get_edge_weight(pred_prob)
-                        if self.builder.should_edge_be_added(pred_label, true_label, weight):
-                            edge_data = self.builder.update_graph(
-                                self.graph, pred_label, true_label, pred_prob, f"image_{image_idx}"
-                            )
-                            edges_data.append(edge_data)
-                            shows_labels.append(pred_label)
-                
-                if self.graph_type == "dissimilarity":
-                    for show_label in self.labels:
-                        self.builder.add_infinity_edges(self.graph, shows_labels, show_label, true_label)
+                        if self.graph_type == "dissimilarity":
+                            for show_label in self.labels:
+                                self.builder.add_infinity_edges(self.graph, shows_labels, show_label, true_label)
             
-            processed_count += len(batch_images)
-            if processed_count % 1000 == 0:
-                print(f"Processed {processed_count}/{total_images} images")
-        
+
+                # Clear the batch after processing
+        batch_images = []
+        batch_labels = []
+                
         end_time = time.time()
         print(f"Graph creation completed in {end_time - start_time:.2f} seconds")
-        
+            
         edges_dataframe = pd.DataFrame(edges_data)
         print(f"Graph creation complete. {len(edges_dataframe)} edges created.")
         return edges_dataframe
