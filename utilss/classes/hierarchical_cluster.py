@@ -5,7 +5,7 @@ class HierarchicalCluster:
     def __init__(self, labels_dict=None):
         self.Z = []  # Track merge distances
         self.labels_dict = labels_dict or {}
-        self.label_mapping = None
+        self.new_labels = None
         
     def create_dendrogram_data(self, UnionFind, labels, max_weight):
         """
@@ -14,36 +14,38 @@ class HierarchicalCluster:
         if not UnionFind.merge_indices or not UnionFind.merge_distances:
             raise ValueError("No merges have been performed yet")
             
-        self.label_mapping = {i: label for i, label in enumerate(labels)}    
+        label_mapping = {i: label for i, label in enumerate(labels)}    
         cluster_sizes = {}  # Track cluster sizes dynamically
         current_cluster_index = len(UnionFind.element_to_index)  # Start from n
-        
         Z = []
         used_clusters = set()  # Track used clusters to prevent duplicates
-        for (idx1, idx2), dist in zip(UnionFind.merge_indices, UnionFind.merge_distances):
-            if idx1 in used_clusters or idx2 in used_clusters:
-                raise ValueError(f"Cluster index {idx1} or {idx2} is being reused before merging.")
-                
-            size1 = cluster_sizes.get(idx1, 1)
-            size2 = cluster_sizes.get(idx2, 1)
-            new_cluster_size = size1 + size2  # Cumulative size
             
-            # Adjust the distance by subtracting from max_weight
-            adjusted_dist = dist
-            if UnionFind.heap_type == "max":
-                adjusted_dist = max_weight + dist  
+        inverted_distances = [dist for dist in UnionFind.merge_distances]
+        
+        for i, ((idx1, idx2), dist) in enumerate(zip(UnionFind.merge_indices, inverted_distances)):
+                if idx1 in used_clusters or idx2 in used_clusters:
+                    raise ValueError(f"Cluster index {idx1} or {idx2} is being reused before merging.")
                 
-            Z.append([idx1, idx2, adjusted_dist, new_cluster_size])
-            # Mark these clusters as used
-            used_clusters.add(idx1)
-            used_clusters.add(idx2)
-            # Assign a new cluster index for tracking
-            cluster_sizes[current_cluster_index] = new_cluster_size
-            current_cluster_index += 1
-            
+                size1 = cluster_sizes.get(idx1, 1)
+                size2 = cluster_sizes.get(idx2, 1)
+                new_cluster_size = size1 + size2  # Cumulative size
+                # Use the inverted normalized distance directly
+                Z.append([idx1, idx2, dist, new_cluster_size])
+                
+                # Mark these clusters as used
+                used_clusters.add(idx1)
+                used_clusters.add(idx2)
+                
+                # Assign a new cluster index for tracking
+                cluster_sizes[current_cluster_index] = new_cluster_size
+                current_cluster_index += 1
+                            
         self.Z = np.array(Z)
+        
         if not self.labels_dict:
             self.labels_dict = {name: i for i, name in enumerate(labels)}
+            
+        self.new_labels = sorted(labels)
             
         return self.Z
     
@@ -63,9 +65,7 @@ class HierarchicalCluster:
         # Create a dictionary with the dendrogram data
         dendrogram_data = {
             'Z': self.Z.tolist(),  # Convert numpy array to list for JSON serialization
-            'labels': labels,
-            'labels_dict': self.labels_dict,
-            'label_mapping': self.label_mapping
+            'new_labels': self.new_labels
         }
         
         # Save the data as JSON
@@ -89,8 +89,7 @@ class HierarchicalCluster:
             data = json.load(f)
             
         self.Z = np.array(data['Z'])
-        self.labels_dict = data['labels_dict']
-        self.label_mapping = data.get('label_mapping')
+        self.new_labels = data.get('new_labels')
         
         print(f"Dendrogram data loaded from {json_path}")
         return self

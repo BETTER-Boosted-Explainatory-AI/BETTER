@@ -114,13 +114,15 @@ def post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename
         
         edges_df_obj = EdgesDataframe(model_path, dataframe_filename)
         edges_df_obj.load_dataframe()
+        count_df = edges_df_obj.get_dataframe_by_count()
+        print(count_df)
         
-        confusion_matrix = _create_confusion_matrix(edges_df_obj.get_dataframe_by_count(), dataset_config["labels"])
+        confusion_matrix = _create_confusion_matrix(count_df, dataset_config["labels"])
+        
         confusion_matrix_t = confusion_matrix + confusion_matrix.T
         max_value = np.max(confusion_matrix_t)
         confusion_matrix_t = max_value - confusion_matrix_t
-        confusion_matrix_t = np.log1p(confusion_matrix_t)
-        
+               
         heap_type = "min"
         new_heap = _create_matrix_heap(confusion_matrix_t, heap_type, dataset_config["labels"])
         uf, merge_list = _create_uf(new_heap, dataset_config["labels"], heap_type)
