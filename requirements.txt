@@ -1,6 +1,7 @@
 fastapi
 mangum
 uvicorn
+pydantic
 numpy
 matplotlib
 nltk
@@ -8,3 +9,6 @@ tensorflow
 keras
 pytest
 scikit-learn
+pandas
+igraph
+python-dotenv

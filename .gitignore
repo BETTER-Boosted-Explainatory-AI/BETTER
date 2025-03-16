@@ -1,5 +1,8 @@
-venv
-cifar100
-imagenet
-__pycache__
-__init__.py
+**/.venv
+**/venv
+**/datasets/cifar100
+**/datasets/imagenet
+**/__pycache__
+**/__init__.py
+**/.env
+**/graphs
