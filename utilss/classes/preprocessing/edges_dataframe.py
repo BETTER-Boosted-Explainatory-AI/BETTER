@@ -18,8 +18,9 @@ class EdgesDataframe:
             print(f'Error saving dataframe: {str(e)}')
 
     def load_dataframe(self):
-        if os.path.exists(self.df_filename):
-            self.edges_df = pd.read_csv(self.df_filename)
+        full_filename = os.path.join('data\database\dataframes', self.df_filename)
+        if os.path.exists(full_filename):
+            self.edges_df = pd.read_csv(full_filename)
             print(f'Edges dataframe has been loaded: {self.df_filename}')
         else:
             print(f'File not found: {self.df_filename}')

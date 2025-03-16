@@ -20,6 +20,7 @@ from tensorflow.keras.applications import ResNet50
 import tensorflow as tf
 
 from routers.hierarchical_clusters_router import hierarchical_clusters_router
+from routers.whitebox_testing_router import whitebox_testing_router
 
 # from PIL import Image
 import numpy as np
@@ -50,5 +51,6 @@ def read_root():
 
 
 app.include_router(hierarchical_clusters_router)
+app.include_router(whitebox_testing_router)
 
 handler = Mangum(app)
