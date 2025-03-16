@@ -48,6 +48,7 @@ class Model:
         return self.accuracy
     
     def model_evaluate_imagenet(self, test_data_dir):
+        ## Not working yet
         img_height, img_width = 224, 224
         batch_size = 32
 
@@ -80,7 +81,8 @@ class Model:
         print(f"Evaluation completed in {elapsed_time:.2f} seconds")
 
     
-    def model_accuracy_selected(self, dataset_instance, selected_labels):        
+    def model_accuracy_selected(self, dataset_instance, selected_labels):       
+        # works for cifar100 dataset 
         x_test = dataset_instance.x_test
         y_test = dataset_instance.y_test
 
@@ -107,6 +109,7 @@ class Model:
 
 
     def model_f1score(self, x_test, y_test):
+        # works for cifar100 dataset
         if self.f1score != -1:
             return self.f1score
         
@@ -122,6 +125,7 @@ class Model:
         print(f'F1 Score (full dataset): {self.f1score:.4f}')
     
     def model_f1score_selected(self, dataset_instance, selected_labels): 
+        # works for cifar100 dataset
         x_test = dataset_instance.x_test
         y_test = dataset_instance.y_test
 
