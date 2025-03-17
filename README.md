@@ -26,3 +26,17 @@ uvicorn app:app --reload
     "dataset": "imagenet"
 }
 ```
+
+### Whitebox Testing
+- **Endpoint**: `http://127.0.0.1:8001/whitebox_testing/`
+- **Methods**: `POST`
+
+
+```bash
+{
+    "model_filename":"cifar100_resnet.keras",
+    "source_labels":["forest", "maple_tree", "oak_tree", "willow_tree", "pine_tree", "palm_tree"],
+    "target_labels":["girl", "boy", "woman", "man","baby"],
+    "edges_data_filename": "cifar100_resnet_edges.csv"
+}
+```
