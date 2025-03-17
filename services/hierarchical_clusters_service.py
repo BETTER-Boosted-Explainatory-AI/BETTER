@@ -34,7 +34,7 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
     
     try:
         model_path = f'data/database/models/{model_filename}.keras'
-        dataframe_filename = f'data/graphs/edges_{graph_type}_{model_filename}.csv'
+        dataframe_filename = f'data/dataframes/edges_{graph_type}_{model_filename}.csv'
         graph_filename = f'data/graphs/graph_{graph_type}_{model_filename}.graphml'
         
         loaded_model = _load_model(dataset_str, model_path, dataset_config)
@@ -68,7 +68,7 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
         
         hc = HierarchicalCluster(labels_dict)
         hc.create_dendrogram_data(uf, dataset_config["labels"], uf.max_weight)
-        hc.save_dendrogram_as_json(dataset_config["labels"], f'data/graphs/dendrogram_{graph_type}_{model_filename}.json')
+        hc.save_dendrogram_as_json(dataset_config["labels"], f'data/dendrograms/dendrogram_{graph_type}_{model_filename}.json')
         return hc.Z
                 
     except FileNotFoundError as e:
