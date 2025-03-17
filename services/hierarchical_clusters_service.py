@@ -34,7 +34,7 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
     
     try:
         model_path = f'data/database/models/{model_filename}.keras'
-        dataframe_filename = f'data/graphs/edges_{graph_type}_{model_filename}.csv'
+        dataframe_filename = f'data/dataframes/edges_{graph_type}_{model_filename}.csv'
         graph_filename = f'data/graphs/graph_{graph_type}_{model_filename}.graphml'
         
         loaded_model = _load_model(dataset_str, model_path, dataset_config)
