@@ -39,6 +39,5 @@ def read_root():
 app.include_router(hierarchical_clusters_router)
 app.include_router(confusion_matrix_router)
 app.include_router(whitebox_testing_router)
-app.include_router(confusion_matrix_router)
 
 handler = Mangum(app)

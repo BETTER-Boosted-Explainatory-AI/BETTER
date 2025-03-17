@@ -19,10 +19,10 @@ confusion_matrix_router = APIRouter()
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-async def create_confusion_matrix(hierarchical_clusters_data: ConfusionMatrixRequest) -> Dict[str, str]:
-    model_filename = hierarchical_clusters_data.model_filename
-    edges_df_filename = hierarchical_clusters_data.edges_df_filename
-    dataset_str = hierarchical_clusters_data.dataset
+async def create_confusion_matrix(confusion_metrix_data: ConfusionMatrixRequest) -> Dict[str, str]:
+    model_filename = confusion_metrix_data.model_filename
+    edges_df_filename = confusion_metrix_data.edges_df_filename
+    dataset_str = confusion_metrix_data.dataset
     new_hc = post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename, dataset_str)
     if new_hc is None:
         raise HTTPException(status_code=404, detail="Hierarchical Clustering was not created")
