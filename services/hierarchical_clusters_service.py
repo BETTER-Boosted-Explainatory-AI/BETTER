@@ -108,7 +108,9 @@ def post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename
             
     try:
         model_path = f'data/database/models/{model_filename}.keras'
-        dataframe_filename = f'data/graphs/{edges_df_filename}.csv'
+        dataframe_filename = f'data/database/dataframes/{edges_df_filename}.csv'
+        print(f"model_path: {model_path}")
+        print(f"dataframe_filename: {dataframe_filename}")
         
         dataset_config = _get_dataset_config(dataset_str)
         
@@ -132,7 +134,7 @@ def post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename
         
         hc = HierarchicalCluster(labels_dict)
         hc.create_dendrogram_data(uf, dataset_config["labels"], uf.max_weight)
-        hc.save_dendrogram_as_json(dataset_config["labels"], f'data/graphs/dendrogram_confusion_matrix_{model_filename}.json')
+        hc.save_dendrogram_as_json(dataset_config["labels"], f'data/database/dendrograms/dendrogram_confusion_matrix_{model_filename}.json')
         return hc.Z
     
     
