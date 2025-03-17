@@ -26,3 +26,16 @@ uvicorn app:app --reload
     "dataset": "imagenet"
 }
 ```
+
+### Hierarchical Clustering - Confusion Matrix
+
+- **Endpoint**: `http://127.0.0.1:8001/hierarchical_clusters/confusion_matrix`
+- **Methods**: `POST`
+
+```bash
+{
+    "model_filename": "mini_imagenet",
+    "edges_df_filename": "edges_dissimilarity_cifar100",
+    "dataset": "imagenet"
+}
+```
