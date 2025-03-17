@@ -9,6 +9,7 @@ from utilss.classes.preprocessing.edges_dataframe import EdgesDataframe
 from utilss.classes.preprocessing.prediction_graph import PredictionGraph
 from utilss.classes.union_find import UnionFind
 from utilss.classes.hierarchical_cluster import HierarchicalCluster
+import os
 
 import numpy as np
 
@@ -33,14 +34,14 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
     dataset = _load_dataset(dataset_config)
     
     try:
-        model_path = f'data/database/models/{model_filename}.keras'
-        dataframe_filename = f'data/database/dataframes/edges_{graph_type}_{model_filename}.csv'
-        graph_filename = f'data/database/graphs/graph_{graph_type}_{model_filename}.graphml'
-        
-        loaded_model = _load_model(dataset_str, model_path, dataset_config)
+        dataframe_filename = f'edges_{graph_type}_{model_filename}.csv'
+        graph_filename = f'graph_{graph_type}_{model_filename}.graphml'
+        dendrogram_filename = f'dendrogram_{graph_type}_{model_filename}.json'
+
+        loaded_model = _load_model(dataset_str, model_filename, dataset_config)
         
         new_graph = PredictionGraph(
-            model_path, 
+            model_filename, 
             graph_filename, 
             graph_type, 
             dataset_config["labels"], 
@@ -50,7 +51,7 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
         )
         edges_df = _create_graph(dataset_str, new_graph, loaded_model, dataset, dataset_config)
         
-        edges_df_obj = EdgesDataframe(model_path, dataframe_filename, edges_df)
+        edges_df_obj = EdgesDataframe(model_filename, dataframe_filename, edges_df)
         edges_df_obj.save_dataframe()
         
         # normilize edges
@@ -68,7 +69,7 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
         
         hc = HierarchicalCluster(labels_dict)
         hc.create_dendrogram_data(uf, dataset_config["labels"], uf.max_weight)
-        hc.save_dendrogram_as_json(dataset_config["labels"], f'data/database/dendrograms/dendrogram_{graph_type}_{model_filename}.json')
+        hc.save_dendrogram_as_json(dendrogram_filename)
         return hc.Z
                 
     except FileNotFoundError as e:
@@ -107,15 +108,14 @@ def post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename
         )
             
     try:
-        model_path = f'data/database/models/{model_filename}.keras'
-        dataframe_filename = f'{edges_df_filename}.csv'
+        dataframe_filename = f'{edges_df_filename}'
+        dendrogram_filename = f'dendrogram_confusion_matrix_{model_filename}'
         
         dataset_config = _get_dataset_config(dataset_str)
         
-        edges_df_obj = EdgesDataframe(model_path, dataframe_filename)
+        edges_df_obj = EdgesDataframe(model_filename, dataframe_filename)
         edges_df_obj.load_dataframe()
         count_df = edges_df_obj.get_dataframe_by_count()
-        print(count_df)
         
         confusion_matrix = _create_confusion_matrix(count_df, dataset_config["labels"])
         
@@ -129,10 +129,12 @@ def post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename
 
         if dataset_str == "imagenet":
             labels_dict = dataset_config["labels_dict"]
+        else:
+            labels_dict = None
         
         hc = HierarchicalCluster(labels_dict)
         hc.create_dendrogram_data(uf, dataset_config["labels"], uf.max_weight)
-        hc.save_dendrogram_as_json(dataset_config["labels"], f'data/database/dendrograms/dendrogram_confusion_matrix_{model_filename}.json')
+        hc.save_dendrogram_as_json(dendrogram_filename)
         return hc.Z
     
     
