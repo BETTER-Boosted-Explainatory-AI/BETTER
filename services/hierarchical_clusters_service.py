@@ -68,7 +68,7 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
         
         hc = HierarchicalCluster(labels_dict)
         hc.create_dendrogram_data(uf, dataset_config["labels"], uf.max_weight)
-        hc.save_dendrogram_as_json(dataset_config["labels"], f'data/graphs/dendrogram_{graph_type}_{model_filename}.json')
+        hc.save_dendrogram_as_json(dataset_config["labels"], f'data/dendrograms/dendrogram_{graph_type}_{model_filename}.json')
         return hc.Z
                 
     except FileNotFoundError as e:
