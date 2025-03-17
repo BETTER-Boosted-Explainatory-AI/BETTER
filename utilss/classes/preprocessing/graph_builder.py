@@ -16,7 +16,7 @@ class GraphBuilder:
         return pred_prob
     
     def should_edge_be_added(self, source_label, target_label, pred_prob):
-        return ((source_label != target_label) and  (pred_prob > self.threshold))
+        return ((source_label != target_label) and (pred_prob > self.threshold))
     
     def update_graph(self, graph, source_label, target_label, probability, image_id):
         weight = self.get_edge_weight(probability)
