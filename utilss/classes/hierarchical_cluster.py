@@ -101,57 +101,7 @@ class HierarchicalCluster:
         print(f"Dendrogram data loaded from {dendrogram_path}")
         return self
         
-    def find_lca(self, label1, label2, n_original_elements, cluster_elements=None):
-        """
-        Find the lowest common ancestor (LCA) of two labels in the dendrogram.
-        
-        Parameters:
-        - label1, label2: The labels to find the LCA for
-        - n_original_elements: Number of original elements (leaves)
-        - cluster_elements: Optional dict to track elements in each cluster
-        
-        Returns:
-        - tuple: (label1, label2, distance, cluster_id)
-        """
-        if cluster_elements is None:
-            cluster_elements = {}
-            for i in range(n_original_elements):
-                cluster_elements[i] = {i}
-                
-        if label1 == label2:
-            raise ValueError("Labels must be different to find a common ancestor")
-        
-        # Convert labels to indices if they're not already
-        idx1 = label1 if isinstance(label1, int) else self.labels_dict.get(label1)
-        idx2 = label2 if isinstance(label2, int) else self.labels_dict.get(label2)
-        
-        if idx1 is None or idx2 is None:
-            raise ValueError(f"Label not found in dendrogram: {label1 if idx1 is None else label2}")
-    
-        for i, (left, right, dist, size) in enumerate(self.Z):
-            left, right = int(left), int(right)
-            cluster_id = n_original_elements + i
-    
-            # Merge the sets of elements
-            cluster_elements[cluster_id] = cluster_elements.get(left, {left}).union(
-                cluster_elements.get(right, {right}))
-    
-            # Check if both indices are found in this merged cluster
-            if idx1 in cluster_elements[cluster_id] and idx2 in cluster_elements[cluster_id]:
-                # Determine which label is in which cluster
-                if idx1 in cluster_elements.get(left, {left}) and idx2 in cluster_elements.get(right, {right}):
-                    # If idx1 is in left and idx2 is in right
-                    return idx1, idx2, dist, cluster_id
-                elif idx2 in cluster_elements.get(left, {left}) and idx1 in cluster_elements.get(right, {right}):
-                    # If idx2 is in left and idx1 is in right
-                    return idx2, idx1, dist, cluster_id
-                else:
-                    # Either both are in left or both are in right, so we need to go deeper
-                    continue
 
-        # If no LCA is found
-        raise ValueError("No common ancestor found for the given labels")
-    
     
     def _validate_labels(self, labels, selected_labels):
         """

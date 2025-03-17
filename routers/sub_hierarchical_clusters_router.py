@@ -5,9 +5,9 @@ from request_models.hierarchical_clustering_model import HierarchicalClusterResu
 from request_models.sub_hierarchical_clusters_model import SubHierarchicalClusterRequest
 from services.sub_hierarchical_clusters_service import _get_sub_heirarchical_clustering
 
-hierarchical_clusters_router = APIRouter()
+sub_hierarchical_clusters_router = APIRouter()
 
-@hierarchical_clusters_router.post(
+@sub_hierarchical_clusters_router.post(
     "/hierarchical_clusters/sub_hierarchical_clusters", 
     response_model=HierarchicalClusterResult,
     status_code=status.HTTP_201_CREATED,
