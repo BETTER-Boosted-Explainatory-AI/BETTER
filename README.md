@@ -40,6 +40,20 @@ uvicorn app:app --reload
 }
 ```
 
+### Hierarchical Clustering - Confusion Matrix
+
+- **Endpoint**: `http://127.0.0.1:8000/hierarchical_clusters/sub_hierarchical_clusters`
+- **Methods**: `POST`
+
+```bash
+{
+    "dataset": "imagenet",
+    "selected_labels": ["Persian_cat", "tabby", "orange", "lemon", "zucchini", "broccoli", "teapot", "coffeepot", "warplane", "space_shuttle", "American_coot", "black_swan"],
+    "z_filename": "dendrogram_similarity_mini_imagenet"
+}
+```
+
+
 ### Whitebox Testing
 - **Endpoint**: `http://127.0.0.1:8001/whitebox_testing/`
 - **Methods**: `POST`
