@@ -3,23 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from dotenv import load_dotenv
 import os
-
-from data.datasets.cifar100_info import CIFAR100_INFO
-from data.datasets.imagenet_info import IMAGENET_INFO
-
-from utilss.classes.model import Model
-# from utilss.classes.datasets.cifar100 import Cifar100
-# from utilss.classes.datasets.imagenet import ImageNet
-from utilss.classes.datasets.dataset_factory import DatasetFactory
-from utilss.classes.preprocessing.prediction_graph import PredictionGraph
-from utilss.classes.preprocessing.edges_dataframe import EdgesDataframe
-from utilss.classes.preprocessing.heap_processor import HeapGraphProcessor
-
-import matplotlib.pyplot as plt
-from tensorflow.keras.applications import ResNet50
-import tensorflow as tf
-
 from routers.hierarchical_clusters_router import hierarchical_clusters_router
+from routers.confusion_matrix_router import confusion_matrix_router
 from routers.whitebox_testing_router import whitebox_testing_router
 
 # from PIL import Image
@@ -51,6 +36,7 @@ def read_root():
 
 
 app.include_router(hierarchical_clusters_router)
+app.include_router(confusion_matrix_router)
 app.include_router(whitebox_testing_router)
 
 handler = Mangum(app)
