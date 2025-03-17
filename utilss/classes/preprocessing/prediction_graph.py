@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from utilss.classes.datasets.cifar100_batch_predictor import Cifar100BatchPredictor
 from utilss.classes.datasets.imagenet_batch_predictor import ImageNetBatchPredictor    
 from .graph_builder import GraphBuilder
+from tensorflow.keras.applications.resnet50 import preprocess_input
 import time
 
 class PredictionGraph:
@@ -179,24 +180,24 @@ class PredictionGraph:
                         continue
                         
                     # Process predictions and update graph
-                    shows_labels = []
+                    infinity_edges_labels = []
                     for _, pred_label, pred_prob in predictions:
                         if pred_label not in self.labels:
                             print(f"Warning: Prediction label '{pred_label}' not in graph labels, skipping.")
                             continue
                         
-                        if self.builder.should_edge_be_added(pred_label, image_label, pred_prob):                            
+                        if self.builder.should_edge_be_added(image_label, pred_label, pred_prob):                            
                             weight = self.builder.get_edge_weight(pred_prob)
-                            if self.builder.should_edge_be_added(pred_label, image_label, weight):
+                            if self.builder.should_edge_be_added(image_label, pred_label, weight):
                                 edge_data = self.builder.update_graph(
-                                    self.graph, pred_label, image_label, pred_prob, image_name
+                                    self.graph, image_label, pred_label, pred_prob, image_name
                                 )
                                 edges_data.append(edge_data)
-                                shows_labels.append(pred_label)
+                                infinity_edges_labels.append(pred_label)
                     
                     if self.graph_type == "dissimilarity":
-                        for show_label in self.labels:
-                            self.builder.add_infinity_edges(self.graph, shows_labels, show_label, image_label)                        
+                        for label in self.labels:
+                            self.builder.add_infinity_edges(self.graph, infinity_edges_labels, label, image_label)                        
                 
                 processed_count += len(batch_paths)
                 if processed_count % 1000 == 0:
@@ -208,7 +209,7 @@ class PredictionGraph:
         edges_dataframe = pd.DataFrame(edges_data)
         print(f"Graph creation complete. {len(edges_dataframe)} edges created.")
         return edges_dataframe
-
+    
     def create_graph_cifar100(self, model, top_k, x_train, y_train_mapped, batch_size=64, min_confidence=0.8):
         """
         Create a graph using predictions from the model.
@@ -217,6 +218,8 @@ class PredictionGraph:
         edges_data = []
         batch_images = []
         batch_labels = []
+        
+        x_train = preprocess_input(x_train)
         
         total_images = len(x_train)
         print(f"Total CIFAR-100 images to process: {total_images}")
@@ -230,50 +233,57 @@ class PredictionGraph:
             predictor.batch_size = batch_size
         
         for i, image in enumerate(x_train):
-            true_label = y_train_mapped[i]
-
+            source_label = y_train_mapped[i]
+            
             # Add image and label to the batch
             batch_images.append(image)
-            batch_labels.append(true_label)
-
+            batch_labels.append(source_label)
+            
             # When the batch is full, or it's the last image, predict the top predictions
             if len(batch_images) == predictor.batch_size or i == len(x_train) - 1:
                 # Perform the batch prediction
                 top_predictions_batch = predictor.get_top_predictions(batch_images, top_k)
-
+                
                 # Iterate over each image in the batch and process predictions
+                added_labels = []
                 for j, top_predictions in enumerate(top_predictions_batch):
+                    current_label = batch_labels[j]
+                    
                     # Process the top predictions for each image
                     if top_predictions[0][2] > min_confidence:
                         filtered_predictions = top_predictions[:top_k]
                         
-                        shows_labels = []
+                        # Track which labels were found in predictions
+                        
                         for _, pred_label, pred_prob in filtered_predictions:
                             if pred_label not in self.labels:
                                 print(f"Warning: Prediction label '{pred_label}' not in graph labels, skipping.")
                                 continue
                             
-                            if self.builder.should_edge_be_added(pred_label, true_label, pred_prob):
-                                weight = self.builder.get_edge_weight(pred_prob)
-                                if self.builder.should_edge_be_added(pred_label, true_label, weight):
-                                    edge_data = self.builder.update_graph(
-                                        self.graph, pred_label, true_label, pred_prob, i
-                                    )
-                                    edges_data.append(edge_data)
-                                    shows_labels.append(pred_label)
+                            # Check if edge should be added
+                            if self.builder.should_edge_be_added(current_label, pred_label, pred_prob):
+                                # Get edge data and update graph
+                                edge_data = self.builder.update_graph(
+                                    self.graph, current_label, pred_label, pred_prob, i
+                                )
+                                edges_data.append(edge_data)
+                                added_labels.append(pred_label)
                         
-                        if self.graph_type == "dissimilarity":
-                            for show_label in self.labels:
-                                self.builder.add_infinity_edges(self.graph, shows_labels, show_label, true_label)
+                    # Add infinity edges for categories not in the predictions
+                if self.graph_type == "dissimilarity":
+                    for label in self.labels:
+                        if label != current_label:  # Don't add self-loops
+                            self.builder.add_infinity_edges(
+                                self.graph, added_labels, label, current_label
+                            )
             
-
                 # Clear the batch after processing
-        batch_images = []
-        batch_labels = []
-                
+                batch_images = []
+                batch_labels = []
+        
         end_time = time.time()
         print(f"Graph creation completed in {end_time - start_time:.2f} seconds")
-            
+        
         edges_dataframe = pd.DataFrame(edges_data)
         print(f"Graph creation complete. {len(edges_dataframe)} edges created.")
         return edges_dataframe
