@@ -1,5 +1,6 @@
 import numpy as np
 import json
+import os
 
 class HierarchicalCluster:
     def __init__(self, labels_dict=None):
@@ -48,7 +49,7 @@ class HierarchicalCluster:
             
         return self.Z
     
-    def save_dendrogram_as_json(self, labels, output_path):
+    def save_dendrogram_as_json(self, dendrogram_filename):
         """
         Create dendrogram data and save it as JSON
         
@@ -62,19 +63,23 @@ class HierarchicalCluster:
         - Path to the saved JSON file
         """
         # Create a dictionary with the dendrogram data
+        
+        DENDROGRAMS_PATH = os.getenv("DENDROGRAMS_PATH")
+        dendrogram_path = f'{DENDROGRAMS_PATH}/{dendrogram_filename}.json'
+        
         dendrogram_data = {
             'Z': self.Z.tolist(),  # Convert numpy array to list for JSON serialization
             'new_labels': self.new_labels
         }
         
         # Save the data as JSON
-        with open(output_path, 'w') as f:
+        with open(dendrogram_path, 'w') as f:
             json.dump(dendrogram_data, f, indent=2)
             
-        print(f"Dendrogram data saved to {output_path}")
-        return output_path
+        print(f"Dendrogram data saved to {dendrogram_path}")
+        return dendrogram_path
     
-    def load_dendrogram_from_json(self, json_path):
+    def load_dendrogram_from_json(self, dendrogram_filename):
         """
         Load dendrogram data from a JSON file
         
@@ -84,13 +89,16 @@ class HierarchicalCluster:
         Returns:
         - self with loaded data
         """
-        with open(json_path, 'r') as f:
+        DENDROGRAMS_PATH = os.getenv("DENDROGRAMS_PATH")
+        dendrogram_path = f'{DENDROGRAMS_PATH}/{dendrogram_filename}.json'
+        
+        with open(dendrogram_path, 'r') as f:
             data = json.load(f)
             
         self.Z = np.array(data['Z'])
         self.new_labels = data.get('new_labels')
         
-        print(f"Dendrogram data loaded from {json_path}")
+        print(f"Dendrogram data loaded from {dendrogram_path}")
         return self
         
     def find_lca(self, label1, label2, n_original_elements, cluster_elements=None):

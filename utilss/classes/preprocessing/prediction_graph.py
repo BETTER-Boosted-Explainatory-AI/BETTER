@@ -11,9 +11,12 @@ import time
 
 class PredictionGraph:
     def __init__(self, model_filename, graph_filename, graph_type, labels, threshold, infinity, dataset):
+        GRAPHS_PATH = os.os.getenv("GRAPHS_PATH")
+        graph_file_path = f'{GRAPHS_PATH}/{graph_filename}.graphml'
+        
         self.graph = Graph(directed=False)
         self.model_filename = model_filename
-        self.graph_filename = graph_filename
+        self.graph_filename = graph_file_path
         self.graph_type = graph_type
         self.graph.add_vertices(labels)
         self.labels = labels
