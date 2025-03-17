@@ -108,9 +108,7 @@ def post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename
             
     try:
         model_path = f'data/database/models/{model_filename}.keras'
-        dataframe_filename = f'data/database/dataframes/{edges_df_filename}.csv'
-        print(f"model_path: {model_path}")
-        print(f"dataframe_filename: {dataframe_filename}")
+        dataframe_filename = f'{edges_df_filename}.csv'
         
         dataset_config = _get_dataset_config(dataset_str)
         
