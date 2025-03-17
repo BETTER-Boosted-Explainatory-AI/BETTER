@@ -13,8 +13,7 @@ class HierarchicalCluster:
         """
         if not UnionFind.merge_indices or not UnionFind.merge_distances:
             raise ValueError("No merges have been performed yet")
-            
-        label_mapping = {i: label for i, label in enumerate(labels)}    
+                
         cluster_sizes = {}  # Track cluster sizes dynamically
         current_cluster_index = len(UnionFind.element_to_index)  # Start from n
         Z = []

@@ -15,31 +15,31 @@ class GraphBuilder:
             return 1 - pred_prob
         return pred_prob
     
-    def should_edge_be_added(self, pred_label, target_label, pred_prob):
-        return ((pred_label != target_label) and  (pred_prob > self.threshold))
+    def should_edge_be_added(self, source_label, target_label, pred_prob):
+        return ((source_label != target_label) and  (pred_prob > self.threshold))
     
-    def update_graph(self, graph, pred_label, target_label, probability, image_id):
+    def update_graph(self, graph, source_label, target_label, probability, image_id):
         weight = self.get_edge_weight(probability)
         
-        if graph.are_adjacent(pred_label, target_label):
-            edge_id = graph.get_eid(pred_label, target_label)
+        if graph.are_adjacent(source_label, target_label):
+            edge_id = graph.get_eid(source_label, target_label)
             graph.es[edge_id]["weight"] += weight
         else:
-            graph.add_edge(pred_label, target_label, weight=weight)
+            graph.add_edge(source_label, target_label, weight=weight)
             
         edge_data = {
             "image_id": image_id,
-            "source": pred_label,
+            "source": source_label,
             "target": target_label,
             "target_probability": probability,
         }
         
         return edge_data
     
-    def add_infinity_edges(self, graph, shows_labels, label, target_label):
-        if label not in shows_labels:
-            if graph.are_adjacent(target_label, label):
-                edge_id = graph.get_eid(target_label, label)
+    def add_infinity_edges(self, graph, infinity_edges_labels, label, source_label):
+        if label not in infinity_edges_labels:
+            if graph.are_adjacent(source_label, label):
+                edge_id = graph.get_eid(source_label, label)
                 graph.es[edge_id]["weight"] += self.infinity
             else:
-                graph.add_edge(target_label, label, weight=self.infinity) 
+                graph.add_edge(source_label, label, weight=self.infinity) 
