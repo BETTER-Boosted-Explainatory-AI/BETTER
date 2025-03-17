@@ -6,7 +6,6 @@ import os
 from routers.hierarchical_clusters_router import hierarchical_clusters_router
 from routers.confusion_matrix_router import confusion_matrix_router
 from routers.whitebox_testing_router import whitebox_testing_router
-from routers.confusion_matrix_router import confusion_matrix_router
 
 # from PIL import Image
 import numpy as np

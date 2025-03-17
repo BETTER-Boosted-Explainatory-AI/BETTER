@@ -129,6 +129,8 @@ def post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename
 
         if dataset_str == "imagenet":
             labels_dict = dataset_config["labels_dict"]
+        else:
+            labels_dict = None
         
         hc = HierarchicalCluster(labels_dict)
         hc.create_dendrogram_data(uf, dataset_config["labels"], uf.max_weight)
