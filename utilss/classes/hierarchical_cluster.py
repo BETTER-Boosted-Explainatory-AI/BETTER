@@ -529,9 +529,32 @@ class HierarchicalCluster:
         
         # Start filtering from the root
         return filter_tree(full_data)
+
+    def merge_clusters(self, node):
+        if "children" not in node:
+            return node
+        
+        merged_children = []
+        for child in node["children"]:
+            merged_child = self.merge_clusters(child)
+            if merged_child:
+                merged_children.append(merged_child)
+        
+        # If all children have value 100, merge them into the parent
+        if all(c.get("value", 0) == 100 for c in merged_children):
+            node["children"] = [grandchild for child in merged_children for grandchild in child.get("children", [])]
+        else:
+            node["children"] = merged_children
+        
+        # If the cluster has only one direct child, remove itself
+        if len(node["children"]) == 1:
+            return node["children"][0]
+        
+        return node
     
     def get_sub_dendrogram_formatted(self, selected_labels):
         filtered_tree = self.filter_dendrogram_by_labels(self.Z_tree_format, selected_labels)
+        filtered_tree = self.merge_clusters(filtered_tree)
         filtered_tree_json = json.dumps(filtered_tree, indent=2)
         return filtered_tree_json
 
