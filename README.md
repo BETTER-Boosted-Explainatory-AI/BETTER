@@ -15,7 +15,7 @@ uvicorn app:app --reload
 ## API
 
 ### Hierarchical Clustering
-- **Endpoint**: `http://127.0.0.1:8001/hierarchical_clusters/`
+- **Endpoint**: `http://127.0.0.1:8000/hierarchical_clusters/`
 - **Methods**: `POST`
 
 
@@ -29,7 +29,7 @@ uvicorn app:app --reload
 
 ### Hierarchical Clustering - Confusion Matrix
 
-- **Endpoint**: `http://127.0.0.1:8001/hierarchical_clusters/confusion_matrix`
+- **Endpoint**: `http://127.0.0.1:8000/hierarchical_clusters/confusion_matrix`
 - **Methods**: `POST`
 
 ```bash

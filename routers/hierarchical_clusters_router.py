@@ -1,10 +1,8 @@
 import os
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, status
 from request_models.hierarchical_clustering_model import HierarchicalClusterRequest, HierarchicalClusterResult
 from typing import Dict
-from services.dataset_service import _get_dataset_config, _load_dataset
-from services.models_service import _load_model
-from services.hierarchical_clusters_service import post_hierarchical_cluster, post_hierarchical_cluster_confusion_matrix
+from services.hierarchical_clusters_service import post_hierarchical_cluster
 
 hierarchical_clusters_router = APIRouter()
 

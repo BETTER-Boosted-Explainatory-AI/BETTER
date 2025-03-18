@@ -1,12 +1,14 @@
 import numpy as np
 import json
 import os
+from scipy.cluster.hierarchy import to_tree
 
 class HierarchicalCluster:
     def __init__(self, labels_dict=None):
         self.Z = []  # Track merge distances
         self.labels_dict = labels_dict or {}
         self.new_labels = None
+        self.Z_tree_format = None
         
     def create_dendrogram_data(self, UnionFind, labels, max_weight):
         """
@@ -49,7 +51,27 @@ class HierarchicalCluster:
             
         return self.Z
     
-    def save_dendrogram_as_json(self, dendrogram_filename):
+    
+    def _build_tree_format(self, node, labels):
+        if node.is_leaf():
+            return {
+                "id": node.id,
+                "name": labels[node.id],
+                }
+        else:
+            return {
+                "id": node.id,
+                "name": f"Cluster {node.id}",
+                "children": [self._build_tree_format(node.get_left(), labels), self._build_tree_format(node.get_right(), labels)],
+                "value": node.dist
+            }
+
+    def _build_tree_hierarchy(self, linkage_matrix, labels):
+        tree, nodes = to_tree(linkage_matrix, rd=True)
+        return self._build_tree_format(tree, labels)
+    
+        
+    def save_dendrogram_as_json(self, dendrogram_filename, labels):
         """
         Create dendrogram data and save it as JSON
         
@@ -67,9 +89,13 @@ class HierarchicalCluster:
         DENDROGRAMS_PATH = os.getenv("DENDROGRAMS_PATH")
         dendrogram_path = f'{DENDROGRAMS_PATH}/{dendrogram_filename}.json'
         
+        self.Z = np.array(self.Z, dtype=np.float64)
+        self.Z_tree_format = self._build_tree_hierarchy(self.Z, labels)
+        
         dendrogram_data = {
             'Z': self.Z.tolist(),  # Convert numpy array to list for JSON serialization
-            'new_labels': self.new_labels
+            'new_labels': self.new_labels,
+            'Z_tree_format': self.Z_tree_format
         }
         
         # Save the data as JSON
@@ -97,11 +123,14 @@ class HierarchicalCluster:
             
         self.Z = np.array(data['Z'])
         self.new_labels = data.get('new_labels')
+        self.Z_tree_format = data.get('Z_tree_format')
         
         print(f"Dendrogram data loaded from {dendrogram_path}")
         return self
         
 
+
+    # sub heirarchical clustering
     
     def _validate_labels(self, labels, selected_labels):
         """

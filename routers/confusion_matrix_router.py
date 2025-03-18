@@ -4,7 +4,7 @@ from request_models.hierarchical_clustering_model import HierarchicalClusterResu
 from request_models.confusion_matrix_model import ConfusionMatrixRequest
 from typing import Dict
 
-from services.hierarchical_clusters_service import post_hierarchical_cluster_confusion_matrix
+from services.confusion_matrix_service import post_hierarchical_cluster_confusion_matrix
 
 
 confusion_matrix_router = APIRouter()
