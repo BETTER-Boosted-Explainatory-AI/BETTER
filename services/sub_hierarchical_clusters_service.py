@@ -2,6 +2,7 @@ import numpy as np
 from fastapi import HTTPException, Request, status
 from .dataset_service import _get_dataset_config, _load_dataset
 from utilss.classes.hierarchical_cluster import HierarchicalCluster
+import json
 
 def _get_sub_heirarchical_clustering(dataset_str, selected_labels, z_filename):
     if z_filename is None:
@@ -13,9 +14,10 @@ def _get_sub_heirarchical_clustering(dataset_str, selected_labels, z_filename):
     dataset_config = _get_dataset_config(dataset_str)
     hc = HierarchicalCluster()
     hc.load_dendrogram_from_json(z_filename)
-    sub_hc, selected_labels_res = hc.extract_sub_dendrogram(dataset_config["labels"], selected_labels)
+    sub_hc = hc.get_sub_dendrogram_formatted(selected_labels)
+    sub_hc_json = json.loads(sub_hc)
     
-    return sub_hc
+    return sub_hc_json
     
     
     

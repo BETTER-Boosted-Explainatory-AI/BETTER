@@ -1,6 +1,7 @@
 import numpy as np
 import json
 import os
+import copy
 from scipy.cluster.hierarchy import to_tree
 
 class HierarchicalCluster:
@@ -467,3 +468,71 @@ class HierarchicalCluster:
         Z_sub = self._build_sub_z_matrix(labels, selected_indices)
         
         return Z_sub, selected_labels
+    
+    def filter_dendrogram_by_labels(self, full_data, target_labels):
+        """
+        Create a minimal dendrogram containing only the specified labels while preserving hierarchy.
+        
+        Args:
+            full_data (dict): The full dendrogram data structure
+            target_labels (list): List of label names to keep
+            
+        Returns:
+            dict: A minimal tree containing only paths to the specified labels
+        """
+        
+        # Check if a node or its descendants contain any of the target labels
+        def contains_target_label(node):
+            # If this is a leaf node (no children)
+            if 'children' not in node:
+                return node.get('name') in target_labels
+            
+            # Check all children
+            for child in node.get('children', []):
+                if contains_target_label(child):
+                    return True
+            
+            return False
+        
+        # Create a filtered copy of the tree
+        def filter_tree(node):
+            # If this node doesn't contain any target labels in its subtree, skip it
+            if not contains_target_label(node):
+                return None
+            
+            # Create a new node with the same ID and name
+            new_node = {
+                'id': node.get('id'),
+                'name': node.get('name')
+            }
+            
+            # Copy the value if it exists
+            if 'value' in node:
+                new_node['value'] = node.get('value')
+            
+            # If it's a leaf node, we're done
+            if 'children' not in node:
+                return new_node
+            
+            # Process children
+            filtered_children = []
+            for child in node.get('children', []):
+                filtered_child = filter_tree(child)
+                if filtered_child:
+                    filtered_children.append(filtered_child)
+            
+            # Add filtered children if any exist
+            if filtered_children:
+                new_node['children'] = filtered_children
+            
+            return new_node
+        
+        # Start filtering from the root
+        return filter_tree(full_data)
+    
+    def get_sub_dendrogram_formatted(self, selected_labels):
+        filtered_tree = self.filter_dendrogram_by_labels(self.Z_tree_format, selected_labels)
+        filtered_tree_json = json.dumps(filtered_tree, indent=2)
+        return filtered_tree_json
+
+
