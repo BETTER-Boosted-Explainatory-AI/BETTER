@@ -6,14 +6,11 @@ class SubHierarchicalClusterRequest(BaseModel):
     selected_labels: List[str]
     z_filename: str    
 
-class ClusterNode(BaseModel):
+class SubHierarchicalClusterResult(BaseModel):
     id: int
     name: str
     value: Optional[float] = None
-    children: Optional[List['ClusterNode']] = None
+    children: Optional[List['SubHierarchicalClusterResult']] = None
 
     class Config:
         orm_mode = True
-
-class SubHierarchicalClusterResult(BaseModel):
-    data: ClusterNode
