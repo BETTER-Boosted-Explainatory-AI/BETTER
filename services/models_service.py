@@ -12,6 +12,10 @@ def save_model():
 
 def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any]) -> Model:
     """Create model based on dataset type."""
+    MODELS_PATH = os.getenv("MODELS_PATH")
+    model_file_path = f'{MODELS_PATH}{model_path}.keras'
+    print(f"Loading model {model_file_path} for dataset {dataset_str}")
+
     if dataset_str == "imagenet":
         return Model(
             ResNet50(weights="imagenet"), 
@@ -21,10 +25,10 @@ def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any
             dataset_config["dataset"]
         )
     elif dataset_str == "cifar100":
-        if not os.path.exists(model_path):
+        if not os.path.exists(model_file_path):
             raise FileNotFoundError(f'Model {model_path} does not exist')
     
-        resnet_model_cifar100 = tf.keras.models.load_model(model_path)
+        resnet_model_cifar100 = tf.keras.models.load_model(model_file_path)
         print(f"Model {model_path} has been loaded")
         return Model(
             resnet_model_cifar100, 

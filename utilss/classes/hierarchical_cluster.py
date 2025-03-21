@@ -3,6 +3,7 @@ import json
 import os
 import copy
 from scipy.cluster.hierarchy import to_tree
+from utilss.wordnet_utils import rename_clusters
 
 class HierarchicalCluster:
     def __init__(self, labels_dict=None):
@@ -92,6 +93,7 @@ class HierarchicalCluster:
         
         self.Z = np.array(self.Z, dtype=np.float64)
         self.Z_tree_format = self._build_tree_hierarchy(self.Z, labels)
+        self.Z_tree_format = rename_clusters(self.Z_tree_format)
         
         dendrogram_data = {
             'Z': self.Z.tolist(),  # Convert numpy array to list for JSON serialization
