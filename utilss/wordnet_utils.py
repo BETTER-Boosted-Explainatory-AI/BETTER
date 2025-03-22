@@ -33,110 +33,80 @@ def common_group(groups):
     return common_hypernyms[::-1]
 
 
-def get_lowest_common_hypernyms(words):
-    """Find the lowest common hypernym (category) for a list of words using WordNet."""
-    # Get all synsets for each word
-    synsets_list = []
-    for word in words:
-        # Clean up the word (remove underscores, etc.)
-        clean_word = word.replace('_', ' ').lower()
-        synsets = wn.synsets(clean_word)
-        if synsets:
-            synsets_list.append(synsets[0])  # Take the first synset as most common meaning
-    
-    if len(synsets_list) < 2:
-        return None
-    
-    # Find lowest common hypernyms
-    common_hypernyms = []
-    for i in range(len(synsets_list) - 1):
-        for j in range(i + 1, len(synsets_list)):
-            hypernyms = synsets_list[i].lowest_common_hypernyms(synsets_list[j])
-            if hypernyms and hypernyms[0].name() != 'entity.n.01':  # Skip very generic hypernyms
-                common_hypernyms.extend(hypernyms)
-    
-    # Return most specific hypernym (lowest in hierarchy)
-    if common_hypernyms:
-        # Sort by information content (more specific = higher value)
-        common_hypernyms.sort(key=lambda h: h.min_depth(), reverse=True)
-        return common_hypernyms[0].name().split('.')[0].replace('_', ' ')
-    
-    return None
-
-def get_leaf_names(node):
-    """Extract all leaf node names from a cluster."""
+def get_all_leaf_names(node):
+    """Extract all leaf node names from a cluster hierarchy."""
     if "children" not in node:
-        return [node["name"]]
+        # Only return actual object names, not cluster names
+        if "Cluster" not in node["name"]:
+            return [node["name"]]
+        return []
     
     names = []
     for child in node["children"]:
-        names.extend(get_leaf_names(child))
+        names.extend(get_all_leaf_names(child))
     return names
 
-def rename_clusters(node):
-    """Recursively rename clusters based on their children."""
-    # Skip leaf nodes
-    if "children" not in node:
-        return node
+def find_common_hypernyms(words):
+    """Find common hypernyms for a list of words using multiple strategies."""
+    # Clean words
+    clean_words = [word.replace('_', ' ').lower() for word in words if "Cluster" not in word]
     
-    # First, recursively process all children
-    for i, child in enumerate(node["children"]):
-        node["children"][i] = rename_clusters(child)
+    if len(clean_words) < 2:
+        return None
     
-    # If this is a cluster node (has "Cluster" in name)
-    if "Cluster" in node["name"]:
-        # Get direct child names for immediate categorization
-        direct_child_names = [child["name"] for child in node["children"] 
-                             if "Cluster" not in child["name"]]
+    # Strategy 1: Try direct WordNet hypernyms
+    synsets_list = []
+    for word in clean_words:
+        synsets = wn.synsets(word, pos=wn.NOUN)
+        if synsets:
+            synsets_list.append(synsets[0])  # Take first synset (most common)
+    
+    # Find common hypernyms if we have at least 2 synsets
+    if len(synsets_list) >= 2:
+        all_hypernyms = []
+        for i in range(len(synsets_list) - 1):
+            for j in range(i + 1, len(synsets_list)):
+                lchs = synsets_list[i].lowest_common_hypernyms(synsets_list[j])
+                for lch in lchs:
+                    if lch.name() != 'entity.n.01':  # Skip extremely general hypernyms
+                        all_hypernyms.append((lch, lch.min_depth()))
         
-        # If direct children are not clusters themselves
-        if direct_child_names:
-            new_name = get_lowest_common_hypernym(direct_child_names)
-            if new_name:
-                node["name"] = new_name.capitalize()
-                # node["original_cluster_id"] = node["name"]  # Preserve original ID
-        else:
-            # Get all leaf node names from all children
-            all_leaf_names = get_leaf_names(node)
-            new_name = get_lowest_common_hypernym(all_leaf_names)
-            if new_name:
-                node["name"] = new_name.capitalize()
-                # node["original_cluster_id"] = node["name"]  # Preserve original ID
+        if all_hypernyms:
+            # Sort by depth (more specific hypernyms have greater depth)
+            all_hypernyms.sort(key=lambda x: x[1], reverse=True)
+            return all_hypernyms[0][0].name().split('.')[0].replace('_', ' ')
+
+def improved_rename_clusters(node, depth=0):
+    """Rename clusters based on their contents, with names becoming more general at higher levels."""
+    # Process children first (bottom-up approach)
+    if "children" in node:
+        for i, child in enumerate(node["children"]):
+            node["children"][i] = improved_rename_clusters(child, depth + 1)
+    
+    # Only rename nodes that have "Cluster" in their name
+    if "Cluster" in node["name"]:
+        # Collect all leaf names under this cluster
+        leaf_names = get_all_leaf_names(node)
+        
+        # If no leaf names (rare case), try using child cluster names
+        if not leaf_names and "children" in node:
+            child_names = [child["name"] for child in node["children"] if "Cluster" not in child["name"]]
+            if child_names:
+                leaf_names = child_names
+        
+        # Try to find a common hypernym or category
+        new_name = None
+        
+        # Adjust naming strategy based on depth
+        if leaf_names:
+            new_name = find_common_hypernyms(leaf_names) 
+        
+        # Apply the new name if found
+        if new_name:
+            node["name"] = new_name.capitalize()
     
     return node
 
-def get_lowest_common_hypernym(words):
-    """Find a suitable category name for a list of words."""
-    # Filter out any cluster names
-    real_words = [w for w in words if "Cluster" not in w]
-    
-    if len(real_words) < 2:
-        return None
-    
-    # Try WordNet's lowest common hypernym
-    hypernym = get_lowest_common_hypernyms(real_words)
-    
-    # Custom handling for specific categories
-    # word_set = set(w.lower().replace('_', ' ') for w in real_words)
-    
-    # # Custom rules for specific categories
-    # if all(w in ['persian cat', 'tabby', 'egyptian cat'] for w in word_set):
-    #     return "domestic cats"
-    # elif all(w in ['chimpanzee', 'gorilla', 'spider monkey'] for w in word_set):
-    #     return "primates"
-    # elif all(w in ['wok', 'frying pan', 'caldron', 'teapot', 'coffeepot', 'crock pot'] for w in word_set):
-    #     return "cookware"
-    # elif all(w in ['broccoli', 'cauliflower', 'head cabbage', 'zucchini'] for w in word_set):
-    #     return "vegetables"
-    # elif all(w in ['orange', 'lemon', 'fig', 'granny smith'] for w in word_set):
-    #     return "fruits"
-    # elif all(w in ['airliner', 'warplane', 'space shuttle'] for w in word_set):
-    #     return "aircraft"
-    # elif all(w in ['minivan', 'police van', 'limousine', 'jeep', 'sports car'] for w in word_set):
-    #     return "vehicles"
-    # elif all(w in ['american coot', 'black swan', 'white stork', 'flamingo'] for w in word_set):
-    #     return "birds"
-    # elif all(w in ['catamaran', 'trimaran', 'container ship', 'fireboat'] for w in word_set):
-    #     return "watercraft"
-    
-    return hypernym
+def process_hierarchy(hierarchy_data):
+    """Process the entire hierarchy, renaming clusters while preserving structure."""
+    return improved_rename_clusters(hierarchy_data)

@@ -42,4 +42,3 @@ def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any
 
 def delete_model():
     return None
-
