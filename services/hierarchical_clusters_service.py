@@ -7,6 +7,7 @@ from .heap_service import _create_graph_heap
 from utilss.classes.preprocessing.edges_dataframe import EdgesDataframe
 from utilss.classes.preprocessing.prediction_graph import PredictionGraph
 from utilss.classes.hierarchical_cluster import HierarchicalCluster
+from utilss.classes.dendrogram import Dendrogram
 import numpy as np
 
 def get_hierarchical_cluster_by_model():
@@ -65,7 +66,9 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
         
         hc = HierarchicalCluster(labels_dict)
         hc.create_dendrogram_data(uf, dataset_config["labels"], uf.max_weight)
-        hc.save_dendrogram_as_json(dendrogram_filename, dataset_config["labels"])
+        dendrogram = Dendrogram(dendrogram_filename)
+        dendrogram._build_tree_hierarchy(hc.Z, dataset_config["labels"])
+        dendrogram.save_dendrogram_as_json()
         return hc.Z
                 
     except FileNotFoundError as e:
