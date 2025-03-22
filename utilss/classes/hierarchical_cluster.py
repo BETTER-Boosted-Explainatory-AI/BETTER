@@ -557,5 +557,3 @@ class HierarchicalCluster:
         filtered_tree = self.merge_clusters(filtered_tree)
         filtered_tree_json = json.dumps(filtered_tree, indent=2)
         return filtered_tree_json
-
-

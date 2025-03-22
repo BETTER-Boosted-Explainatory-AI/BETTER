@@ -6,4 +6,3 @@ class WhiteboxTestingRequest(BaseModel):
     source_labels: List[str]
     target_labels: List[str]
     edges_data_filename: str
-

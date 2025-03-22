@@ -18,6 +18,3 @@ def _get_sub_heirarchical_clustering(dataset_str, selected_labels, z_filename):
     sub_hc_json = json.loads(sub_hc)
     
     return sub_hc_json
-    
-    
-    

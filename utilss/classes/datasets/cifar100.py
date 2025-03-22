@@ -23,30 +23,34 @@ class Cifar100(Dataset):
 
     def load(self, name):
         dataset_path = os.path.join("data", "datasets", name)
-        if os.path.exists(dataset_path):
-            print(f"Loading dataset from: {dataset_path}")
-
-            train_batch = self.unpickle(os.path.join(dataset_path, "train"))
-            print(f"Train batch keys: {train_batch.keys()}")
-            print(f"Train batch data shape: {train_batch[b'data'].shape}")
-
-            self.x_train = train_batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
-            self.y_train = np.array(train_batch[b'fine_labels'])
-
-            test_batch = self.unpickle(os.path.join(dataset_path, "test"))
-            print(f"Test batch keys: {test_batch.keys()}")
-            print(f"Test batch data shape: {test_batch[b'data'].shape}")
-
-            self.x_test = test_batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
-            self.y_test = np.array(test_batch[b'fine_labels'])
-            self.y_train_mapped = [self.label_to_class_name(label) for label in self.y_train]
-            self.y_test_mapped = [self.label_to_class_name(label) for label in self.y_test]
-
-            print("Dataset loaded successfully")
-            return True
-        else:
+        
+        if not os.path.exists(dataset_path):
             print(f"Dataset path {dataset_path} does not exist")
             return False
+        
+        print(f"Loading dataset from: {dataset_path}")
+
+        train_batch = self.unpickle(os.path.join(dataset_path, "train"))
+        print(f"Train batch keys: {train_batch.keys()}")
+        print(f"Train batch data shape: {train_batch[b'data'].shape}")
+
+        self.x_train = train_batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+        self.y_train = np.array(train_batch[b'fine_labels'])
+
+        test_batch = self.unpickle(os.path.join(dataset_path, "test"))
+        print(f"Test batch keys: {test_batch.keys()}")
+        print(f"Test batch data shape: {test_batch[b'data'].shape}")
+
+        self.x_test = test_batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+        self.y_test = np.array(test_batch[b'fine_labels'])
+        self.y_train_mapped = self._map_y_labels(self.y_train)
+        self.y_test_mapped = self._map_y_labels(self.y_test)
+
+        print("Dataset loaded successfully")
+        return True
+    
+    def _map_y_labels(self, y_train):
+        return [self.label_to_class_name(label) for label in y_train]
     
     def one_hot_to_class_name_auto(self, one_hot_vector):
         return self.labels[np.argmax(one_hot_vector)] 
