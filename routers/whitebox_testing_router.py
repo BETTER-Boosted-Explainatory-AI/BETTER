@@ -19,6 +19,8 @@ async def get_whitebox_testing(whitebox_testing_request: WhiteboxTestingRequest)
     target_labels = whitebox_testing_request.target_labels
     edges_data = whitebox_testing_request.edges_data_filename
     problematic_imgs = get_white_box_analysis(model_name, source_labels, target_labels, edges_data)
+    
     if problematic_imgs is None:
         raise HTTPException(status_code=404, detail="White Box Testing was not created")
+    
     return problematic_imgs

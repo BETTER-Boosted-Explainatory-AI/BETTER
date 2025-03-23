@@ -3,11 +3,12 @@ from .dataset_service import _get_dataset_config, _load_dataset
 from .graphs_service import _create_graph
 from .models_service import _load_model
 from .union_find_service import _create_uf
-from .heap_service import _create_graph_heap
+from .heap_service import _create_graph_heap, _get_heap_type
 from utilss.classes.preprocessing.edges_dataframe import EdgesDataframe
 from utilss.classes.preprocessing.prediction_graph import PredictionGraph
 from utilss.classes.hierarchical_cluster import HierarchicalCluster
 from utilss.classes.dendrogram import Dendrogram
+from utilss.enums.hierarchical_cluster_type import HierarchicalClusterType
 import numpy as np
 
 def get_hierarchical_cluster_by_model():
@@ -20,7 +21,7 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
             detail="Model filename is required"
         )
         
-    if graph_type not in ["similarity", "dissimilarity"]:
+    if graph_type != HierarchicalClusterType.SIMILARITY.value and graph_type != HierarchicalClusterType.DISSIMILARITY.value:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
             detail="Graph type must be either 'similarity' or 'dissimilarity'"
@@ -55,7 +56,7 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
         for edge in new_graph.get_graph().es:
             edge["weight"] = np.log1p(edge["weight"])
             
-        heap_type = "max" if graph_type == "similarity" else "min"
+        heap_type = _get_heap_type(graph_type)
         
         new_heap = _create_graph_heap(new_graph.get_graph(), heap_type, dataset_config["labels"])
         uf, merge_list = _create_uf(new_heap, dataset_config["labels"], heap_type)

@@ -6,6 +6,7 @@ import pytest
 from utilss.classes.cifar100 import Cifar100
 from utilss.classes.imagenet import ImageNet
 
+
 @pytest.fixture
 def cifar100():
     dataset = Cifar100()

@@ -8,7 +8,7 @@ from utilss.classes.datasets.imagenet_batch_predictor import ImageNetBatchPredic
 from .graph_builder import GraphBuilder
 from tensorflow.keras.applications.resnet50 import preprocess_input
 import time
-    
+
 class PredictionGraph:
     def __init__(self, model_filename, graph_filename, graph_type, labels, threshold, infinity, dataset):
         self.graph = Graph(directed=False)

@@ -27,4 +27,3 @@ class WhiteBoxTesting:
         print("Counts of each image ID:", image_counts.to_dict())
 
         return image_counts.to_dict()
-

@@ -24,6 +24,8 @@ async def create_confusion_matrix(confusion_metrix_data: ConfusionMatrixRequest)
     edges_df_filename = confusion_metrix_data.edges_df_filename
     dataset_str = confusion_metrix_data.dataset
     new_hc = post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename, dataset_str)
+    
     if new_hc is None:
         raise HTTPException(status_code=404, detail="Hierarchical Clustering was not created")
+    
     return HierarchicalClusterResult(data=new_hc.tolist())

@@ -21,8 +21,8 @@ async def create_hierarchical_clusters(hierarchical_clusters_data: HierarchicalC
     graph_type = hierarchical_clusters_data.graph_type
     dataset_str = hierarchical_clusters_data.dataset
     new_hc = post_hierarchical_cluster(model_filename, graph_type, dataset_str)
+    
     if new_hc is None:
         raise HTTPException(status_code=404, detail="Hierarchical Clustering was not created")
+    
     return HierarchicalClusterResult(data=new_hc.tolist())
-
-

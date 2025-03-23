@@ -89,4 +89,3 @@ def post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"Error processing request: {str(e)}"
         )
-        
