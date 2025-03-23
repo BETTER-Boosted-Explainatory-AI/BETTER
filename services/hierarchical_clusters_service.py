@@ -8,7 +8,7 @@ from utilss.classes.preprocessing.edges_dataframe import EdgesDataframe
 from utilss.classes.preprocessing.prediction_graph import PredictionGraph
 from utilss.classes.hierarchical_cluster import HierarchicalCluster
 from utilss.classes.dendrogram import Dendrogram
-from utilss.enums.hierarchical_cluster_type import HierarchicalClusterType
+from utilss.enums.hierarchical_cluster_types import HierarchicalClusterType
 import numpy as np
 
 def get_hierarchical_cluster_by_model():
