@@ -15,12 +15,14 @@ class Cifar100BatchPredictor:
         """
         Process a batch of images and return the top predictions for each image in the batch.
         """
+
         # Perform prediction on the entire batch
         batch_preds = self.model.predict(np.array(images))
 
         # Process each image's predictions in the batch
         batch_results = []
         for pred in batch_preds:
+            print(f"Prediction: {pred}")
             top_indices = pred.argsort()[-top:][::-1]
             batch_results.append([(i, cifar100_labels[i], pred[i]) for i in top_indices])
         

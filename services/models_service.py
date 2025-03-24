@@ -42,3 +42,9 @@ def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any
 
 def delete_model():
     return None
+
+def query_model(current_model: Model, image_path: str):
+    print(f"Querying model with image: {image_path}")
+    prediction = current_model.predict_batches(image_path)
+    print(f"Prediction: {prediction}")
+    return prediction
