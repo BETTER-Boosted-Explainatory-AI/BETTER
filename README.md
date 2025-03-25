@@ -54,3 +54,16 @@ uvicorn app:app --reload
     "edges_data_filename": "edges_dissimilarity_cifar100"
 }
 ```
+
+### Query - Hierarchy check
+- **Endpoint**: `http://127.0.0.1:8000/query`
+- **Methods**: `POST`
+
+
+```bash
+curl -X POST "http://127.0.0.1:8000/query" \
+-F "model_filename=cifar100_resnet" \
+-F "dataset=cifar100" \
+-F "image=@path/to/your/image.jpg" \
+-F "dendrogram_filename=edges_dissimilarity_cifar100"
+```

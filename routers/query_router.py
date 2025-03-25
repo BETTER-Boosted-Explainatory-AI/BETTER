@@ -29,7 +29,7 @@ async def upload_image(
         UPLOAD_DIR = os.getenv("UPLOAD_DIR")
         if not UPLOAD_DIR:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Upload directory not configured"
             )
 
@@ -47,10 +47,19 @@ async def upload_image(
         dataset_config = _get_dataset_config(dataset)
         current_model = _load_model(dataset_config["dataset"], model_filename, dataset_config)
         prediction = current_model.predict(image_path)
-        top_label = dataset_config["labels"][prediction[0][0]]
+
+        # Extract the top prediction and label based on dataset type
+        if dataset == "imagenet":
+            top_prediction = max(prediction, key=lambda x: x[2])
+            top_label = top_prediction[1]
+        elif dataset == "cifar100":
+            top_prediction = max(prediction, key=lambda x: x[1])
+            top_label = dataset_config["labels"][top_prediction[0]]
+        else:
+            raise ValueError(f"Unsupported dataset: {dataset}")
+        
         query_result = query_model(top_label, dendrogram_filename)
 
-        
         # Return the prediction wrapped in the Pydantic model
         return QueryResponse(query_result=query_result)
 

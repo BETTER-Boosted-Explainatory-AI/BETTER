@@ -5,6 +5,7 @@ from .union_find_service import _create_uf
 from .heap_service import _create_matrix_heap
 from utilss.classes.preprocessing.edges_dataframe import EdgesDataframe
 from utilss.classes.hierarchical_cluster import HierarchicalCluster
+from utilss.classes.dendrogram import Dendrogram
 import os
 
 def _create_confusion_matrix(count_per_target, labels):
@@ -67,7 +68,10 @@ def post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename
         
         hc = HierarchicalCluster(labels_dict)
         hc.create_dendrogram_data(uf, dataset_config["labels"], uf.max_weight)
-        hc.save_dendrogram_as_json(dendrogram_filename, dataset_config["labels"])
+        dendrogram = Dendrogram(dendrogram_filename)
+        dendrogram._build_tree_hierarchy(hc.Z, dataset_config["labels"])
+        dendrogram.save_dendrogram_as_json()
+
         return hc.Z
     
     
