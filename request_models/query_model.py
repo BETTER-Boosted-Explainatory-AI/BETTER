@@ -1,9 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import Dict, Any
+from pydantic import BaseModel
+from typing import List, Optional
 
-class PredictionResponse(BaseModel):
-    prediction: Dict[str, Any] = Field(
-        ..., 
-        description="Prediction results from the model",
-        example={"class": "dog", "confidence": 0.95}
-    )
+class QueryResponse(BaseModel):
+    query_result: Optional[List[str]]

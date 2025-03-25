@@ -14,9 +14,6 @@ class Model:
     def __init__(self, model, top_k, min_confidence, model_filename, dataset):
         MODELS_PATH = os.getenv("MODELS_PATH")
         model_file_path = f'{MODELS_PATH}/{model_filename}.keras'
-        
-        
-        
         self.model = model
         self.model_filename = model_file_path
         self.top_k = top_k

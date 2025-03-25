@@ -167,4 +167,35 @@ class Dendrogram:
         
         print(f"Dendrogram data loaded from {dendrogram_path}")
         return self
-
+    
+    def find_name_hierarchy(self, node, target_name):
+        """
+        Recursively search for a target name in the hierarchical structure.
+        
+        Args:
+            node (dict): The current node in the hierarchical structure
+            target_name (str): The name to search for
+        
+        Returns:
+            list: A list of names representing the hierarchy from target to root,
+                or None if the target is not found
+        """
+        # Check if the current node's name matches the target
+        if node.get('name') == target_name:
+            return [target_name]
+        
+        # If the node has children, recursively search through them
+        if 'children' in node:
+            for child in node['children']:
+                # Recursively search in each child
+                result = self.find_name_hierarchy(child, target_name)
+                
+                # If a path is found, prepend the current node's name
+                if result is not None:
+                    # Only prepend the current node's name if it's a cluster
+                    if node.get('name'):
+                        result.append(node['name'])
+                    return result
+        
+        # If no match is found in this branch
+        return None

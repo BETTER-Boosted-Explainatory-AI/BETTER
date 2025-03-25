@@ -1,6 +1,7 @@
 import os
 from typing import Dict, Any, Optional
 from utilss.classes.model import Model
+from utilss.classes.dendrogram import Dendrogram
 import tensorflow as tf
 from tensorflow.keras.applications import ResNet50
 
@@ -43,8 +44,10 @@ def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any
 def delete_model():
     return None
 
-def query_model(current_model: Model, image_path: str):
-    print(f"Querying model with image: {image_path}")
-    prediction = current_model.predict_batches(image_path)
-    print(f"Prediction: {prediction}")
-    return prediction
+def query_model(top_label: str, dendrogram_filenaem: str):
+    dendrogram = Dendrogram(dendrogram_filenaem)
+    dendrogram.load_dendrogram_from_json()
+    consistensy = dendrogram.find_name_hierarchy(dendrogram.Z_tree_format, top_label)
+    print(f"Consistency for {top_label}: {consistensy}")
+    return consistensy
+

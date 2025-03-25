@@ -15,7 +15,6 @@ class Cifar100BatchPredictor:
         """
         Process a batch of images and return the top predictions for each image in the batch.
         """
-
         # Perform prediction on the entire batch
         batch_preds = self.model.predict(np.array(images))
 
