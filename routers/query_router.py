@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form
 
 from services.models_service import query_model, _load_model
 from services.dataset_service import _get_dataset_config
+from utilss.enums.datasets_enum import DatasetsEnum
 from request_models.query_model import QueryResponse
 from pathlib import Path
 import os
@@ -49,10 +50,10 @@ async def upload_image(
         prediction = current_model.predict(image_path)
 
         # Extract the top prediction and label based on dataset type
-        if dataset == "imagenet":
+        if dataset == DatasetsEnum.IMAGENET.value:
             top_prediction = max(prediction, key=lambda x: x[2])
             top_label = top_prediction[1]
-        elif dataset == "cifar100":
+        elif dataset == DatasetsEnum.CIFAR100.value:
             top_prediction = max(prediction, key=lambda x: x[1])
             top_label = dataset_config["labels"][top_prediction[0]]
         else:

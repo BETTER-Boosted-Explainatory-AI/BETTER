@@ -4,6 +4,7 @@ from utilss.classes.model import Model
 from utilss.classes.dendrogram import Dendrogram
 import tensorflow as tf
 from tensorflow.keras.applications import ResNet50
+from utilss.enums.datasets_enum import DatasetsEnum
 
 def get_model():
     return None
@@ -17,7 +18,7 @@ def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any
     model_file_path = f'{MODELS_PATH}{model_path}.keras'
     print(f"Loading model {model_file_path} for dataset {dataset_str}")
 
-    if dataset_str == "imagenet":
+    if dataset_str == DatasetsEnum.IMAGENET.value:
         return Model(
             ResNet50(weights="imagenet"), 
             dataset_config["top_k"], 
@@ -25,7 +26,7 @@ def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any
             model_path, 
             dataset_config["dataset"]
         )
-    elif dataset_str == "cifar100":
+    elif dataset_str == DatasetsEnum.CIFAR100.value:
         if not os.path.exists(model_file_path):
             raise FileNotFoundError(f'Model {model_path} does not exist')
     

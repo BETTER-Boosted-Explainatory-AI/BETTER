@@ -5,6 +5,9 @@ from .union_find_service import _create_uf
 from .heap_service import _create_matrix_heap
 from utilss.classes.preprocessing.edges_dataframe import EdgesDataframe
 from utilss.classes.hierarchical_cluster import HierarchicalCluster
+from utilss.enums.datasets_enum import DatasetsEnum
+from utilss.enums.heap_type import HeapType
+
 from utilss.classes.dendrogram import Dendrogram
 import os
 
@@ -57,11 +60,11 @@ def post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename
         max_value = np.max(confusion_matrix_t)
         confusion_matrix_t = max_value - confusion_matrix_t
                
-        heap_type = "min"
+        heap_type = HeapType.MINIMUM.value
         new_heap = _create_matrix_heap(confusion_matrix_t, heap_type, dataset_config["labels"])
         uf, merge_list = _create_uf(new_heap, dataset_config["labels"], heap_type)
 
-        if dataset_str == "imagenet":
+        if dataset_str == DatasetsEnum.IMAGENET.value:
             labels_dict = dataset_config["labels_dict"]
         else:
             labels_dict = None

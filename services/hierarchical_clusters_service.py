@@ -9,6 +9,7 @@ from utilss.classes.preprocessing.prediction_graph import PredictionGraph
 from utilss.classes.hierarchical_cluster import HierarchicalCluster
 from utilss.classes.dendrogram import Dendrogram
 from utilss.enums.hierarchical_cluster_types import HierarchicalClusterType
+from utilss.enums.datasets_enum import DatasetsEnum
 import numpy as np
 
 def get_hierarchical_cluster_by_model():
@@ -62,7 +63,7 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
         uf, merge_list = _create_uf(new_heap, dataset_config["labels"], heap_type)
         
         labels_dict = None
-        if dataset_str == "imagenet":
+        if dataset_str == DatasetsEnum.IMAGENET.value:
             labels_dict = dataset_config["labels_dict"]
         
         hc = HierarchicalCluster(labels_dict)

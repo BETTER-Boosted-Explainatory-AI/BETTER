@@ -1,6 +1,7 @@
 from utilss.classes.preprocessing.prediction_graph import PredictionGraph
 from utilss.classes.model import Model
 from typing import Dict, Any
+from utilss.enums.datasets_enum import DatasetsEnum
 
 def fetch_graph_by_model():
     return None
@@ -8,7 +9,7 @@ def fetch_graph_by_model():
 def _create_graph(dataset_str: str, graph: PredictionGraph, model: Model, 
                         dataset, dataset_config: Dict[str, Any]):
     """Create graph edges based on dataset type."""
-    if dataset_str == "imagenet":
+    if dataset_str == DatasetsEnum.IMAGENET.value:
         edges_df= graph.create_graph(
             model=model,
             top_k=model.top_k,
@@ -17,7 +18,7 @@ def _create_graph(dataset_str: str, graph: PredictionGraph, model: Model,
         )
         graph.save_graph()
         return edges_df
-    elif dataset_str == "cifar100":
+    elif dataset_str == DatasetsEnum.CIFAR100.value:
         edges_df = graph.create_graph(
             model=model,
             top_k=model.top_k,

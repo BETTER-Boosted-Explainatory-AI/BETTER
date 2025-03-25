@@ -164,8 +164,6 @@ class Model:
     def predict_cifar100(self, image_input):
         expected_size = (32, 32)
         # Assume it's a path and load the image
-        print(f"Loading image from: {image_input}")
-        print(f"Target size: {self.size}")
         img = tf.keras.preprocessing.image.load_img(image_input, target_size=expected_size)
         img_array = tf.keras.preprocessing.image.img_to_array(img)
         img_array = preprocess_input(img_array)
