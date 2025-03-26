@@ -49,20 +49,23 @@ async def upload_image(
         current_model = _load_model(dataset_config["dataset"], model_filename, dataset_config)
         prediction = current_model.predict(image_path)
 
-        # Extract the top prediction and label based on dataset type
+        # Extract the top 3 predictions and labels based on dataset type
         if dataset == DatasetsEnum.IMAGENET.value:
-            top_prediction = max(prediction, key=lambda x: x[2])
-            top_label = top_prediction[1]
+            sorted_predictions = sorted(prediction, key=lambda x: x[2], reverse=True)  # Sort by probability
+            top_3_predictions = [(p[1], float(p[2])) for p in sorted_predictions[:3]]  # (label, probability)
+            top_label = top_3_predictions[0][0]  # Top label
         elif dataset == DatasetsEnum.CIFAR100.value:
-            top_prediction = max(prediction, key=lambda x: x[1])
-            top_label = dataset_config["labels"][top_prediction[0]]
+            sorted_predictions = sorted(prediction, key=lambda x: x[1], reverse=True)  # Sort by probability
+            top_3_predictions = [(dataset_config["labels"][p[0]], float(p[1])) for p in sorted_predictions[:3]]  # (label, probability)
+            top_label = top_3_predictions[0][0]  # Top label
         else:
             raise ValueError(f"Unsupported dataset: {dataset}")
         
+        # Query result based on the top label
         query_result = query_model(top_label, dendrogram_filename)
 
         # Return the prediction wrapped in the Pydantic model
-        return QueryResponse(query_result=query_result)
+        return QueryResponse(query_result=query_result, top_3_predictions=top_3_predictions)
 
     except Exception as e:
         # Proper error handling
