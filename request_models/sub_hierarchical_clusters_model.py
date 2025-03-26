@@ -14,3 +14,11 @@ class SubHierarchicalClusterResult(BaseModel):
 
     class Config:
         from_attributes = True
+
+class NamingClusterRequest(BaseModel):
+    cluster_id: int
+    dendrogram_filename: str
+    new_name: str
+
+class NamingClusterResult(BaseModel):
+    message: str

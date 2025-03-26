@@ -199,3 +199,29 @@ class Dendrogram:
         
         # If no match is found in this branch
         return None
+    
+    def rename_cluster(self, cluster_id, new_name):
+        """
+        Rename a cluster in the dendrogram hierarchy.
+        
+        Args:
+            cluster_id (int): The ID of the cluster to rename
+            new_name (str): The new name for the cluster
+        
+        Returns:
+            dict: The updated dendrogram hierarchy
+        """
+        print(f"Renaming cluster {cluster_id} to {new_name}")
+        def rename_node(node):
+            # If this is the target cluster, rename it
+            if node.get('id') == cluster_id:
+                node['name'] = new_name
+            
+            # If the node has children, recursively rename them
+            if 'children' in node:
+                for child in node['children']:
+                    rename_node(child)
+        
+        # Start renaming from the root
+        rename_node(self.Z_tree_format)
+        return self.Z_tree_format
