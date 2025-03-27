@@ -16,4 +16,5 @@ CIFAR100_INFO ={
     "top_k" : 4,
     "min_confidence" : 0.8,
     "infinity" : 500,
+    "init_selected_labels": ["maple_tree", "oak_tree", "palm_tree", "pine_tree", "forest", "willow_tree", "girl", "woman", "boy", "baby", "man", "shrew", "hamster", "mouse", "rabbit", "squirrel"],
 }
