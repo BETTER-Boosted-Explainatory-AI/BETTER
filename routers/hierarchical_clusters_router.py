@@ -35,7 +35,6 @@ async def create_hierarchical_clusters(hierarchical_clusters_data: HierarchicalC
 #     dataset: str = Form(...)            
 # ) -> Dict[str, str]:
 #     try:
-#         # # Save the uploaded model file to a temporary directory
 #         MODELS_DIR = os.getenv("MODELS_PATH", "models")
 #         model_path = upload(MODELS_DIR, model_file)
 #         new_hc = post_new_hierarchical_cluster(model_path, graph_type, dataset)
@@ -46,4 +45,3 @@ async def create_hierarchical_clusters(hierarchical_clusters_data: HierarchicalC
 #         return HierarchicalClusterResult(data=new_hc.tolist())
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=str(e))
-## //gay <- eido is funny haha 
