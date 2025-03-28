@@ -1,12 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form
-
-from services.models_service import query_model, _load_model
-from services.dataset_service import _get_dataset_config
-from utilss.enums.datasets_enum import DatasetsEnum
+from services.models_service import query_model, query_predictions
+from utilss.files_utils import upload
 from request_models.query_model import QueryResponse
-from pathlib import Path
 import os
-import shutil
 
 query_router = APIRouter()
 
@@ -27,44 +23,17 @@ async def upload_image(
     dendrogram_filename: str = Form(...),
 ) -> QueryResponse:
     try:
-        UPLOAD_DIR = os.getenv("UPLOAD_DIR")
-        if not UPLOAD_DIR:
+        PHOTOS_DIR = os.getenv("UPLOAD_DIR")
+        if not PHOTOS_DIR:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Upload directory not configured"
+                detail="Upload photos directory not configured"
             )
 
-        # Ensure upload directory exists
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-        # Create a unique file path to prevent overwriting
-        image_path = Path(UPLOAD_DIR) / f"{os.urandom(16).hex()}_{image.filename}"
-        
-        # Save the uploaded file
-        with open(image_path, "wb") as f:
-            shutil.copyfileobj(image.file, f)
-
-        # Process the image
-        dataset_config = _get_dataset_config(dataset)
-        current_model = _load_model(dataset_config["dataset"], model_filename, dataset_config)
-        prediction = current_model.predict(image_path)
-
-        # Extract the top 3 predictions and labels based on dataset type
-        if dataset == DatasetsEnum.IMAGENET.value:
-            sorted_predictions = sorted(prediction, key=lambda x: x[2], reverse=True)  # Sort by probability
-            top_3_predictions = [(p[1], float(p[2])) for p in sorted_predictions[:3]]  # (label, probability)
-            top_label = top_3_predictions[0][0]  # Top label
-        elif dataset == DatasetsEnum.CIFAR100.value:
-            sorted_predictions = sorted(prediction, key=lambda x: x[1], reverse=True)  # Sort by probability
-            top_3_predictions = [(dataset_config["labels"][p[0]], float(p[1])) for p in sorted_predictions[:3]]  # (label, probability)
-            top_label = top_3_predictions[0][0]  # Top label
-        else:
-            raise ValueError(f"Unsupported dataset: {dataset}")
-        
-        # Query result based on the top label
+        image_path = upload(PHOTOS_DIR, image)
+        top_label, top_3_predictions = query_predictions(dataset, model_filename, image_path)
         query_result = query_model(top_label, dendrogram_filename)
 
-        # Return the prediction wrapped in the Pydantic model
         return QueryResponse(query_result=query_result, top_3_predictions=top_3_predictions)
 
     except Exception as e:

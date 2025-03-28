@@ -1,8 +1,10 @@
 import os
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form
 from request_models.hierarchical_clustering_model import HierarchicalClusterRequest, HierarchicalClusterResult
 from typing import Dict
-from services.hierarchical_clusters_service import post_hierarchical_cluster
+from services.hierarchical_clusters_service import post_hierarchical_cluster, post_new_hierarchical_cluster
+from utilss.files_utils import upload
+import shutil
 
 hierarchical_clusters_router = APIRouter()
 
@@ -26,3 +28,22 @@ async def create_hierarchical_clusters(hierarchical_clusters_data: HierarchicalC
         raise HTTPException(status_code=404, detail="Hierarchical Clustering was not created")
     
     return HierarchicalClusterResult(data=new_hc.tolist())
+
+# async def create_visual_explaination(
+#     model_file: UploadFile = File(...), 
+#     graph_type: str = Form(...),        
+#     dataset: str = Form(...)            
+# ) -> Dict[str, str]:
+#     try:
+#         # # Save the uploaded model file to a temporary directory
+#         MODELS_DIR = os.getenv("MODELS_PATH", "models")
+#         model_path = upload(MODELS_DIR, model_file)
+#         new_hc = post_new_hierarchical_cluster(model_path, graph_type, dataset)
+        
+#         if new_hc is None:
+#             raise HTTPException(status_code=404, detail="Hierarchical Clustering was not created")
+        
+#         return HierarchicalClusterResult(data=new_hc.tolist())
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+## //gay <- eido is funny haha 

@@ -73,7 +73,7 @@ def post_hierarchical_cluster_confusion_matrix(model_filename, edges_df_filename
         hc.create_dendrogram_data(uf, dataset_config["labels"], uf.max_weight)
         dendrogram = Dendrogram(dendrogram_filename)
         dendrogram._build_tree_hierarchy(hc.Z, dataset_config["labels"])
-        dendrogram.save_dendrogram_as_json()
+        dendrogram.save_dendrogram_as_json(hc.Z)
 
         return hc.Z
     
