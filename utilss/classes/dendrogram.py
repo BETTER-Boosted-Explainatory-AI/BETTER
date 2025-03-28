@@ -118,7 +118,7 @@ class Dendrogram:
         filtered_tree_json = json.dumps(filtered_tree, indent=2)
         return filtered_tree_json
 
-    def save_dendrogram_as_json(self):
+    def save_dendrogram_as_json(self, linkage_matrix=None):
         """
         Create dendrogram data and save it as JSON
         
@@ -136,7 +136,16 @@ class Dendrogram:
         DENDROGRAMS_PATH = os.getenv("DENDROGRAMS_PATH")
         dendrogram_path = f'{DENDROGRAMS_PATH}/{self.dendrogram_filename}.json'
         
+        # Load existing data if the file exists
+        if os.path.exists(dendrogram_path):
+            with open(dendrogram_path, 'r') as f:
+                existing_data = json.load(f)
+        else:
+            existing_data = {}
+
+        # Preserve the existing Z key if it exists
         dendrogram_data = {
+            'Z': existing_data.get('Z', linkage_matrix.tolist()),
             'Z_tree_format': self.Z_tree_format
         }
         

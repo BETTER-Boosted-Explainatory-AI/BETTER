@@ -1,4 +1,6 @@
 import numpy as np
+import json
+import os
 
 class HierarchicalCluster:
     def __init__(self, labels_dict=None):
@@ -384,4 +386,25 @@ class HierarchicalCluster:
         Z_sub = self._build_sub_z_matrix(labels, selected_indices)
         
         return Z_sub, selected_labels
+    
+    def load_Z_from_json(self, filename):
+        """
+        Load dendrogram data from a JSON file
+        
+        Parameters:
+        - json_path: Path to the JSON file containing dendrogram data
+        
+        Returns:
+        - self with loaded data
+        """
+        DENDROGRAMS_PATH = os.getenv("DENDROGRAMS_PATH")
+        dendrogram_path = f'{DENDROGRAMS_PATH}/{filename}.json'
+        
+        with open(dendrogram_path, 'r') as f:
+            data = json.load(f)
+            
+        self.Z = data.get('Z')
+        
+        print(f"Dendrogram data loaded from {dendrogram_path}")
+        return self
     
