@@ -16,7 +16,6 @@ def _get_sub_heirarchical_clustering(dataset_str, selected_labels, z_filename):
     dendrogram.load_dendrogram_from_json()
     sub_hc = dendrogram.get_sub_dendrogram_formatted(selected_labels)
     sub_hc_json = json.loads(sub_hc)
-    
     return sub_hc_json
 
 def _rename_cluster(cluster_id, new_name, dendrogram_filename):
