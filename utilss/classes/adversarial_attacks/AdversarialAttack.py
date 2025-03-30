@@ -3,7 +3,6 @@ import numpy as np
 import tensorflow as tf
 import time
 
-# Import enum classes
 from enums.attack_type import AttackType
 from enums.hierarchical_cluster_types import HierarchicalClusterType
 from scoring import Scoring
