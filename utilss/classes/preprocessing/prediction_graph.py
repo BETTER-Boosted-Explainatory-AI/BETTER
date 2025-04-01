@@ -74,134 +74,113 @@ class PredictionGraph:
     def create_graph_imagenet(self, model, top_k, trainset_path, labels_dict, batch_size=64, min_confidence=0.8):
         """
         Create a graph using predictions from the model.
-        Optimized for GPU usage with ImageNet data.
+        Optimized for GPU usage with ImageNet data using batch processing.
         """
+        print(f"Creating graph from {trainset_path}")
         edges_data = []
-        processed_count = 0
-        
-        # Collect all image paths and their labels
-        all_image_paths = []
-        all_image_labels = []
-        folder_to_images = {}
-        
-        # First, collect all the image paths to process
-        print("Collecting image paths...")
-        with ThreadPoolExecutor(max_workers=16) as executor:
-            # Create a list of folder processing tasks
-            folder_tasks = []
-            
-            for folder_name in os.listdir(trainset_path):
-                folder_path = os.path.join(trainset_path, folder_name)
-                if not os.path.isdir(folder_path):
-                    continue
-                    
-                # Get label from folder name
-                image_label = labels_dict.get(folder_name)
-                if image_label is None:
-                    continue
-                
-                folder_tasks.append((folder_name, folder_path, image_label))
-            
-            # Process folders in parallel to collect image paths
-            def process_folder(task):
-                folder_name, folder_path, image_label = task
-                folder_images = []
-                
-                for image_name in os.listdir(folder_path):
-                    img_path = os.path.join(folder_path, image_name)
-                    if os.path.isfile(img_path):
-                        folder_images.append((img_path, image_name))
-                
-                return folder_name, image_label, folder_images
-            
-            # Execute all folder processing tasks
-            results = list(executor.map(process_folder, folder_tasks))
-            
-            # Combine results
-            for folder_name, image_label, folder_images in results:
-                if folder_images:
-                    folder_to_images[folder_name] = folder_images
-                    for img_path, _ in folder_images:
-                        all_image_paths.append(img_path)
-                        all_image_labels.append(image_label)
-        
-        total_images = len(all_image_paths)
-        print(f"Total images to process: {total_images}")
-        start_time = time.time()
 
-        # Create a BatchPredictor if model is not already one
-        if not hasattr(model, 'batch_predictor'):
-            predictor = ImageNetBatchPredictor(model=model.model, batch_size=batch_size)
-        else:
-            predictor = model.batch_predictor
-            predictor.batch_size = batch_size  # Ensure correct batch size
+        # Ensure all labels are in the graph
+        for label in labels_dict.values():
+            if label not in self.graph.vs["name"]:
+                self.graph.add_vertices(1)  # Adds a single node
+                self.graph.vs[-1]["name"] = label  # Assigns the label to the new node
+
+        folders = os.listdir(trainset_path)
+        start_time = time.time()
         
-        # Process images in batches by folder to maintain organization
-        for folder_name, image_list in folder_to_images.items():
-            if not image_list:
+        # Create a batch predictor for ImageNet
+        predictor = ImageNetBatchPredictor(model=model.model, batch_size=batch_size)
+        
+        # Process each folder/class
+        for folder_name in folders:
+            folder_path = os.path.join(trainset_path, folder_name)
+            if not os.path.isdir(folder_path):
                 continue
                 
             image_label = labels_dict[folder_name]
-            folder_paths = [item[0] for item in image_list]
-            folder_names = [item[1] for item in image_list]
+            print(f"Processing folder: {folder_name}, label: {image_label}")
             
-            # Process in larger batches for better GPU utilization
-            for i in range(0, len(folder_paths), batch_size):
-                # Get current batch
-                batch_paths = folder_paths[i:i+batch_size]
-                batch_names = folder_names[i:i+batch_size]
+            image_files = [
+                f for f in os.listdir(folder_path)
+                if os.path.isfile(os.path.join(folder_path, f)) and 
+                f.lower().endswith(('.png', '.jpg', '.jpeg'))
+            ]
+            
+            # Process images in batches
+            for i in range(0, len(image_files), batch_size):
+                batch_files = image_files[i:i+batch_size]
+                batch_paths = [os.path.join(folder_path, f) for f in batch_files]
                 
-                # Get predictions for this batch
-                batch_results = predictor.get_top_predictions(batch_paths, top_k)
-                
-                # Process results and update graph
-                for j, (img_path, predictions) in enumerate(batch_results):
-                    # Match the image path back to its name
-                    # Find the index of img_path in batch_paths
+                # Load batch of images
+                batch_images = []
+                for img_path in batch_paths:
                     try:
-                        path_index = batch_paths.index(img_path)
-                        image_name = batch_names[path_index]
-                    except ValueError:
-                        # If path not found, use a default approach
-                        image_name = os.path.basename(img_path)
-                    
-                    # Skip if no predictions or confidence too low
-                    if not predictions or predictions[0][2] < min_confidence:
+                        img = tf.keras.preprocessing.image.load_img(img_path, target_size=(224, 224))
+                        img_array = tf.keras.preprocessing.image.img_to_array(img)
+                        img_array = preprocess_input(img_array)
+                        batch_images.append(img_array)
+                    except Exception as e:
+                        print(f"Error loading image {img_path}: {e}")
                         continue
-                    
-                    # Only process images predicted correctly
-                    correct_prediction = False
-                    for _, pred_label, _ in predictions:
-                        if pred_label == image_label:
-                            correct_prediction = True
-                            break
-                            
-                    if not correct_prediction:
-                        continue
-                        
-                    # Process predictions and update graph
-                    infinity_edges_labels = []
-                    for _, pred_label, pred_prob in predictions:
-                        if pred_label not in self.labels:
-                            print(f"Warning: Prediction label '{pred_label}' not in graph labels, skipping.")
-                            continue
-                        
-                        if self.builder.should_edge_be_added(image_label, pred_label, pred_prob):                            
-                            weight = self.builder.get_edge_weight(pred_prob)
-                            if self.builder.should_edge_be_added(image_label, pred_label, weight):
-                                edge_data = self.builder.update_graph(
-                                    self.graph, image_label, pred_label, pred_prob, image_name
-                                )
-                                edges_data.append(edge_data)
-                                infinity_edges_labels.append(pred_label)
-                    
-                    if self.graph_type == "dissimilarity":
-                        for label in self.labels:
-                            self.builder.add_infinity_edges(self.graph, infinity_edges_labels, label, image_label)                        
                 
-                processed_count += len(batch_paths)
-                if processed_count % 1000 == 0:
-                    print(f"Processed {processed_count}/{total_images} images")
+                if not batch_images:
+                    continue
+                    
+                # Stack images into a batch array
+                batch_array = np.stack(batch_images)
+                
+                # Get batch predictions
+                batch_predictions = predictor.predict_batch(batch_array)
+                
+                # Process each image's predictions
+                for j, predictions in enumerate(batch_predictions):
+                    if j >= len(batch_files):
+                        break
+                        
+                    image_name = batch_files[j]
+                    
+                    # Check if the top prediction matches the folder name
+                    if predictions[0][0][0] == folder_name:
+                        added_labels = []
+                        
+                        # Process predictions
+                        for _, pred_class, pred_prob in predictions[0]:
+                            pred_label = labels_dict.get(pred_class)
+                            
+                            if pred_label and pred_label != image_label and pred_label in self.graph.vs["name"] and pred_prob > threshold:
+                                # Check if the edge already exists
+                                if self.graph.are_connected(image_label, pred_label):
+                                    edge_id = self.graph.get_eid(image_label, pred_label)
+                                    self.graph.es[edge_id]["weight"] += 1-pred_prob
+                                    edges_data.append({
+                                        "image_id": image_name,
+                                        "source": image_label,
+                                        "target": pred_label,
+                                        "target_probability": pred_prob,
+                                        "edge": "updated",
+                                        "edge_weight": self.graph.es[edge_id]["weight"]
+                                    })
+                                else:
+                                    self.graph.add_edge(image_label, pred_label, weight=1-pred_prob)
+                                    edge_id = self.graph.get_eid(image_label, pred_label)
+                                    edges_data.append({
+                                        "image_id": image_name,
+                                        "source": image_label,
+                                        "target": pred_label,
+                                        "target_probability": pred_prob,
+                                        "edge": "added",
+                                        "edge_weight": self.graph.es[edge_id]["weight"]
+                                    })
+                                added_labels.append(pred_label)
+                        
+                        # Add infinity edges for categories not in the predictions
+                        for each_label in self.graph.vs["name"]:
+                            if each_label not in added_labels and each_label != image_label:
+                                if self.graph.are_connected(image_label, each_label):
+                                    edge_id = self.graph.get_eid(image_label, each_label)
+                                    self.graph.es[edge_id]["weight"] += infinity
+                                else:
+                                    self.graph.add_edge(image_label, each_label, weight=infinity)
         
         end_time = time.time()
         print(f"Graph creation completed in {end_time - start_time:.2f} seconds")

@@ -98,3 +98,25 @@ class ImageNetBatchPredictor:
                     results.append((batch_paths[k], decoded_preds))
         
         return results
+
+    def predict_batch(self, batch_images):
+        """
+        Process a batch of images and return the decoded predictions for each image.
+        
+        Args:
+            batch_images: Numpy array of shape (batch_size, 224, 224, 3)
+            
+        Returns:
+            List of decoded prediction results for each image
+        """
+        # Get predictions for the entire batch at once
+        batch_preds = self.model.predict(batch_images)
+        
+        # Decode predictions for each image
+        decoded_predictions = []
+        for i in range(len(batch_preds)):
+            # Use TensorFlow's decode_predictions to get the class names and probabilities
+            preds = decode_predictions(np.expand_dims(batch_preds[i], axis=0), top=5)
+            decoded_predictions.append(preds)
+        
+        return decoded_predictions

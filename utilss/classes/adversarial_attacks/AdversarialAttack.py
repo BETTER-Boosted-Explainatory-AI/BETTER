@@ -3,9 +3,9 @@ import numpy as np
 import tensorflow as tf
 import time
 
-from enums.attack_type import AttackType
-from enums.hierarchical_cluster_types import HierarchicalClusterType
-from scoring import Scoring
+from utilss.enums.attack_type import AttackType
+from utilss.enums.hierarchical_cluster_types import HierarchicalClusterType
+from utilss.classes.scoring import Scoring
 
 class AdversarialAttack(ABC):
     """
