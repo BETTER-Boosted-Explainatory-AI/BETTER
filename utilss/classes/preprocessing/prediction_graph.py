@@ -8,6 +8,7 @@ from utilss.classes.datasets.imagenet_batch_predictor import ImageNetBatchPredic
 from .graph_builder import GraphBuilder
 from tensorflow.keras.applications.resnet50 import preprocess_input
 import time
+import tensorflow as tf
 
 class PredictionGraph:
     def __init__(self, model_filename, graph_filename, graph_type, labels, threshold, infinity, dataset):
@@ -178,9 +179,9 @@ class PredictionGraph:
                             if each_label not in added_labels and each_label != image_label:
                                 if self.graph.are_connected(image_label, each_label):
                                     edge_id = self.graph.get_eid(image_label, each_label)
-                                    self.graph.es[edge_id]["weight"] += infinity
+                                    self.graph.es[edge_id]["weight"] += 100
                                 else:
-                                    self.graph.add_edge(image_label, each_label, weight=infinity)
+                                    self.graph.add_edge(image_label, each_label, weight=100)
         
         end_time = time.time()
         print(f"Graph creation completed in {end_time - start_time:.2f} seconds")

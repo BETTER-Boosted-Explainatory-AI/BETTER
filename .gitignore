@@ -8,3 +8,6 @@
 **/graphs
 **/dataframes
 **/dendrograms
+**/*.graphml
+**/*.csv
+**/*.json
