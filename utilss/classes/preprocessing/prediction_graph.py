@@ -72,124 +72,6 @@ class PredictionGraph:
         else:
             raise ValueError(f"Unknown dataset: {self.dataset}")
 
-    def create_graph_imagenet(self, model, top_k, trainset_path, labels_dict, batch_size=64, min_confidence=0.8):
-        """
-        Create a graph using predictions from the model.
-        Optimized for GPU usage with ImageNet data using batch processing.
-        """
-        print(f"Creating graph from {trainset_path}")
-        edges_data = []
-
-        # Ensure all labels are in the graph
-        for label in labels_dict.values():
-            if label not in self.graph.vs["name"]:
-                self.graph.add_vertices(1)  # Adds a single node
-                self.graph.vs[-1]["name"] = label  # Assigns the label to the new node
-
-        folders = os.listdir(trainset_path)
-        start_time = time.time()
-        
-        # Create a batch predictor for ImageNet
-        predictor = ImageNetBatchPredictor(model=model.model, batch_size=batch_size)
-        
-        # Process each folder/class
-        for folder_name in folders:
-            folder_path = os.path.join(trainset_path, folder_name)
-            if not os.path.isdir(folder_path):
-                continue
-                
-            image_label = labels_dict[folder_name]
-            print(f"Processing folder: {folder_name}, label: {image_label}")
-            
-            image_files = [
-                f for f in os.listdir(folder_path)
-                if os.path.isfile(os.path.join(folder_path, f)) and 
-                f.lower().endswith(('.png', '.jpg', '.jpeg'))
-            ]
-            
-            # Process images in batches
-            for i in range(0, len(image_files), batch_size):
-                batch_files = image_files[i:i+batch_size]
-                batch_paths = [os.path.join(folder_path, f) for f in batch_files]
-                
-                # Load batch of images
-                batch_images = []
-                for img_path in batch_paths:
-                    try:
-                        img = tf.keras.preprocessing.image.load_img(img_path, target_size=(224, 224))
-                        img_array = tf.keras.preprocessing.image.img_to_array(img)
-                        img_array = preprocess_input(img_array)
-                        batch_images.append(img_array)
-                    except Exception as e:
-                        print(f"Error loading image {img_path}: {e}")
-                        continue
-                
-                if not batch_images:
-                    continue
-                    
-                # Stack images into a batch array
-                batch_array = np.stack(batch_images)
-                
-                # Get batch predictions
-                batch_predictions = predictor.predict_batch(batch_array)
-                
-                # Process each image's predictions
-                for j, predictions in enumerate(batch_predictions):
-                    if j >= len(batch_files):
-                        break
-                        
-                    image_name = batch_files[j]
-                    
-                    # Check if the top prediction matches the folder name
-                    if predictions[0][0][0] == folder_name:
-                        added_labels = []
-                        
-                        # Process predictions
-                        for _, pred_class, pred_prob in predictions[0]:
-                            pred_label = labels_dict.get(pred_class)
-                            
-                            if pred_label and pred_label != image_label and pred_label in self.graph.vs["name"] and pred_prob > threshold:
-                                # Check if the edge already exists
-                                if self.graph.are_connected(image_label, pred_label):
-                                    edge_id = self.graph.get_eid(image_label, pred_label)
-                                    self.graph.es[edge_id]["weight"] += 1-pred_prob
-                                    edges_data.append({
-                                        "image_id": image_name,
-                                        "source": image_label,
-                                        "target": pred_label,
-                                        "target_probability": pred_prob,
-                                        "edge": "updated",
-                                        "edge_weight": self.graph.es[edge_id]["weight"]
-                                    })
-                                else:
-                                    self.graph.add_edge(image_label, pred_label, weight=1-pred_prob)
-                                    edge_id = self.graph.get_eid(image_label, pred_label)
-                                    edges_data.append({
-                                        "image_id": image_name,
-                                        "source": image_label,
-                                        "target": pred_label,
-                                        "target_probability": pred_prob,
-                                        "edge": "added",
-                                        "edge_weight": self.graph.es[edge_id]["weight"]
-                                    })
-                                added_labels.append(pred_label)
-                        
-                        # Add infinity edges for categories not in the predictions
-                        for each_label in self.graph.vs["name"]:
-                            if each_label not in added_labels and each_label != image_label:
-                                if self.graph.are_connected(image_label, each_label):
-                                    edge_id = self.graph.get_eid(image_label, each_label)
-                                    self.graph.es[edge_id]["weight"] += 100
-                                else:
-                                    self.graph.add_edge(image_label, each_label, weight=100)
-        
-        end_time = time.time()
-        print(f"Graph creation completed in {end_time - start_time:.2f} seconds")
-        
-        edges_dataframe = pd.DataFrame(edges_data)
-        print(f"Graph creation complete. {len(edges_dataframe)} edges created.")
-        return edges_dataframe
-        
     def create_graph_cifar100(self, model, top_k, x_train, y_train_mapped, batch_size=64, min_confidence=0.8):
         """
         Create a graph using predictions from the model.
@@ -267,3 +149,74 @@ class PredictionGraph:
         edges_dataframe = pd.DataFrame(edges_data)
         print(f"Graph creation complete. {len(edges_dataframe)} edges created.")
         return edges_dataframe
+    def create_graph_imagenet(self, model, top_k, trainset_path, labels_dict, batch_size=64, min_confidence=0.8):
+        """
+        Create a graph using predictions from the model.
+        Optimized for GPU usage with ImageNet data.
+        """
+        for label in labels_dict.values():
+            if not any(v["name"] == label for v in self.graph.vs):
+                self.graph.add_vertices(1)  # Adds a single node
+                self.graph.vs[-1]["name"] = label
+        
+        edges_data = []
+        
+        folders = os.listdir(trainset_path)
+        start_time = time.time()
+        
+        for folder_name in folders:
+            folder_path = os.path.join(trainset_path, folder_name)
+        
+            if folder_name not in labels_dict:
+                print(f"Skipping folder '{folder_name}' - not found in labels_dict")
+                continue
+            
+            image_paths = [
+                os.path.join(folder_path, f) 
+                for f in os.listdir(folder_path)
+                if os.path.isfile(os.path.join(folder_path, f))
+            ]            
+
+            image_label = labels_dict[folder_name]
+
+            for i in range(0, len(image_paths), batch_size):
+                batch_paths = image_paths[i:i+batch_size]
+                batch_names = [os.path.basename(path) for path in batch_paths]            
+                
+                if not hasattr(model, 'batch_predictor'):
+                    predictor = ImageNetBatchPredictor(model=model.model, batch_size=batch_size)
+                else:
+                    predictor = model.batch_predictor
+                    predictor.batch_size = batch_size 
+                    
+                batch_predictions = predictor.predict_batch(batch_paths, top_k) 
+                
+                for idx, (image_path, image_name, predictions_set) in enumerate(zip(batch_paths, batch_names, batch_predictions)):
+                    infinity_edges_labels = []
+                    
+                if predictions_set[0][0] == folder_name:
+                    for _, pred_label, pred_prob in predictions_set:    
+                        if pred_label not in self.labels:
+                            print(f"Warning: Prediction label '{pred_label}' not in graph labels, skipping.")
+                            continue
+                        
+                        if self.builder.should_edge_be_added(image_label, pred_label, pred_prob):                            
+                            weight = self.builder.get_edge_weight(pred_prob)
+                            if self.builder.should_edge_be_added(image_label, pred_label, weight):
+                                edge_data = self.builder.update_graph(
+                                    self.graph, image_label, pred_label, pred_prob, image_name
+                                )
+                                edges_data.append(edge_data)
+                                infinity_edges_labels.append(pred_label)
+                    
+                    if self.graph_type == "dissimilarity":
+                        for label in self.labels:
+                            self.builder.add_infinity_edges(self.graph, infinity_edges_labels, label, image_label)                        
+        
+        end_time = time.time()
+        print(f"Graph creation completed in {end_time - start_time:.2f} seconds")
+        
+        edges_dataframe = pd.DataFrame(edges_data)
+        print(f"Graph creation complete. {len(edges_dataframe)} edges created.")
+        return edges_dataframe            
+       
