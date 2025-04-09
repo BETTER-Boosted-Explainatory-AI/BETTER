@@ -10,3 +10,6 @@
 **/dendrograms
 **/users
 **/users/**
+**/*.graphml
+**/*.csv
+**/*.json
