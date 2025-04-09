@@ -12,6 +12,27 @@ pip install --no-cache-dir -r requirements.txt
 ## To run the server locally
 uvicorn app:app --reload
 
+## User Folder Structure
+
+```
+d----- users
+|       rw---- users.json
+|       d----- uid
+|               rw---- models.json
+|               d----- model_id
+|                       d----- similarity
+|                               rw---- similarity_dendrogram.json
+|                               rw---- matrix_dendrogram.json
+|                               rw---- edges_df.csv
+|                               rw---- logistic_regression_model.json
+|                       d----- dissimilarity
+|                               rw---- dissimilarity_dendrogram.json
+|                               rw---- matrix_dendrogram.json
+|                               rw---- edges_df.csv
+|                               rw---- logistic_regression_model.json
+```
+
+
 ## API
 
 ### Hierarchical Clustering
