@@ -2,10 +2,16 @@ import pandas as pd
 import os
 
 class EdgesDataframe:
-    def __init__(self, model_filename, df_filename, edges_df=None):
-        DATAFRAMES_PATH = os.getenv("DATAFRAMES_PATH")
-        df_file_path = f'{DATAFRAMES_PATH}/{df_filename}.csv'
-        print(df_file_path)
+    def __init__(self, user_id, model_filename, df_filename, edges_df=None):
+        USERS_PATH = os.getenv("USERS_PATH", "users")
+        DATAFRAMES_PATH = os.getenv("DATAFRAMES_PATH", "dataframes")
+
+        # Construct the full path using os.path.join
+        user_folder_path = os.path.join(USERS_PATH, user_id)
+        df_file_path = os.path.join(user_folder_path, DATAFRAMES_PATH, f"{df_filename}.csv")
+
+        print(f"Dataframe file path: {df_file_path}")
+        
         self.model_filename = model_filename
         self.df_filename = df_file_path
         self.edges_df = pd.DataFrame() if edges_df is None else edges_df

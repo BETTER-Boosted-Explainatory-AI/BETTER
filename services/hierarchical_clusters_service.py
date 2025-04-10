@@ -93,7 +93,7 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
             detail=f"Error processing request: {str(e)}"
         )
     
-def post_new_hierarchical_cluster(model_filename, graph_type, dataset_str):
+def post_new_hierarchical_cluster(model_filename, graph_type, dataset_str, user_id):
     if model_filename is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 

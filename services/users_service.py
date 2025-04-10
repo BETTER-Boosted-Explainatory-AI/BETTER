@@ -4,7 +4,7 @@ import os
 
 def initialize_user(email: str, password: str) -> User:
     """Initialize a new user."""
-    user = User(email=email, password=password)
+    user = User(user_id=None, email=email, password=password)
     user.create_user()
     return user
 
@@ -37,3 +37,6 @@ def mock_login(email: str, password: str) -> User:
     user_class = User(user_id=user['id'], email=user['email'], password=user['password'])
     user_class.load_models()
     return user_class
+
+def get_current_session_user():
+    return User(user_id="01877886-8180-438c-ac9f-a703b7c5c5e5", email="wwx@gmail.com", password="456")

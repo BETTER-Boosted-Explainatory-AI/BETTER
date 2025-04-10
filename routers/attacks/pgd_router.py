@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
-from request_models.pgd_attack_models import PGDAttackRequest, PGDAttackResponse
-from services.pgd_attack_service import perform_pgd_attack
-from enums.hierarchical_cluster_types import HierarchicalClusterType
+from request_models.attacks.pgd_request_model import PGDAttackRequest, PGDAttackResponse
+from services.attacks.pgd_service import perform_pgd_attack
+from utilss.enums.hierarchical_cluster_types import HierarchicalClusterType
 
 # Create router for PGD attack endpoints
 pgd_attack_router = APIRouter()
