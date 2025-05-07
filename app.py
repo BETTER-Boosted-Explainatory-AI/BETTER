@@ -3,14 +3,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from dotenv import load_dotenv
 import os
-from routers.TBD_hierarchical_clusters_router import hierarchical_clusters_router
-from routers.TBD_confusion_matrix_router import confusion_matrix_router
+
+from routers.nma_router import nma_router
 from routers.whitebox_testing_router import whitebox_testing_router
 from routers.sub_hierarchical_clusters_router import sub_hierarchical_clusters_router
 from routers.query_router import query_router
 from routers.dataset_router import datasets_router
-# from routers.attacks.pgd_router import pgd_attack_router 
 from routers.users_router import users_router
+
+# from routers.TBD_hierarchical_clusters_router import hierarchical_clusters_router
+# from routers.TBD_confusion_matrix_router import confusion_matrix_router
+# from routers.attacks.pgd_router import pgd_attack_router 
 # from PIL import Image
 import numpy as np
 
@@ -41,6 +44,7 @@ def read_root():
 
 # app.include_router(hierarchical_clusters_router)
 # app.include_router(confusion_matrix_router)
+app.include_router(nma_router)
 app.include_router(sub_hierarchical_clusters_router)
 app.include_router(whitebox_testing_router)
 app.include_router(query_router)

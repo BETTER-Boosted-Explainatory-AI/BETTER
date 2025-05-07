@@ -4,94 +4,106 @@ from PIL import Image
 from .dataset import Dataset
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from utilss.wordnet_utils import convert_folder_name_to_label
 from data.datasets.imagenet_info import IMAGENET_INFO
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
 
 class ImageNet(Dataset):
     def __init__(self):
         super().__init__(IMAGENET_INFO["dataset"], IMAGENET_INFO["threshold"], IMAGENET_INFO["infinity"], IMAGENET_INFO["labels"])
-        self.train_data = []
-        self.test_data = []
-        self.labels_dict = {}
-
-    def load_labels(self, train_files):
-        for folder_name in train_files:
-            label = convert_folder_name_to_label(folder_name)
-            self.labels_dict.update({folder_name:label})
-        print(self.labels_dict)
-
-    def load(self, name, batch_size=32, image_size=(224, 224), num_workers=2):
-        dataset_path = os.path.abspath(os.path.join("data", "datasets", name))
+        self.x_train = None
+        self.y_train = None
+        self.x_test = None
+        self.y_test = None
+        self.unique_labels = None
         
+    def load_mini_imagenet(dataset_path, img_size=(224, 224)):
+        """
+        Load mini ImageNet dataset from a directory structure where:
+        - Each subdirectory name in dataset_path is a class label
+        - Each subdirectory contains images of that class
+        
+        Parameters:
+        -----------
+        dataset_path : str
+            Path to the dataset directory (e.g., 'imagenet/train')
+        img_size : tuple
+            Size to resize the images to (height, width)
+            
+        Returns:
+        --------
+        images : np.array
+            Array of preprocessed images with shape (n_samples, height, width, channels)
+        labels : np.array
+            Array of labels as folder names (e.g., 'n01440764')
+        unique_labels : np.array
+            Array of unique label strings
+        """
         if not os.path.exists(dataset_path):
-            print(f"Dataset path {dataset_path} does not exist")
-            return False
+            raise ValueError(f"Dataset path does not exist: {dataset_path}")
         
-        print(f"Loading dataset from: {dataset_path}")
-
-        train_path = os.path.join(dataset_path, 'train')
-        test_path = os.path.join(dataset_path, 'test')
-
-        # Load train and test images in batches
-        start_time = time.time()
-        self.train_data = list(self.load_images_in_batches(train_path, batch_size, image_size, num_workers))
-        self.test_data = list(self.load_images_in_batches(test_path, batch_size, image_size, num_workers))
-        end_time = time.time()
-
-        print(f"Loaded {len(self.train_data)} training batches and {len(self.test_data)} testing batches")
-        print(f"Total loading time: {end_time - start_time:.2f} seconds")
+        # Get all class names (subdirectories)
+        class_names = sorted([
+            d for d in os.listdir(dataset_path)
+            if os.path.isdir(os.path.join(dataset_path, d)) and d.startswith('n') and d[1:].isdigit()
+        ])
         
-        return True
-
-    def load_images_in_batches(self, folder, batch_size, image_size, num_workers):
+        if not class_names:
+            raise ValueError(f"No subdirectories found in {dataset_path}")
+        
+        # Track unique labels
+        unique_labels = list(class_names)  # Use class_names directly as unique_labels
+        
+        # Prepare lists to hold images and labels
         images = []
         labels = []
-        batch_count = 0
-        total_images = 0
+        
+        # Load images from each class
+        print(f"Loading images from {len(class_names)} classes...")
+        for class_name in class_names:
+            class_path = os.path.join(dataset_path, class_name)
+            # Get all image files in the class directory
+            img_files = [f for f in os.listdir(class_path) 
+                        if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+            
+            for img_file in img_files:
+                img_path = os.path.join(class_path, img_file)
+                try:
+                    # Load and preprocess image
+                    img = load_img(img_path, target_size=img_size)
+                    img_array = img_to_array(img)
+                    
+                    # Properly preprocess for ResNet50
+                    # img_array = preprocess_input(img_array)
+                    
+                    # Add to our collections
+                    images.append(img_array)
+                    labels.append(class_name)  # Use folder name directly as label
 
-        def load_image(image_path, class_folder):
-            try:
-                img = Image.open(image_path).convert('RGB')  # Load image
-                img = img.resize(image_size)  # Resize image
-                label = convert_folder_name_to_label(class_folder)  # Get class name
-                return np.array(img), label
-            except Exception as e:
-                print(f"Error loading {image_path}: {e}")
-                return None, None
+                except Exception as e:
+                    print(f"Error loading {img_path}: {e}")
+        
+        # Convert lists to numpy arrays
+        images = np.array(images)
+        labels = np.array(labels)
+        
+        print(f"Loaded {len(images)} images with shape {images.shape}")
+        print(f"Found {len(unique_labels)} unique classes")
+        
+        return images, labels
 
-        with ThreadPoolExecutor(max_workers=num_workers) as executor:
-            futures = []
-            for class_folder in os.listdir(folder):
-                class_path = os.path.join(folder, class_folder)
-                if os.path.isdir(class_path):  # Ensure it's a folder
-                    for image_file in os.listdir(class_path):
-                        image_path = os.path.join(class_path, image_file)
-                        futures.append(executor.submit(load_image, image_path, class_folder))
+    def load(self, name):
+        dataset_path = os.path.join("data", "datasets", name)
+        train_path = os.path.join(dataset_path, "train")
+        test_path = os.path.join(dataset_path, "test")
+        
+        self.x_train, self.y_train = self.load_mini_imagenet(train_path)
+        self.x_test, self.y_test = self.load_mini_imagenet(test_path)
+        
 
-            for future in as_completed(futures):
-                img, label = future.result()
-                if img is not None and label is not None:
-                    images.append(img)
-                    labels.append(label)
-                    total_images += 1
-                    if len(images) == batch_size:
-                        batch_count += 1
-                        yield np.array(images), np.array(labels)
-                        # print(f"Loaded batch {batch_count} from {folder}")
-                        images = []
-                        labels = []
-
-        if images:
-            yield np.array(images), np.array(labels)
-            batch_count += 1
-            # print(f"Loaded batch {batch_count} from {folder}")
-
-        print(f"Total images loaded from {folder}: {total_images}")
-        print(f"Batch size: {batch_size}")
-        print(f"Total batches: {batch_count}")
 
     def get_train_image_by_id(self, image_id):
         # Implement the logic to get an image by its ID from the ImageNet dataset
+        
         print(f"Getting image with ID: {image_id}")
         data = self.train_data
         batch_index = image_id // len(data[0][0])

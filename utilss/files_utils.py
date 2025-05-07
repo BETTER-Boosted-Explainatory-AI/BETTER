@@ -5,19 +5,28 @@ import json
 import uuid
 from utilss.classes.user import User
 
+
 def upload(upload_dir: str, model_file: UploadFile) -> str:
     os.makedirs(upload_dir, exist_ok=True)
     model_path = os.path.join(upload_dir, model_file.filename)
 
     print(f"Saving model to {model_path}")
-    
+
     with open(model_path, "wb") as f:
         shutil.copyfileobj(model_file.file, f)
-    
+
     return model_path
 
-def upload_model(user_folder: str, model_id: str, model_file: UploadFile, dataset: str, graph_type) -> str:
 
+def upload_model(
+    user_folder: str,
+    model_id: str,
+    model_file: UploadFile,
+    dataset: str,
+    graph_type: str,
+    min_confidence: float,
+    top_k: int,
+) -> str:
     models_json_path = os.path.join(user_folder, "models.json")
     if os.path.exists(models_json_path):
         with open(models_json_path, "r") as json_file:
@@ -25,15 +34,27 @@ def upload_model(user_folder: str, model_id: str, model_file: UploadFile, datase
     else:
         models_data = []
 
-    model_id_md = check_models_metadata(models_data, model_id, graph_type)    
-    model_subfolder = os.path.join(user_folder,model_id_md)
+    model_id_md = check_models_metadata(models_data, model_id, graph_type)
+    model_subfolder = os.path.join(user_folder, model_id, graph_type)
     os.makedirs(model_subfolder, exist_ok=True)
 
+
     if model_id_md is None:
-        print(f"Graph type {graph_type} for the model {model_file.filename} already exists. Skipping upload.")
+        print(
+            f"Graph type {graph_type} for the model {model_file.filename} already exists. Skipping upload."
+        )
         return os.path.join(model_subfolder, model_file.filename)
 
-    save_model_metadata(models_data, models_json_path, model_id_md, model_file.filename, dataset, graph_type)
+    save_model_metadata(
+        models_data,
+        models_json_path,
+        model_id_md,
+        model_file.filename,
+        dataset,
+        graph_type,
+        min_confidence,
+        top_k,
+    )
 
     # Save the model file in the model_id subfolder
     model_path = os.path.join(model_subfolder, model_file.filename)
@@ -43,13 +64,18 @@ def upload_model(user_folder: str, model_id: str, model_file: UploadFile, datase
 
     return model_path
 
-def save_model_metadata(models_data, models_json_path ,model_id, model_filename, dataset, graph_type) -> None:
-        # Prepare model metadata
+
+def save_model_metadata(
+    models_data, models_json_path, model_id, model_filename, dataset, graph_type, min_confidence, top_k,
+) -> None:
+    # Prepare model metadata
     model_metadata = {
         "model_id": model_id,
         "file_name": model_filename,
         "dataset": dataset,
         "graph_type": [graph_type],
+        "min_confidence": min_confidence,
+        "top_k": top_k
     }
 
     # Check if the model_id already exists
@@ -62,23 +88,29 @@ def save_model_metadata(models_data, models_json_path ,model_id, model_filename,
             # Add the new graph_type if it doesn't already exist
             if graph_type not in model["graph_type"]:
                 model["graph_type"].append(graph_type)
-                print(f"Adding '{graph_type}' to graph_type for file '{model_filename}'.")
+                print(
+                    f"Adding '{graph_type}' to graph_type for file '{model_filename}'."
+                )
             else:
-                print(f"Graph type '{graph_type}' already exists for file '{model_filename}'. Skipping.")
+                print(
+                    f"Graph type '{graph_type}' already exists for file '{model_filename}'. Skipping."
+                )
             break
     else:
         # If no matching model_id is found, append new metadata
         models_data.append(model_metadata)
-        print(f"Adding new metadata for file '{model_filename}' with graph type '{graph_type}'.")
+        print(
+            f"Adding new metadata for file '{model_filename}' with graph type '{graph_type}'."
+        )
 
     with open(models_json_path, "w") as json_file:
         json.dump(models_data, json_file, indent=4)
 
+
 def check_models_metadata(models_data, model_id, graph_type):
     for model in models_data:
-        if model["model_id"] == model_id and graph_type == model["graph_type"]:
-            return None
-        elif model["model_id"] == model_id and graph_type != model["graph_type"]:
+        if model["model_id"] == model_id:
+            if graph_type in model.get("graph_type", []):
+                return None
             return model_id
-        else:
-            return str(uuid.uuid4())
+    return str(uuid.uuid4())

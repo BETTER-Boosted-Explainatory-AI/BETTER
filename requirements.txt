@@ -13,3 +13,4 @@ pandas
 igraph
 python-dotenv
 python-multipart
+pydantic[email]

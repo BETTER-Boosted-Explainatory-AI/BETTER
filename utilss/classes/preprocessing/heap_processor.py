@@ -1,46 +1,28 @@
 import heapq
 import copy
 
+from utilss.enums.heap_types import HeapType
+from utilss.enums.graph_types import GraphTypes
 
-class HeapGraphProcessor:
-    def __init__(self, heap_type, labels):
-        self.heap_type = heap_type
-        self.labels = labels
+class HeapProcessor:
+    def __init__(self,graph, graph_type, labels):
+        self.heap_type = self._get_heap_type(graph_type)
         self.heap = []
-        self.nodes_multiplier = -1 if heap_type == "max" else 1
+        self.nodes_multiplier = -1 if self.heap_type == "max" else 1
+        
+        self._process_edges(graph, labels)
+ 
+        
+    def _get_heap_type(self, graph_type):
+        return HeapType.MINIMUM.value if graph_type == GraphTypes.DISSIMILARITY.value else HeapType.MAXIMUM.value
 
-    def process_edges(self, graph):
+    def _process_edges(self, graph, labels):
         """Processes edges and pushes them into a max heap."""
         for edge in graph.es:
             source = graph.vs[edge.source]["name"]
             target = graph.vs[edge.target]["name"]
             weight = edge["weight"] if "weight" in edge.attributes() else 0
             heapq.heappush(self.heap, (self.nodes_multiplier * weight, source, target))
-
-        if self.heap_type == "max":
-            self._add_missing_edges(graph)
-
-    def _add_missing_edges(self, graph):
-        """Adds missing edges with zero weight to the heap for similarity graphs."""
-        for source_node in self.labels:
-            for target_node in self.labels:
-                if source_node != target_node and not graph.are_adjacent(
-                    source_node, target_node
-                ):
-                    heapq.heappush(
-                        self.heap, (0 * self.nodes_multiplier, source_node, target_node)
-                    )
-
-    def process_matrix(self, confusion_matrix):
-        num_labels = len(self.labels)
-
-        for i in range(num_labels):
-            for j in range(num_labels):
-                if i != j:
-                    source = self.labels[i]
-                    target = self.labels[j]
-                    weight = confusion_matrix[i, j] * self.nodes_multiplier
-                    heapq.heappush(self.heap, (weight, source, target))
 
     def get_heap(self):
         """Returns the max heap."""
