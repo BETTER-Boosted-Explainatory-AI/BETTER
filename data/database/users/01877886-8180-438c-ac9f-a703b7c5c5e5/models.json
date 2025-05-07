@@ -3,6 +3,17 @@
         "model_id": "017f7c63-4beb-440a-8e0f-81fb631be9dd",
         "file_name": "upload_try.keras",
         "dataset": "cifar100",
-        "graph_type": "similarity"
+        "graph_type": [
+            "similarity",
+            "dissimilarity"
+        ]
+    },
+    {
+        "model_id": "93a15032-6bf4-497a-8076-b455cbc7ae0e",
+        "file_name": "upload_try.keras",
+        "dataset": "cifar100",
+        "graph_type": [
+            "dissimilarity"
+        ]
     }
 ]
