@@ -4,7 +4,7 @@ from igraph import Graph
 from utilss.enums.heap_types import HeapType
 from .preprocessing.batch_predictor import BatchPredictor
 from .preprocessing.heap_processor import HeapProcessor
-from .preprocessing.graphs.graph_builder import GraphBuilder
+from .preprocessing.graph.graph_builder import GraphBuilder
 from .preprocessing.hierarchical_clustering_builder import HierarchicalClusteringBuilder
 from .preprocessing.z_builder import ZBuilder
 
