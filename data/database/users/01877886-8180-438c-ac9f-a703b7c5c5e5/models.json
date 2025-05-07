@@ -1,3 +1,8 @@
-{
-    "models": []
-}
+[
+    {
+        "model_id": "017f7c63-4beb-440a-8e0f-81fb631be9dd",
+        "file_name": "upload_try.keras",
+        "dataset": "cifar100",
+        "graph_type": "similarity"
+    }
+]

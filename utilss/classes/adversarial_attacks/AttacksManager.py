@@ -5,7 +5,7 @@ from enums.hierarchical_cluster_types import HierarchicalClusterType
 from FGSM import FGSMAttack
 from PGD import PGDAttack
 from DeepFool import DeepFoolAttack
-from scoring import Scoring
+from utilss.classes.score_calculator import Scoring
 
 num_samples = 50
 

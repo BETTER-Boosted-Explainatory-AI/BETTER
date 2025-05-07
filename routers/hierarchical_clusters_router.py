@@ -40,8 +40,8 @@ async def create_visual_explaination(
     try:
         # # Save the uploaded model file to a temporary directory
         BASE_DIR = os.getenv("USERS_PATH", "users")  # Base directory for user data
-        user_folder = os.path.join(BASE_DIR, str(current_user.user_id), "models")
-        model_path = upload_model(user_folder, model_file, dataset, current_user)
+        user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
+        model_path = upload_model(user_folder, model_file, dataset, graph_type)
         new_hc = post_new_hierarchical_cluster(model_path, graph_type, dataset, current_user.user_id)
         
         if new_hc is None:

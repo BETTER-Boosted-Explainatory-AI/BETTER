@@ -5,7 +5,7 @@ import time
 
 from utilss.enums.attack_type import AttackType
 from utilss.enums.hierarchical_cluster_types import HierarchicalClusterType
-from utilss.classes.scoring import Scoring
+from utilss.classes.score_calculator import Scoring
 
 class AdversarialAttack(ABC):
     """
