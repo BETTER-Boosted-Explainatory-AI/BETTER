@@ -1,6 +1,6 @@
 from enum import Enum
 
-class HierarchicalClusterType(Enum):
+class GraphTypes(Enum):
     SIMILARITY = "similarity"
     DISSIMILARITY = "dissimilarity"
-    CONFUSION_MATRIX = "confusion_matrix"
+    COUNT = "count"

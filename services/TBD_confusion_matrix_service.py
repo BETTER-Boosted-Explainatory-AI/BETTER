@@ -4,7 +4,7 @@ from .dataset_service import _get_dataset_config, _load_dataset
 from .union_find_service import _create_uf
 from .heap_service import _create_matrix_heap
 from utilss.classes.preprocessing.edges_dataframe import EdgesDataframe
-from utilss.classes.hierarchical_cluster import HierarchicalCluster
+from utilss.classes.TBD_hierarchical_cluster import HierarchicalCluster
 from utilss.enums.datasets_enum import DatasetsEnum
 from utilss.enums.heap_type import HeapType
 

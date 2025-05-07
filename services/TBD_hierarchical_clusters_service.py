@@ -6,7 +6,7 @@ from .union_find_service import _create_uf
 from .heap_service import _create_graph_heap, _get_heap_type
 from utilss.classes.preprocessing.edges_dataframe import EdgesDataframe
 from utilss.classes.preprocessing.prediction_graph import PredictionGraph
-from utilss.classes.hierarchical_cluster import HierarchicalCluster
+from utilss.classes.TBD_hierarchical_cluster import HierarchicalCluster
 from utilss.classes.dendrogram import Dendrogram
 from utilss.enums.hierarchical_cluster_types import HierarchicalClusterType
 from utilss.enums.datasets_enum import DatasetsEnum

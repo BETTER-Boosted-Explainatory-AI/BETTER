@@ -22,12 +22,14 @@ d----- users
 |               d----- model_id
 |                       d----- similarity
 |                               rw---- similarity_dendrogram.json
-|                               rw---- matrix_dendrogram.json
 |                               rw---- edges_df.csv
 |                               rw---- logistic_regression_model.json
 |                       d----- dissimilarity
 |                               rw---- dissimilarity_dendrogram.json
-|                               rw---- matrix_dendrogram.json
+|                               rw---- edges_df.csv
+|                               rw---- logistic_regression_model.json
+|                       d----- count
+|                               rw---- count_dendrogram.json
 |                               rw---- edges_df.csv
 |                               rw---- logistic_regression_model.json
 ```

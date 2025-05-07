@@ -1,8 +1,8 @@
 import os
 from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Depends
-from request_models.hierarchical_clustering_model import HierarchicalClusterRequest, HierarchicalClusterResult
+from request_models.TBD_hierarchical_clustering_model import HierarchicalClusterRequest, HierarchicalClusterResult
 from typing import Dict
-from services.hierarchical_clusters_service import post_hierarchical_cluster, post_new_hierarchical_cluster
+from services.TBD_hierarchical_clusters_service import post_hierarchical_cluster, post_new_hierarchical_cluster
 from utilss.files_utils import upload, upload_model
 from services.users_service import get_current_session_user
 from utilss.classes.user import User
