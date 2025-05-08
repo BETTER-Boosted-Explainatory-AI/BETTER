@@ -10,6 +10,7 @@ from routers.sub_hierarchical_clusters_router import sub_hierarchical_clusters_r
 from routers.query_router import query_router
 from routers.dataset_router import datasets_router
 # from routers.attacks.pgd_router import pgd_attack_router 
+from routers.adversarial_router import adversarial_router
 from routers.users_router import users_router
 # from PIL import Image
 import numpy as np
@@ -45,7 +46,7 @@ app.include_router(sub_hierarchical_clusters_router)
 app.include_router(whitebox_testing_router)
 app.include_router(query_router)
 app.include_router(datasets_router)
-# app.include_router(pgd_attack_router) 
+app.include_router(adversarial_router) 
 app.include_router(users_router)
 
 

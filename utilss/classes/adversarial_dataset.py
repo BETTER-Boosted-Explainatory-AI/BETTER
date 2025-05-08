@@ -1,97 +1,69 @@
 from sklearn.model_selection import train_test_split
 import numpy as np
 from .score_calculator import ScoreCalculator
+from ..files_utils import load_numpy_from_directory, get_labels_from_dataset_info, load_raw_image
 import tensorflow as tf
 import os
 
 class AdversarialDataset:
-    def __init__(self, clear_images, adversarial_images, base_directory):
-        self.clear_images = clear_images
-        self.adversarial_images = adversarial_images
-        self.base_directory = base_directory
-        # Load images if not provided
-        if clear_images is None:
-            self.clear_images = self._load_images_from_directory("data/datasets/imagenet/clear")
-        else:
-            self.clear_images = clear_images
+    def __init__(self, Z_file, clean_images, adversarial_images, model_filename, dataset):
+        self.Z_matrix = Z_file
+        self.dataset = dataset
+        # Load the model
+        try:
+            if not os.path.exists(model_filename):
+                raise FileNotFoundError(f"Model file '{model_filename}' not found.")
+            
+            self.model = tf.keras.models.load_model(model_filename)
+            print(f"Model loaded successfully from '{model_filename}'.")
+        except Exception as e:
+            raise ValueError(f"Error loading model from '{model_filename}': {e}")
 
-        if adversarial_images is None:
-            self.adversarial_images = self._load_images_from_directory("data/datasets/imagenet/adversarial")
+        DATA_PATH = os.getenv("DATA_PATH")
+        if DATA_PATH is None:
+            raise ValueError("DATA_PATH environment variable is not set.")
+        
+        DATASET_PATH = os.getenv("DATASET_PATH")
+        if DATASET_PATH is None:
+            raise ValueError("DATASET_PATH environment variable is not set.")
+
+
+        if clean_images is None and adversarial_images is None:
+            self.clear_images = load_numpy_from_directory(f"{DATASET_PATH}{dataset}/clean")
+            self.adversarial_images = load_numpy_from_directory(f"{DATASET_PATH}{dataset}/adversarial")
         else:
+            self.clear_images = clean_images
             self.adversarial_images = adversarial_images
-        z_file_path = os.path.join(self.base_directory, "matrix_dendrogram.pkl")
-        self.score_calculator = ScoreCalculator(z_file_path, class_names=None)
 
-    def _load_images_from_directory(self, directory):
-        """
-        Load images from a given directory. Assumes images are stored as .npy files.
-        """
-        images = []
-        for filename in os.listdir(directory):
-            if filename.endswith(".npy"):
-                file_path = os.path.join(directory, filename)
-                images.append(np.load(file_path))
-        return images
+        dataset_info_file = os.path.join(DATASET_PATH, f"{dataset}_info.py")
+        if not os.path.exists(dataset_info_file):
+            raise FileNotFoundError(f"Dataset info file '{dataset_info_file}' not found.")
 
-    def save_images_to_directories(self):
-        """
-        Save clear and adversarial images into separate directories.
-        """
+        self.labels = get_labels_from_dataset_info(dataset, DATASET_PATH)
+        if self.labels is None:
+            raise ValueError(f"Labels not found in dataset info file '{dataset_info_file}'.")      
 
-        # Ensure the directories exist
-        os.makedirs(self.clear_dir, exist_ok=True)
-        os.makedirs(self.adversarial_dir, exist_ok=True)
+        self.score_calculator = ScoreCalculator(self.Z_matrix, self.labels)
 
-        # Save clear images
-        for i, img in enumerate(self.clear_images):
-            np.save(os.path.join(self.clear_dir, f"clear_{i}.npy"), img.numpy())
-
-        print(f"Saved {len(self.clear_images)} clear images to {self.clear_dir}")
-
-        # Save adversarial images
-        for i, img in enumerate(self.adversarial_images):
-            np.save(os.path.join(self.adversarial_dir, f"adversarial_{i}.npy"), img.numpy())
-
-        print(f"Saved {len(self.adversarial_images)} adversarial images to {self.adversarial_dir}")
-
-    def load_raw_image(file_path):
-        """
-        Load a raw adversarial example that was saved as a numpy array
-        """
-        # Load the numpy array and convert back to tensor
-        img_example = np.load(file_path)
-        return tf.convert_to_tensor(img_example, dtype=tf.float32)
-    
-    def calculate_scores(self, model, dir, label):
-        scores = []
-        for filename in os.listdir(dir):
-            if filename.endswith(".npy") and filename.startswith(label):
-                file_path = os.path.join(dir, filename)
-                loaded_adversarial = self.load_raw_image(file_path)
-
-                score = ScoreCalculator.calculate_adversarial_score(
-                    model.predict(loaded_adversarial))
-                scores.append(score)
-        return scores
-
-    def create_logistic_regression_dataset(self, model, clean_folder, adversarial_folder):
-        # Initialize data collection
+    def create_logistic_regression_dataset(self):
         scores = []
         labels = []
 
         try:
-            org_scores, org_labels = self.calculate_scores(model, clean_folder, label="clear_")
-            scores.extend(org_scores)
-            labels.extend(org_labels)
+            for image in self.clear_images:
+                score = self.score_calculator.calculate_adversarial_score(self.model.predict(image))
+                scores.append(score)
+                labels.append(0)
         except Exception as e:
             print(f"Error processing clean image: {e}")
         
         # Generate features for PGD attacks
-        print("Generating PGD attack features...")
+        print("Generating attack features...")
         try:
-            pgd_scores, pgd_labels = self.calculate_scores(model, adversarial_folder, label="adversarial_")
-            scores.extend(pgd_scores)
-            labels.extend(pgd_labels)
+            for adv_image in self.adversarial_images:
+                score = self.score_calculator.calculate_adversarial_score(self.model.predict(adv_image))
+                scores.append(score)
+                labels.append(1)
         except Exception as e:
             print(f"Error processing PGD attack on image: {e}")
 
@@ -105,18 +77,11 @@ class AdversarialDataset:
         # Reshape X to ensure it is 2D
         if len(X.shape) == 1:
             X = X.reshape(-1, 1)
-
-        # print(f"X shape: {X.shape}")
-        # print(f"y shape: {y.shape}")
-        # print(f"X: {X}")
-        # print(f"y: {y}")
         
         # Split into training and test sets
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.3, random_state=42
         )
-
-        # joblib.dump((X_train, y_train, X_test, y_test), f'.{self.base_directory}/{filename}.pkl')
         
         print(f"Training data shape: {X_train.shape}")
         print(f"Clean samples: {sum(y_train == 0)}, Adversarial samples: {sum(y_train == 1)}")
