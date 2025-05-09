@@ -8,7 +8,7 @@ from utilss.classes.edges_dataframe import EdgesDataframe
 from utilss.classes.preprocessing.TBD_prediction_graph import PredictionGraph
 from utilss.classes.TBD_hierarchical_cluster import HierarchicalCluster
 from utilss.classes.dendrogram import Dendrogram
-from utilss.enums.hierarchical_cluster_types import HierarchicalClusterType
+from utilss.enums.graph_types import GraphTypes
 from utilss.enums.datasets_enum import DatasetsEnum
 import numpy as np
 
@@ -22,7 +22,7 @@ def post_hierarchical_cluster(model_filename, graph_type, dataset_str):
             detail="Model filename is required"
         )
         
-    if graph_type != HierarchicalClusterType.SIMILARITY.value and graph_type != HierarchicalClusterType.DISSIMILARITY.value:
+    if graph_type != GraphTypes.SIMILARITY.value and graph_type != GraphTypes.DISSIMILARITY.value:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
             detail="Graph type must be either 'similarity' or 'dissimilarity'"
@@ -100,7 +100,7 @@ def post_new_hierarchical_cluster(model_filename, graph_type, dataset_str, user_
             detail="Model filename is required"
         )
         
-    if graph_type != HierarchicalClusterType.SIMILARITY.value and graph_type != HierarchicalClusterType.DISSIMILARITY.value:
+    if graph_type != GraphTypes.SIMILARITY.value and graph_type != GraphTypes.DISSIMILARITY.value:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
             detail="Graph type must be either 'similarity' or 'dissimilarity'"

@@ -44,6 +44,7 @@ async def create_visual_explaination(
         user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
         model_path = upload_model(user_folder, model_id, model_file, dataset, graph_type)
         new_hc = post_new_hierarchical_cluster(model_path, graph_type, dataset, current_user.user_id)
+
         
         if new_hc is None:
             raise HTTPException(status_code=404, detail="Hierarchical Clustering was not created")

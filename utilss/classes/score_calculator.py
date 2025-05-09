@@ -125,7 +125,7 @@ class ScoreCalculator:
                 
                 # Calculate semantic distance
                 rank_count = self.count_ancestors_to_lca(idx1, idx2)
-                # print(f"Rank Count for {label1} and {label2}: {rank_count}")
+                print(f"Rank Count for {label1} and {label2}: {rank_count}")
                 
                 # Calculate product of probabilities and distance
                 prob_product = prob1 * prob2

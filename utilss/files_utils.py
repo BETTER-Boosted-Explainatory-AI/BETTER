@@ -3,8 +3,11 @@ import shutil
 from fastapi import UploadFile
 import json
 import uuid
+import numpy as np
 from utilss.classes.user import User
-
+import tensorflow as tf
+import importlib.util
+from tensorflow.keras.applications.resnet50 import preprocess_input
 
 def upload(upload_dir: str, model_file: UploadFile) -> str:
     os.makedirs(upload_dir, exist_ok=True)
@@ -113,4 +116,5 @@ def check_models_metadata(models_data, model_id, graph_type):
             if graph_type in model.get("graph_type", []):
                 return None
             return model_id
-    return str(uuid.uuid4())
+        else:
+            return str(uuid.uuid4())
