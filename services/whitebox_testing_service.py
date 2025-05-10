@@ -1,5 +1,5 @@
 from utilss.classes.whitebox_testing import WhiteBoxTesting
-from utilss.classes.preprocessing.edges_dataframe import EdgesDataframe
+from utilss.classes.edges_dataframe import EdgesDataframe
 
 def get_white_box_analysis(model_name, source_labels, target_labels, edges_data_filename):
     edges_data = EdgesDataframe(model_name, edges_data_filename)

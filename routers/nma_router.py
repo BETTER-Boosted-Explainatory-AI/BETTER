@@ -1,31 +1,46 @@
 import os
 from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Depends
-from request_models.nma_model import NMARequest, NMAResult
+from request_models.nma_model import NMAResult
 from typing import Dict
-from services.TBD_hierarchical_clusters_service import post_hierarchical_cluster, post_new_hierarchical_cluster
-from utilss.files_utils import upload, upload_model
+from utilss.files_utils import upload_model
 from services.users_service import get_current_session_user
 from utilss.classes.user import User
-import shutil
+from services.nma_service import (
+    _create_nma,
+)
 
 nma_router = APIRouter()
 
 
-
 @nma_router.post(
-    "/hierarchical_clusters", 
+    "/nma",
     response_model=NMAResult,
     status_code=status.HTTP_201_CREATED,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
-        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
-    }
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"},
+    },
 )
-async def create_nma(nma_data: NMARequest) -> Dict[str, str]:
-    user_id = nma_data.user_id
-    model_file = nma_data.model_file
-    dataset_name = nma_data.dataset
-    graph_type = nma_data.graph_type
-    min_confidence = nma_data.min_confidence
-    top_k = nma_data.top_k
+async def create_nma(
+    current_user: User = Depends(get_current_session_user),
+    model_file: UploadFile = File(...),
+    dataset: str = Form(...),
+    graph_type: str = Form(...),
+    model_id: str = Form(None),
+    min_confidence: float = Form(0.5),
+    top_k: int = Form(5),
+) -> Dict[str, str]:
+    try:
+        BASE_DIR = os.getenv("USERS_PATH", "users")
+        user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
+        model_path = upload_model(user_folder, model_id, model_file, dataset, graph_type, min_confidence, top_k)
+        new_nma = _create_nma(model_path, graph_type, dataset, current_user.user_id, min_confidence, top_k)
+        
+        if new_nma is None:
+            raise HTTPException(status_code=404, detail="Hierarchical Clustering was not created")
+        
+        return NMAResult(data=new_nma.tolist())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

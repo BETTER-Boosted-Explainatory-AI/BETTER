@@ -1,11 +1,11 @@
 from fastapi import HTTPException, status
 from .dataset_service import _get_dataset_config, _load_dataset
-from .graphs_service import _create_graph
+from .TBD_graphs_service import _create_graph
 from .models_service import _load_model, construct_model
-from .union_find_service import _create_uf
+from .TBD_union_find_service import _create_uf
 from .heap_service import _create_graph_heap, _get_heap_type
-from utilss.classes.preprocessing.edges_dataframe import EdgesDataframe
-from utilss.classes.preprocessing.prediction_graph import PredictionGraph
+from utilss.classes.edges_dataframe import EdgesDataframe
+from utilss.classes.preprocessing.TBD_prediction_graph import PredictionGraph
 from utilss.classes.TBD_hierarchical_cluster import HierarchicalCluster
 from utilss.classes.dendrogram import Dendrogram
 from utilss.enums.graph_types import GraphTypes

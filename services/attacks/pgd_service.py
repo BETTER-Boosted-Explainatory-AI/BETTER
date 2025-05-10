@@ -33,7 +33,7 @@ def _get_dataset_instance(dataset_str: str):
         # Use the global ImageNet instance if available
         if app.imagenet_instance is None:
             # If not already loaded, load it
-            from utilss.classes.datasets.imagenet import ImageNet
+            from utilss.classes.datasets.TBD_imagenet import ImageNet
             app.imagenet_instance = ImageNet()
             app.imagenet_instance.load("imagenet")
         return app.imagenet_instance
