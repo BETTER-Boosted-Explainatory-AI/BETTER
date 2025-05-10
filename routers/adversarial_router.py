@@ -36,7 +36,7 @@ async def generate_adversarial_detector(
             raise HTTPException(status_code=404, detail="Detector was not created")
         
         # Return an instance of DetectorResponse
-        return DetectorResponse(message="Detector created successfully")
+        return DetectorResponse(result="Detector created successfully")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

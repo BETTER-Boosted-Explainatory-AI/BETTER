@@ -35,13 +35,13 @@ class AdversarialDataset:
             self.clear_images = clean_images
             self.adversarial_images = adversarial_images
 
-        dataset_info_file = os.path.join(DATASET_PATH, f"{dataset}_info.py")
-        if not os.path.exists(dataset_info_file):
-            raise FileNotFoundError(f"Dataset info file '{dataset_info_file}' not found.")
+        # dataset_info_file = os.path.join(DATASET_PATH, f"{dataset}_info.py")
+        # if not os.path.exists(dataset_info_file):
+        #     raise FileNotFoundError(f"Dataset info file '{dataset_info_file}' not found.")
 
-        self.labels = get_labels_from_dataset_info(dataset, DATASET_PATH)
+        self.labels = get_labels_from_dataset_info(dataset)
         if self.labels is None:
-            raise ValueError(f"Labels not found in dataset info file '{dataset_info_file}'.")      
+            raise ValueError(f"info file for the dataset {dataset} not found'.")      
 
         self.score_calculator = ScoreCalculator(self.Z_matrix, self.labels)
 
@@ -50,7 +50,7 @@ class AdversarialDataset:
         labels = []
 
         try:
-            for image in self.clear_images:
+            for image in self.clear_images[:50]:
                 score = self.score_calculator.calculate_adversarial_score(self.model.predict(image))
                 scores.append(score)
                 labels.append(0)
@@ -60,7 +60,7 @@ class AdversarialDataset:
         # Generate features for PGD attacks
         print("Generating attack features...")
         try:
-            for adv_image in self.adversarial_images:
+            for adv_image in self.adversarial_images[:50]:
                 score = self.score_calculator.calculate_adversarial_score(self.model.predict(adv_image))
                 scores.append(score)
                 labels.append(1)

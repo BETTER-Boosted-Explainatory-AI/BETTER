@@ -7,9 +7,12 @@ import numpy as np
 from utilss.classes.user import User
 import tensorflow as tf
 import importlib.util
-from tensorflow.keras.applications.resnet50 import preprocess_input
+# from tensorflow.keras.applications.resnet50 import preprocess_input
+from services.models_service import get_preprocess_function
 from data.datasets.cifar100_info import CIFAR100_INFO
 from data.datasets.imagenet_info import IMAGENET_INFO
+from PIL import Image
+import io
 
 def upload(upload_dir: str, model_file: UploadFile) -> str:
     os.makedirs(upload_dir, exist_ok=True)
@@ -121,11 +124,6 @@ def check_models_metadata(models_data, model_id, graph_type):
         else:
             return str(uuid.uuid4())
         
-# def get_model_info(models_data, model_id):
-#     for model in models_data:
-#         if model["model_id"] == model_id:
-#             return model
-#     return None
 def get_user_models_info(user_folder: str, model_id: str):
     models_json_path = os.path.join(user_folder, "models.json")
     if os.path.exists(models_json_path):
@@ -207,23 +205,14 @@ def get_labels_from_dataset_info(dataset_name: str) -> list:
             raise ValueError(f"Unsupported dataset: {dataset_name}")
     except Exception as e:
         raise ValueError(f"Error loading labels from dataset info file: {e}")
-    #     # Construct the full path to the dataset info file
-    #     DATASET_PATH = os.getenv("DATASET_PATH")
-    #     if DATASET_PATH is None:
-    #         raise ValueError("DATASET_PATH environment variable is not set.")
-    #     dataset_info_file = os.path.join(DATASET_PATH, f"{dataset_name}_info.py")
-        
-    #     # Check if the file exists
-    #     if not os.path.exists(dataset_info_file):
-    #         raise FileNotFoundError(f"Dataset info file '{dataset_info_file}' not found.")
-        
-    #     # Import the dataset info file as a module
-    #     spec = importlib.util.spec_from_file_location("dataset_info", dataset_info_file)
-    #     dataset_info = importlib.util.module_from_spec(spec)
-    #     spec.loader.exec_module(dataset_info)
-        
-    #     # Access the labels
-    #     labels = dataset_info.CIFAR100_INFO.get("labels", [])
-    #     return labels
-    # except Exception as e:
-    #     raise ValueError(f"Error loading labels from dataset info file: {e}")
+
+def preprocess_image(model, image):
+    expected_shape = model.input_shape
+    input_height, input_width = expected_shape[1], expected_shape[2]
+    pil_image = Image.open(io.BytesIO(image)).convert("RGB")
+    pil_image = pil_image.resize((input_width, input_height))
+    preprocess_input = get_preprocess_function(model)
+    image_array = preprocess_input(np.array(pil_image))
+    image_preprocessed = np.expand_dims(image_array, axis=0)
+    return image_preprocessed
+

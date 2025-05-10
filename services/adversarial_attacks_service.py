@@ -1,13 +1,9 @@
 from utilss.classes.adversarial_dataset import AdversarialDataset
 from utilss.classes.adversarial_detector import AdversarialDetector
 from utilss.classes.score_calculator import ScoreCalculator
-from utilss.files_utils import get_user_models_info, get_model_files, get_labels_from_dataset_info
-from PIL import Image
-import io
-import numpy as np
+from utilss.files_utils import get_user_models_info, get_model_files, get_labels_from_dataset_info, preprocess_image
 import tensorflow as tf
 import os
-import json
 
 
 def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_filename, dataset) -> AdversarialDataset:
@@ -27,11 +23,15 @@ def create_logistic_regression_detector(model_id: str, graph_type: str, clean_im
         model_file = model_files["model_file"]
         Z_file = model_files["Z_file"]
         
-    adversarial_dataset = _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_file, model_info["dataset"])
     adversarial_detector = AdversarialDetector(model_graph_folder)
-    adversarial_detector.train_adversarial_detector(adversarial_dataset)
+    if adversarial_detector.does_detector_exist():
+        print("Adversarial detector already exists.")
+        return adversarial_detector
+    else:
+        adversarial_dataset = _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_file, model_info["dataset"])
+        adversarial_detector.train_adversarial_detector(adversarial_dataset)
 
-    return adversarial_dataset
+    return adversarial_detector
 
 def detect_adversarial_image(model_id, graph_type, image, user_folder):
     """
@@ -67,31 +67,16 @@ def detect_adversarial_image(model_id, graph_type, image, user_folder):
         else:
             raise ValueError(f"Model file {model_file} does not exist")
         
-        expected_shape = model.input_shape
-        input_height, input_width = expected_shape[1], expected_shape[2]
-        print(f"Model expects input shape: {expected_shape}")
+    image_preprocessed = preprocess_image(model, image)
 
-        pil_image = Image.open(io.BytesIO(image)).convert("RGB")
-        
-        # Resize the image based on the model's expected input size
-        pil_image = pil_image.resize((input_width, input_height))
-        
-        # Convert the image to a NumPy array and normalize pixel values to [0, 1]
-        image_array = np.array(pil_image) / 255.0
-        
-        print(f"Resized image array shape: {image_array.shape}") 
-        
-        # Add a batch dimension (models expect input shape: [batch_size, height, width, channels])
-        image_preprocessed = np.expand_dims(image_array, axis=0)
-        
-        print(f"Preprocessed image shape before prediction: {image_preprocessed.shape}")
+    print(f"Image preprocessed successfully.")
 
-        detector = AdversarialDetector(model_graph_folder)
-
-        score_calculator = ScoreCalculator(Z_full, labels)
+    detector = AdversarialDetector(model_graph_folder)
+    score_calculator = ScoreCalculator(Z_full, labels)
     
     # Get predictions from the original model
     preds = model.predict(image_preprocessed, verbose=0)
+
     
     # Calculate the adversarial score (or other features)
     score = score_calculator.calculate_adversarial_score(preds[0])
