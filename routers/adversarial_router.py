@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, status, Form, UploadFile, Depends
-from services.adversarial_attacks_service import create_logistic_regression_detector
+from services.adversarial_attacks_service import create_logistic_regression_detector, detect_adversarial_image
 from services.users_service import get_current_session_user
 from utilss.classes.user import User
 from typing import List, Optional
-from request_models.adversarial_model import DetectorResponse
+from request_models.adversarial_model import DetectorResponse, DetectionResult
 import os
 
 adversarial_router = APIRouter()
@@ -31,7 +31,7 @@ async def generate_adversarial_detector(
         detector = create_logistic_regression_detector(
             current_model_id, graph_type, clean_images, adversarial_images, user_folder
         )
-        print("detector", detector)
+
         if detector is None:
             raise HTTPException(status_code=404, detail="Detector was not created")
         
@@ -39,4 +39,34 @@ async def generate_adversarial_detector(
         return DetectorResponse(message="Detector created successfully")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@adversarial_router.post(
+    "/adversarial/detect",
+    status_code=status.HTTP_200_OK,
+    response_model=DetectorResponse,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
+    }
+)
+async def detect_query(
+    current_model_id: str = Form(...),
+    graph_type: str = Form(...),
+    image: UploadFile = Form(...),
+    current_user: User = Depends(get_current_session_user)
+):
+    try:
+        BASE_DIR = os.getenv("USERS_PATH", "users")
+        user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
+        image_content = await image.read()
+        detection_result = detect_adversarial_image(current_model_id, graph_type, image_content, user_folder)
+        if detection_result is None:
+            raise HTTPException(status_code=404, detail="Detection result not found")
+        return DetectorResponse(result=detection_result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+        
+        
 

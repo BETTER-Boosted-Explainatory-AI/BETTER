@@ -8,6 +8,8 @@ from utilss.classes.user import User
 import tensorflow as tf
 import importlib.util
 from tensorflow.keras.applications.resnet50 import preprocess_input
+from data.datasets.cifar100_info import CIFAR100_INFO
+from data.datasets.imagenet_info import IMAGENET_INFO
 
 def upload(upload_dir: str, model_file: UploadFile) -> str:
     os.makedirs(upload_dir, exist_ok=True)
@@ -118,3 +120,110 @@ def check_models_metadata(models_data, model_id, graph_type):
             return model_id
         else:
             return str(uuid.uuid4())
+        
+# def get_model_info(models_data, model_id):
+#     for model in models_data:
+#         if model["model_id"] == model_id:
+#             return model
+#     return None
+def get_user_models_info(user_folder: str, model_id: str):
+    models_json_path = os.path.join(user_folder, "models.json")
+    if os.path.exists(models_json_path):
+        with open(models_json_path, "r") as json_file:
+            models_data = json.load(json_file)
+    else:
+        models_data = []
+        raise ValueError(f"Models metadata file '{models_json_path}' not found.")
+    
+    if model_id is None:
+        return models_data
+    else:
+        return get_model_info(models_data, model_id)
+
+def get_model_info(models_data, model_id):
+    for model in models_data:
+        if model["model_id"] == model_id:
+            return {
+                "model_id": model["model_id"],
+                "file_name": model["file_name"],
+                "dataset": model["dataset"],
+                "graph_type": model["graph_type"],
+            }
+    # If no match is found, return None
+    print(f"Model {model_id} doesn't exist.")
+    return None
+
+def get_model_files(user_folder: str, model_info: dict, graph_type: str):
+        model_subfolder = os.path.join(user_folder, model_info["model_id"])
+        model_file = os.path.join(model_subfolder, model_info["file_name"])
+        if not os.path.exists(model_file):
+            model_file = None
+            raise ValueError(f"Model file {model_file} does not exist")
+        model_graph_folder = os.path.join(model_subfolder, graph_type)
+        Z_file = os.path.join(model_graph_folder, f"{graph_type}_dendrogram.pkl")
+        if not os.path.exists(Z_file):
+            Z_file = None
+            print(f"Z file {Z_file} does not exist")
+        detector_filename = os.path.join(model_graph_folder, 'logistic_regression_model.pkl')
+        if not os.path.exists(detector_filename):
+            detector_filename = None
+            print(f"Detector model file {detector_filename} does not exist")
+        dataframe_filename = os.path.join(model_graph_folder, 'edges_df.csv')
+        if not os.path.exists(dataframe_filename):
+            dataframe_filename = None
+            print(f"Dataframe file {dataframe_filename} does not exist")
+        return {"model_file": model_file, "Z_file": Z_file, "detector_filename": detector_filename, "dataframe": dataframe_filename, "model_graph_folder": model_graph_folder}
+        
+def load_numpy_from_directory(directory):
+    """
+    Load images from a given directory. Assumes images are stored as .npy files.
+    """
+    print(f"Loading images from {directory}")
+    images = []
+    for filename in os.listdir(directory):
+        if filename.endswith(".npy"):
+            file_path = os.path.join(directory, filename)
+            image = np.load(file_path)
+            image = np.expand_dims(image, axis=0)
+            image = preprocess_input(image)
+            images.append(image)
+    return images
+
+def load_raw_image(file_path):
+    """
+    Load a raw adversarial example that was saved as a numpy array
+    """
+    # Load the numpy array and convert back to tensor
+    img_example = np.load(file_path)
+    return tf.convert_to_tensor(img_example, dtype=tf.float32)
+
+def get_labels_from_dataset_info(dataset_name: str) -> list:
+    try:
+        if dataset_name == "cifar100":
+            return CIFAR100_INFO.get("labels", [])
+        elif dataset_name == "imagenet":
+            return IMAGENET_INFO.get("labels", [])
+        else:
+            raise ValueError(f"Unsupported dataset: {dataset_name}")
+    except Exception as e:
+        raise ValueError(f"Error loading labels from dataset info file: {e}")
+    #     # Construct the full path to the dataset info file
+    #     DATASET_PATH = os.getenv("DATASET_PATH")
+    #     if DATASET_PATH is None:
+    #         raise ValueError("DATASET_PATH environment variable is not set.")
+    #     dataset_info_file = os.path.join(DATASET_PATH, f"{dataset_name}_info.py")
+        
+    #     # Check if the file exists
+    #     if not os.path.exists(dataset_info_file):
+    #         raise FileNotFoundError(f"Dataset info file '{dataset_info_file}' not found.")
+        
+    #     # Import the dataset info file as a module
+    #     spec = importlib.util.spec_from_file_location("dataset_info", dataset_info_file)
+    #     dataset_info = importlib.util.module_from_spec(spec)
+    #     spec.loader.exec_module(dataset_info)
+        
+    #     # Access the labels
+    #     labels = dataset_info.CIFAR100_INFO.get("labels", [])
+    #     return labels
+    # except Exception as e:
+    #     raise ValueError(f"Error loading labels from dataset info file: {e}")
