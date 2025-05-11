@@ -87,6 +87,7 @@ def query_predictions(dataset, model_filename, image_path):
         raise ValueError(f"Unsupported dataset: {dataset}")
 
 def get_preprocess_function(model):
+    print("Determining preprocessing function based on model layers...")
     preprocess_map = {
         "resnet50": resnet50_preprocess,
         "vgg16": vgg16_preprocess,
@@ -98,7 +99,6 @@ def get_preprocess_function(model):
 
     for layer in model.layers:
         layer_name = layer.name.lower()
-        # print(f"Layer name: {layer.name}")
         for model_name in preprocess_map.keys():
             if model_name in layer_name:
                 print(f"Detected model type: {model_name}")

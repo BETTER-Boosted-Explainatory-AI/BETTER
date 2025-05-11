@@ -4,10 +4,7 @@ from fastapi import UploadFile
 import json
 import uuid
 import numpy as np
-from utilss.classes.user import User
 import tensorflow as tf
-import importlib.util
-# from tensorflow.keras.applications.resnet50 import preprocess_input
 from services.models_service import get_preprocess_function
 from data.datasets.cifar100_info import CIFAR100_INFO
 from data.datasets.imagenet_info import IMAGENET_INFO
@@ -172,7 +169,7 @@ def get_model_files(user_folder: str, model_info: dict, graph_type: str):
             print(f"Dataframe file {dataframe_filename} does not exist")
         return {"model_file": model_file, "Z_file": Z_file, "detector_filename": detector_filename, "dataframe": dataframe_filename, "model_graph_folder": model_graph_folder}
         
-def load_numpy_from_directory(directory):
+def load_numpy_from_directory(model ,directory):
     """
     Load images from a given directory. Assumes images are stored as .npy files.
     """
@@ -182,9 +179,8 @@ def load_numpy_from_directory(directory):
         if filename.endswith(".npy"):
             file_path = os.path.join(directory, filename)
             image = np.load(file_path)
-            image = np.expand_dims(image, axis=0)
-            image = preprocess_input(image)
-            images.append(image)
+            preprocess_image = preprocess_numpy_image(model, image)
+            images.append(preprocess_image)
     return images
 
 def load_raw_image(file_path):
@@ -216,3 +212,16 @@ def preprocess_image(model, image):
     image_preprocessed = np.expand_dims(image_array, axis=0)
     return image_preprocessed
 
+def preprocess_numpy_image(model, image):
+    """
+    Preprocess a NumPy array image for the given model.
+    """
+    image = np.expand_dims(image, axis=0)
+
+    # Get the appropriate preprocessing function for the model
+    preprocess_input = get_preprocess_function(model)
+
+    # Apply the preprocessing function
+    image_preprocessed = preprocess_input(image)
+
+    return image_preprocessed

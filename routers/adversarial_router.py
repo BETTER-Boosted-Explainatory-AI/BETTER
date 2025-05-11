@@ -3,7 +3,7 @@ from services.adversarial_attacks_service import create_logistic_regression_dete
 from services.users_service import get_current_session_user
 from utilss.classes.user import User
 from typing import List, Optional
-from request_models.adversarial_model import DetectorResponse, DetectionResult
+from request_models.adversarial_model import DetectorResponse
 import os
 
 adversarial_router = APIRouter()
