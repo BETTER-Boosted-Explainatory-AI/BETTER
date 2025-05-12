@@ -1,7 +1,8 @@
 from sklearn.model_selection import train_test_split
 import numpy as np
-from .score_calculator import ScoreCalculator
-from ..files_utils import load_numpy_from_directory, get_labels_from_dataset_info, load_raw_image
+from utilss.classes.score_calculator import ScoreCalculator
+from utilss.files_utils import load_numpy_from_directory, get_labels_from_dataset_info, preprocess_numpy_image
+# from services.models_service import get_preprocess_function
 import tensorflow as tf
 import os
 
@@ -29,19 +30,15 @@ class AdversarialDataset:
 
 
         if clean_images is None and adversarial_images is None:
-            self.clear_images = load_numpy_from_directory(f"{DATASET_PATH}{dataset}/clean")
-            self.adversarial_images = load_numpy_from_directory(f"{DATASET_PATH}{dataset}/adversarial")
+            self.clear_images = load_numpy_from_directory(self.model, f"{DATASET_PATH}{dataset}/clean")
+            self.adversarial_images = load_numpy_from_directory(self.model, f"{DATASET_PATH}{dataset}/adversarial")
         else:
             self.clear_images = clean_images
             self.adversarial_images = adversarial_images
 
-        dataset_info_file = os.path.join(DATASET_PATH, f"{dataset}_info.py")
-        if not os.path.exists(dataset_info_file):
-            raise FileNotFoundError(f"Dataset info file '{dataset_info_file}' not found.")
-
-        self.labels = get_labels_from_dataset_info(dataset, DATASET_PATH)
+        self.labels = get_labels_from_dataset_info(dataset)
         if self.labels is None:
-            raise ValueError(f"Labels not found in dataset info file '{dataset_info_file}'.")      
+            raise ValueError(f"info file for the dataset {dataset} not found'.")      
 
         self.score_calculator = ScoreCalculator(self.Z_matrix, self.labels)
 
@@ -49,8 +46,10 @@ class AdversarialDataset:
         scores = []
         labels = []
 
+        print("getting preprocess function...")
+
         try:
-            for image in self.clear_images:
+            for image in self.clear_images[:50]:
                 score = self.score_calculator.calculate_adversarial_score(self.model.predict(image))
                 scores.append(score)
                 labels.append(0)
@@ -60,7 +59,7 @@ class AdversarialDataset:
         # Generate features for PGD attacks
         print("Generating attack features...")
         try:
-            for adv_image in self.adversarial_images:
+            for adv_image in self.adversarial_images[:50]:
                 score = self.score_calculator.calculate_adversarial_score(self.model.predict(adv_image))
                 scores.append(score)
                 labels.append(1)

@@ -1,4 +1,8 @@
 from pydantic import BaseModel
 
 class DetectorResponse(BaseModel):
-    message: str
+    result: str
+
+class DetectionResult(BaseModel):
+    label: str
+    probability: float

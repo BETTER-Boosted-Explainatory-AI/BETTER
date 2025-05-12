@@ -4,8 +4,15 @@ from utilss.classes.model import Model
 from utilss.classes.dendrogram import Dendrogram
 import tensorflow as tf
 from tensorflow.keras.applications import ResNet50
+from tensorflow.keras.applications.resnet50 import preprocess_input as resnet50_preprocess
+from tensorflow.keras.applications.vgg16 import preprocess_input as vgg16_preprocess
+from tensorflow.keras.applications.inception_v3 import preprocess_input as inception_v3_preprocess
+from tensorflow.keras.applications.mobilenet import preprocess_input as mobilenet_preprocess
+from tensorflow.keras.applications.efficientnet import preprocess_input as efficientnet_preprocess
+from tensorflow.keras.applications.xception import preprocess_input as xception_preprocess
 from utilss.enums.datasets_enum import DatasetsEnum
 from services.dataset_service import _get_dataset_config
+
 
 def get_model():
     return None
@@ -68,5 +75,26 @@ def query_predictions(dataset, model_filename, image_path):
         return top_label, top_3_predictions
     else:
         raise ValueError(f"Unsupported dataset: {dataset}")
-    
+
+def get_preprocess_function(model):
+    print("Determining preprocessing function based on model layers...")
+    preprocess_map = {
+        "resnet50": resnet50_preprocess,
+        "vgg16": vgg16_preprocess,
+        "inception_v3": inception_v3_preprocess,
+        "mobilenet": mobilenet_preprocess,
+        "efficientnet": efficientnet_preprocess,
+        "xception": xception_preprocess,
+    }
+
+    for layer in model.layers:
+        layer_name = layer.name.lower()
+        for model_name in preprocess_map.keys():
+            if model_name in layer_name:
+                print(f"Detected model type: {model_name}")
+                return preprocess_map[model_name]
+
+    # If no matching model type is found, use generic normalization
+    print("No supported model type found in the layers. Falling back to generic normalization.")
+    return lambda x: x / 255.0  # Generic normalization to [0, 1]
 
