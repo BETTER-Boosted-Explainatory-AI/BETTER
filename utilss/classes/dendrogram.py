@@ -3,9 +3,11 @@ from utilss.wordnet_utils import process_hierarchy
 import json
 import os
 import numpy as np
+import pickle
 
 class Dendrogram:
-    def __init__(self, dendrogram_filename):
+    def __init__(self, Z, dendrogram_filename):
+        self.Z = Z
         self.Z_tree_format = None
         self.dendrogram_filename = dendrogram_filename
 
@@ -118,7 +120,7 @@ class Dendrogram:
         filtered_tree_json = json.dumps(filtered_tree, indent=2)
         return filtered_tree_json
 
-    def save_dendrogram_as_json(self, linkage_matrix=None):
+    def save_dendrogram(self, linkage_matrix=None):
         """
         Create dendrogram data and save it as JSON
         
@@ -133,30 +135,36 @@ class Dendrogram:
         """
         # Create a dictionary with the dendrogram data
         
-        DENDROGRAMS_PATH = os.getenv("DENDROGRAMS_PATH")
-        dendrogram_path = f'{DENDROGRAMS_PATH}/{self.dendrogram_filename}.json'
+        # DENDROGRAMS_PATH = os.getenv("DENDROGRAMS_PATH")
+        # dendrogram_path = f'{DENDROGRAMS_PATH}/{self.dendrogram_filename}.json'
         
         # Load existing data if the file exists
-        if os.path.exists(dendrogram_path):
-            with open(dendrogram_path, 'r') as f:
-                existing_data = json.load(f)
-        else:
-            existing_data = {}
-
-        # Preserve the existing Z key if it exists
-        dendrogram_data = {
-            'Z': existing_data.get('Z', linkage_matrix.tolist()),
-            'Z_tree_format': self.Z_tree_format
-        }
+        directory = os.path.dirname(self.dendrogram_filename)
         
-        # Save the data as JSON
-        with open(dendrogram_path, 'w') as f:
-            json.dump(dendrogram_data, f, indent=2)
-            
-        print(f"Dendrogram data saved to {dendrogram_path}")
-        return dendrogram_path
+        # Create directories if they don't exist
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        
+        # Define file paths
+        pickle_path = f'{self.dendrogram_filename}.pkl'
+        json_path = f'{self.dendrogram_filename}.json'
+        
+        # Save linkage matrix as pickle if provided
+        if linkage_matrix is not None:
+            with open(pickle_path, 'wb') as f:
+                pickle.dump(linkage_matrix, f)
+            print(f"Linkage matrix saved to {pickle_path}")
+        
+        # Save tree format as JSON
+        if self.Z_tree_format is not None:
+            with open(json_path, 'w') as f:
+                json.dump(self.Z_tree_format, f, indent=2)
+            print(f"Tree format saved to {json_path}")
+        
+        return pickle_path, json_path
+        
     
-    def load_dendrogram_from_json(self):
+    def load_dendrogram(self):
         """
         Load dendrogram data from a JSON file
         
@@ -166,15 +174,27 @@ class Dendrogram:
         Returns:
         - self with loaded data
         """
-        DENDROGRAMS_PATH = os.getenv("DENDROGRAMS_PATH")
-        dendrogram_path = f'{DENDROGRAMS_PATH}/{self.dendrogram_filename}.json'
+        pickle_path = f'{self.dendrogram_filename}.pkl'
+        json_path = f'{self.dendrogram_filename}.json'
         
-        with open(dendrogram_path, 'r') as f:
-            data = json.load(f)
-            
-        self.Z_tree_format = data.get('Z_tree_format')
+        # Load linkage matrix from pickle
+        if os.path.exists(pickle_path):
+            with open(pickle_path, 'rb') as f:
+                self.Z = pickle.load(f)
+            print(f"Linkage matrix loaded from {pickle_path}")
+        else:
+            print(f"Pickle file not found: {pickle_path}")
+            self.Z = None
         
-        print(f"Dendrogram data loaded from {dendrogram_path}")
+        # Load tree format from JSON
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as f:
+                self.Z_tree_format = json.load(f)
+            print(f"Tree format loaded from {json_path}")
+        else:
+            print(f"JSON file not found: {json_path}")
+            self.Z_tree_format = None
+        
         return self
     
     def find_name_hierarchy(self, node, target_name):

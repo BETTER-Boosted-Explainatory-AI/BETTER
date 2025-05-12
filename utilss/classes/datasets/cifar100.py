@@ -2,7 +2,6 @@ import os
 import pickle
 import numpy as np
 from .dataset import Dataset
-from globalvars import cifar100_labels
 import matplotlib.pyplot as plt
 from data.datasets.cifar100_info import CIFAR100_INFO
 

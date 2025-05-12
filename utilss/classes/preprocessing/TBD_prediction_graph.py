@@ -5,7 +5,7 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 from utilss.classes.datasets.TBD_cifar100_batch_predictor import Cifar100BatchPredictor
 from utilss.classes.datasets.TBD_imagenet_batch_predictor import ImageNetBatchPredictor    
-from .graph.graph_builder import GraphBuilder
+from .graph_builder import GraphBuilder
 from tensorflow.keras.applications.resnet50 import preprocess_input
 import time
 import tensorflow as tf

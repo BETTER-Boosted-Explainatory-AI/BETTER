@@ -35,12 +35,12 @@ async def create_nma(
         BASE_DIR = os.getenv("USERS_PATH", "users")
         user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
         model_path = upload_model(user_folder, model_id, model_file, dataset, graph_type, min_confidence, top_k)
-        new_nma = _create_nma(model_path, graph_type, dataset, current_user.user_id, min_confidence, top_k)
+        init_z = _create_nma(model_path, graph_type, dataset, current_user.user_id, min_confidence, top_k)
         
-        if new_nma is None:
+        if init_z is None:
             raise HTTPException(status_code=404, detail="Hierarchical Clustering was not created")
         
-        return NMAResult(data=new_nma.tolist())
+        return NMAResult(data=init_z.tolist())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -14,7 +14,7 @@ class ImageNet(Dataset):
         self.y_train = None
         self.x_test = None
         self.y_test = None
-        self.unique_labels = None
+        self.directory_labels = None
         
     def load_mini_imagenet(dataset_path, img_size=(224, 224)):
         """
@@ -94,11 +94,12 @@ class ImageNet(Dataset):
     def load(self, name):
         dataset_path = os.path.join("data", "datasets", name)
         train_path = os.path.join(dataset_path, "train")
-        test_path = os.path.join(dataset_path, "test")
+        # test_path = os.path.join(dataset_path, "test")
         
         self.x_train, self.y_train = self.load_mini_imagenet(train_path)
-        self.x_test, self.y_test = self.load_mini_imagenet(test_path)
-        
+        # self.x_test, self.y_test = self.load_mini_imagenet(test_path)
+        self.directory_labels = IMAGENET_INFO["directory_labels"]
+        print("loaded imagenet dataset")
 
 
     def get_train_image_by_id(self, image_id):
