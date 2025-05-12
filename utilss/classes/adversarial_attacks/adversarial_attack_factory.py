@@ -1,6 +1,6 @@
-from utilss.classes.adversarial_attacks.pgd_attack import PGDAttack
-from utilss.classes.adversarial_attacks.fgsm_attack import FGSMAttack
-from utilss.classes.adversarial_attacks.deepfool_attack import DeepFoolAttack
+from utilss.classes.adversarial_attacks.PGD import PGDAttack
+from utilss.classes.adversarial_attacks.FGSM import FGSMAttack
+from utilss.classes.adversarial_attacks.DeepFool import DeepFoolAttack
 from utilss.enums.attack_type import AttackType
 
 def get_attack(attack_name: str):
