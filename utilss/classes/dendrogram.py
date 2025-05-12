@@ -6,7 +6,7 @@ import numpy as np
 import pickle
 
 class Dendrogram:
-    def __init__(self, Z, dendrogram_filename):
+    def __init__(self, dendrogram_filename, Z=None):
         self.Z = Z
         self.Z_tree_format = None
         self.dendrogram_filename = dendrogram_filename

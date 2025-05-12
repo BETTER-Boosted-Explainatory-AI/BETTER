@@ -17,6 +17,17 @@ from services.dataset_service import _get_dataset_config
 def get_model():
     return None
 
+def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
+    # Construct the model path based on user_id and model_id
+    BASE_DIR = os.getenv("USERS_PATH", "users")
+    model_path = os.path.join(BASE_DIR, str(user_id), str(model_id))
+    
+    # Check if the model path exists
+    if os.path.exists(model_path):
+        return model_path
+    else:
+        return None
+
 def save_model():
     return None
 

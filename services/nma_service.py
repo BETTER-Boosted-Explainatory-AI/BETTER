@@ -1,18 +1,18 @@
 from fastapi import HTTPException, status
 import os
 from .dataset_service import _get_dataset_config, _load_dataset
-from .models_service import _load_model
+from .models_service import _load_model, _get_model_path
 from utilss.classes.nma import NMA
 from utilss.classes.edges_dataframe import EdgesDataframe
 from utilss.classes.dendrogram import Dendrogram
 from utilss.enums.datasets_enum import DatasetsEnum
 from utilss.enums.graph_types import GraphTypes
 
-def _create_nma(model_filename, graph_type, dataset_str, user_id, min_confidence, top_k):
-    if model_filename is None:
+def _create_nma(model_file, graph_type, dataset_str, user_id, min_confidence, top_k):
+    if model_file is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-            detail="Model filename is required"
+            detail="Model file is required"
         )
         
     if graph_type != GraphTypes.SIMILARITY.value and graph_type != GraphTypes.DISSIMILARITY.value and graph_type != GraphTypes.COUNT.value:
@@ -20,15 +20,21 @@ def _create_nma(model_filename, graph_type, dataset_str, user_id, min_confidence
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
             detail="Graph type must be either 'similarity' or 'dissimilarity'"
         )
-    model_directory = os.path.dirname(model_filename)
-    dataframe_filename = f'{model_directory}/{graph_type}/edges_df.csv'
-    dendrogram_filename = f'{model_directory}/{graph_type}/dendrogram'
     
     dataset_config = _get_dataset_config(dataset_str)
     dataset = _load_dataset(dataset_config)
     
     try:
-        loaded_model = _load_model(dataset_str, model_filename, dataset_config)
+        loaded_model = _load_model(dataset_str, model_file.name, dataset_config)
+        model_directory = _get_model_path(user_id, loaded_model.model_path)
+        if model_directory is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                detail="Could not find model directory"
+            )
+            
+        dataframe_filename = f'{model_directory}/{graph_type}/edges_df.csv'
+        dendrogram_filename = f'{model_directory}/{graph_type}/dendrogram'
         
         labels = dataset.labels
         if dataset_str == DatasetsEnum.IMAGENET.value:
@@ -44,11 +50,11 @@ def _create_nma(model_filename, graph_type, dataset_str, user_id, min_confidence
             min_confidence=min_confidence,
         )
         
-        edges_df_obj = EdgesDataframe(user_id, model_filename, dataframe_filename, nma.edges_df)
+        edges_df_obj = EdgesDataframe(user_id, model_file.name, dataframe_filename, nma.edges_df)
         edges_df_obj.save_dataframe()
         print(nma.Z)            
         
-        dendrogram = Dendrogram(nma.Z, dendrogram_filename)
+        dendrogram = Dendrogram(dendrogram_filename, nma.Z)
         dendrogram._build_tree_hierarchy(nma.Z, dataset.labels)
         
         dendrogram.save_dendrogram(nma.Z)

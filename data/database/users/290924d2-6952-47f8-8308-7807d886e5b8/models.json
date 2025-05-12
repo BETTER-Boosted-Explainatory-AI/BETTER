@@ -1,1 +1,26 @@
-[]
+[
+    {
+        "model_id": "db9f2ab0-e9b5-4bb7-afde-1d902f5404a8",
+        "file_name": "cifar100_resnet.keras",
+        "dataset": "cifar100",
+        "graph_type": [
+            "similarity",
+            "dissimilarity",
+            "count"
+        ],
+        "min_confidence": 0.8,
+        "top_k": 4
+    },
+    {
+        "model_id": "717ca699-031d-48ea-ac88-e092faaf30a9",
+        "file_name": "resnet50_imagenet.keras",
+        "dataset": "imagenet",
+        "graph_type": [
+            "similarity",
+            "dissimilarity",
+            "count"
+        ],
+        "min_confidence": 0.8,
+        "top_k": 4
+    }
+]

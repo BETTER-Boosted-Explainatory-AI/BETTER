@@ -21,15 +21,15 @@ d----- users
 |               rw---- models.json
 |               d----- model_id
 |                       d----- similarity
-|                               rw---- similarity_dendrogram.json
+|                               rw---- dendrogram.json
 |                               rw---- edges_df.csv
 |                               rw---- logistic_regression_model.json
 |                       d----- dissimilarity
-|                               rw---- dissimilarity_dendrogram.json
+|                               rw---- dendrogram.json
 |                               rw---- edges_df.csv
 |                               rw---- logistic_regression_model.json
 |                       d----- count
-|                               rw---- count_dendrogram.json
+|                               rw---- dendrogram.json
 |                               rw---- edges_df.csv
 |                               rw---- logistic_regression_model.json
 ```
@@ -37,45 +37,42 @@ d----- users
 
 ## API
 
-### Hierarchical Clustering
-- **Endpoint**: `http://127.0.0.1:8000/hierarchical_clusters/`
+### NMA
+- **Endpoint**: `http://127.0.0.1:8000/nma/`
 - **Methods**: `POST`
 
 
 ```bash
 {
-    "model_filename": "mini_imagenet",
+    "current_user": "uuid",
+    "model_file": "file.keras",
+    "dataset": "imagenet",
     "graph_type": "similarity",
-    "dataset": "imagenet"
+    "model_id": None,
+    "min_confidence": 0.8,
+    "top_k": 4
 }
 ```
 
-### Hierarchical Clustering - Confusion Matrix
+### Dataset's labels
+- **Endpoint**: `http://127.0.0.1:8000/datasets/{dataset_name}/labels`
+- **Methods**: `GET`
 
-- **Endpoint**: `http://127.0.0.1:8000/hierarchical_clusters/sub_hierarchical_clusters`
+
+### Dendrogram
+
+- **Endpoint**: `http://127.0.0.1:8000//dendrograms`
 - **Methods**: `POST`
 
 ```bash
 {
-    "dataset": "imagenet",
-    "selected_labels": ["Persian_cat", "tabby", "orange", "lemon", "zucchini", "broccoli", "teapot", "coffeepot", "warplane", "space_shuttle", "American_coot", "black_swan"],
-    "z_filename": "dendrogram_similarity_mini_imagenet"
+    "user_id": "uuid",
+    "model_id": "uuid",
+    "graph_type":  "count",
+    "selected_labels": ["Persian_cat", "tabby", "Madagascar_cat", "Egyptian_cat", "pug", "boxer", "Norwich_terrier", "kuvasz", "minivan"]
 }
 ```
 
-
-### Hierarchical Clustering - Sub Dendrogram
-
-- **Endpoint**: `http://127.0.0.1:8000/hierarchical_clusters/sub_hierarchical_clusters`
-- **Methods**: `POST`
-
-```bash
-{
-    "dataset": "imagenet",
-    "selected_labels": ["Persian_cat", "tabby", "orange", "lemon", "zucchini", "broccoli", "teapot", "coffeepot", "warplane", "space_shuttle", "American_coot", "black_swan"],
-    "z_filename": "dendrogram_similarity_mini_imagenet"
-}
-```
 
 
 ### Whitebox Testing

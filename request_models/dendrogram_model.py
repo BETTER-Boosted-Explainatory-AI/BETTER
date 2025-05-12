@@ -1,16 +1,19 @@
 from pydantic import BaseModel
 from typing import List, Optional
+import uuid
 
-class SubHierarchicalClusterRequest(BaseModel):
-    dataset: str
+
+class DendrogramRequest(BaseModel):
+    user_id: uuid.UUID
+    model_id: uuid.UUID
+    graph_type: str
     selected_labels: List[str]
-    z_filename: str    
 
-class SubHierarchicalClusterResult(BaseModel):
+class DendrogramResult(BaseModel):
     id: int
     name: str
     value: Optional[float] = None
-    children: Optional[List['SubHierarchicalClusterResult']] = None
+    children: Optional[List['DendrogramResult']] = None
 
     class Config:
         from_attributes = True
