@@ -2,6 +2,7 @@ from utilss.classes.adversarial_dataset import AdversarialDataset
 from utilss.classes.adversarial_detector import AdversarialDetector
 from utilss.classes.score_calculator import ScoreCalculator
 from utilss.files_utils import get_user_models_info, get_model_files, get_labels_from_dataset_info, preprocess_image
+from utilss.classes.adversarial_attacks.adversarial_attack_factory import get_attack
 import tensorflow as tf
 import os
 
@@ -76,7 +77,6 @@ def detect_adversarial_image(model_id, graph_type, image, user_folder):
     
     # Get predictions from the original model
     preds = model.predict(image_preprocessed, verbose=0)
-
     
     # Calculate the adversarial score (or other features)
     score = score_calculator.calculate_adversarial_score(preds[0])
@@ -86,6 +86,26 @@ def detect_adversarial_image(model_id, graph_type, image, user_folder):
     label = detector.predict(feature)[0]  # Predict the label (0 = clean, 1 = adversarial)
     
     return ('Adversarial' if label == 1 else 'Clean')
+
+def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_folder):
+    model_info = get_user_models_info(user_folder, model_id)
+
+    if model_info is None:
+        raise ValueError(f"Model ID {model_id} not found in models.json")
+    else:
+        model_files = get_model_files(user_folder, model_info, graph_type)
+        model_file = model_files["model_file"]
+        if os.path.exists(model_file):
+            model = tf.keras.models.load_model(model_file)
+            print(f"Model loaded successfully from '{model_file}'.")
+        else:
+            raise ValueError(f"Model file {model_file} does not exist")
+        
+        adversarial_attack = get_attack(attack_type)
+        adversarial_image = adversarial_attack.attack(model, image)
+        
+
+
 
 
     

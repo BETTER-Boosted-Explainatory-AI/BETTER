@@ -39,4 +39,4 @@ def mock_login(email: str, password: str) -> User:
     return user_class
 
 def get_current_session_user():
-    return User(user_id="01877886-8180-438c-ac9f-a703b7c5c5e5", email="wwx@gmail.com", password="456")
+    return User(user_id="290924d2-6952-47f8-8308-7807d886e5b8", email="nurixhbh@gmail.com", password="123")

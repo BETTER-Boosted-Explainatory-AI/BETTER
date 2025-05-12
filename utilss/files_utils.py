@@ -5,10 +5,9 @@ import json
 import uuid
 import numpy as np
 import tensorflow as tf
+from services.models_service import get_cached_preprocess_function
 import importlib.util
-from tensorflow.keras.applications.resnet50 import preprocess_input
 from utilss.uuid_utils import is_valid_uuid
-from services.models_service import get_preprocess_function
 from data.datasets.cifar100_info import CIFAR100_INFO
 from data.datasets.imagenet_info import IMAGENET_INFO
 from PIL import Image
@@ -159,7 +158,7 @@ def get_model_files(user_folder: str, model_info: dict, graph_type: str):
             model_file = None
             raise ValueError(f"Model file {model_file} does not exist")
         model_graph_folder = os.path.join(model_subfolder, graph_type)
-        Z_file = os.path.join(model_graph_folder, f"{graph_type}_dendrogram.pkl")
+        Z_file = os.path.join(model_graph_folder, "dendrogram.pkl")
         if not os.path.exists(Z_file):
             Z_file = None
             print(f"Z file {Z_file} does not exist")
@@ -211,7 +210,7 @@ def preprocess_image(model, image):
     input_height, input_width = expected_shape[1], expected_shape[2]
     pil_image = Image.open(io.BytesIO(image)).convert("RGB")
     pil_image = pil_image.resize((input_width, input_height))
-    preprocess_input = get_preprocess_function(model)
+    preprocess_input = get_cached_preprocess_function(model)
     image_array = preprocess_input(np.array(pil_image))
     image_preprocessed = np.expand_dims(image_array, axis=0)
     return image_preprocessed
@@ -220,10 +219,12 @@ def preprocess_numpy_image(model, image):
     """
     Preprocess a NumPy array image for the given model.
     """
-    image = np.expand_dims(image, axis=0)
+    if image.ndim == 3:
+        # If the image is 3D, add a batch dimension
+        image = np.expand_dims(image, axis=0)
 
     # Get the appropriate preprocessing function for the model
-    preprocess_input = get_preprocess_function(model)
+    preprocess_input = get_cached_preprocess_function(model)
 
     # Apply the preprocessing function
     image_preprocessed = preprocess_input(image)

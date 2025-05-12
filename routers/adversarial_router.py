@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Form, UploadFile, Depends
-from services.adversarial_attacks_service import create_logistic_regression_detector, detect_adversarial_image
+from services.adversarial_attacks_service import create_logistic_regression_detector, detect_adversarial_image, analysis_adversarial_image
 from services.users_service import get_current_session_user
 from utilss.classes.user import User
 from typing import List, Optional
@@ -67,6 +67,38 @@ async def detect_query(
         return DetectorResponse(result=detection_result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+# @adversarial_router.post(
+#     "/adversarial/analyze",
+#     status_code=status.HTTP_200_OK,
+#     response_model=DetectorResponse,
+#     responses={
+#         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
+#         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
+#         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
+#     }
+# )
+# async def analyze_adversarial(
+#     current_model_id: str = Form(...),
+#     graph_type: str = Form(...),
+#     image: UploadFile = Form(...),
+#     attack_type: str = Form(...),
+#     epsilon: Optional[float] = Form(None),
+#     alpha: Optional[float] = Form(None),
+    
+#     current_user: User = Depends(get_current_session_user)
+# ):
+#     try:
+#         BASE_DIR = os.getenv("USERS_PATH", "users")
+#         user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
+#         image_content = await image.read()
+#         analysis_result = analysis_adversarial_image(current_model_id, graph_type, attack_type ,image_content, user_folder)
+#         if analysis_result is None:
+#             raise HTTPException(status_code=404, detail="Detection result not found")
+#         return DetectorResponse(result=analysis_result)
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e)
+# )
         
         
 

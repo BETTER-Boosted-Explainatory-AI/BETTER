@@ -1,7 +1,7 @@
-from enum import Enum, auto
+from enum import Enum
 
 class AttackType(Enum):
     """Enum for supported adversarial attack types"""
-    FGSM = auto()
-    PGD = auto() 
-    DEEPFOOL = auto()
+    FGSM = "fgsm"
+    PGD = "pgd"
+    DEEPFOOL = "deepfool"
