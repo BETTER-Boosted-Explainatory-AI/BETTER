@@ -14,34 +14,24 @@ def save_model():
     return None
 
 def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any]) -> Model:
-    """Create model based on dataset type."""
-    MODELS_PATH = os.getenv("MODELS_PATH")
-    model_file_path = f'{MODELS_PATH}{model_path}.keras'
-    print(f"Loading model {model_file_path} for dataset {dataset_str}")
+    print(f"Loading model {model_path} for dataset {dataset_str}")
 
-    if dataset_str == DatasetsEnum.IMAGENET.value:
-        return Model(
-            ResNet50(weights="imagenet"), 
-            dataset_config["top_k"], 
-            dataset_config["min_confidence"], 
-            model_path, 
-            dataset_config["dataset"]
-        )
-    elif dataset_str == DatasetsEnum.CIFAR100.value:
-        if not os.path.exists(model_file_path):
-            raise FileNotFoundError(f'Model {model_path} does not exist')
-    
-        resnet_model_cifar100 = tf.keras.models.load_model(model_file_path)
-        print(f"Model {model_path} has been loaded")
-        return Model(
-            resnet_model_cifar100, 
-            dataset_config["top_k"], 
-            dataset_config["min_confidence"], 
-            model_path, 
-            dataset_config["dataset"]
-        )
-    else:
+    if dataset_str != DatasetsEnum.IMAGENET.value and dataset_str != DatasetsEnum.CIFAR100.value:
         raise ValueError(f"Invalid dataset: {dataset_str}")
+
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f'Model {model_path} does not exist')
+
+    model = tf.keras.models.load_model(model_path)
+    print(f"Model {model_path} has been loaded")
+    return Model(
+        model, 
+        dataset_config["top_k"], 
+        dataset_config["min_confidence"], 
+        model_path, 
+        dataset_config["dataset"]
+    )
+
 
 def construct_model(model_path: str, dataset_config: Dict[str, Any]) -> Model:
         print(f"Loading model {model_path} for dataset {dataset_config['dataset']}")

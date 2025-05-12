@@ -1,8 +1,45 @@
 from nltk.corpus import wordnet as wn
+import os
 
 def convert_folder_name_to_label(folder_name):
     synsets = wn.synset_from_pos_and_offset('n', int(folder_name[1:]))
     return synsets.lemma_names()[0]
+
+def convert_folder_names_to_readable_labels(dataset_path):
+    if not os.path.exists(dataset_path):
+        raise ValueError(f"Dataset path does not exist: {dataset_path}")
+    
+    class_names = sorted([
+        d for d in os.listdir(dataset_path)
+        if os.path.isdir(os.path.join(dataset_path, d)) and d.startswith('n') and d[1:].isdigit()
+    ])
+    
+    if not class_names:
+        raise ValueError(f"No subdirectories found in {dataset_path}")
+    
+    special_case_mapping = {
+        "n02012849": "crane_bird",       # Crane bird
+        "n03126707": "crane_machine",    # Crane machine
+        "n03710637": "maillot",          # Maillot (swimsuit)
+        "n03710721": "tank_suit"         # Tank suit (different type of swimsuit)
+    }
+    
+    # Create mapping from folder names to readable labels
+    folder_to_label = {}
+    for folder_name in class_names:
+        if folder_name in special_case_mapping:
+            readable_label = special_case_mapping[folder_name]
+        elif folder_name.startswith('n'):
+            readable_label = convert_folder_name_to_label(folder_name)
+        else:
+            readable_label = folder_name
+            
+        folder_to_label[folder_name] = readable_label
+    
+    readable_labels = [folder_to_label[folder_name] for folder_name in class_names]
+    
+    return readable_labels, folder_to_label
+
 
 def folder_name_to_number(folder_name):
     synsets = wn.synsets(folder_name)

@@ -4,7 +4,7 @@ from fastapi import UploadFile
 import json
 import uuid
 from utilss.classes.user import User
-
+from utilss.uuid_utils import is_valid_uuid
 
 def upload(upload_dir: str, model_file: UploadFile) -> str:
     os.makedirs(upload_dir, exist_ok=True)
@@ -27,6 +27,8 @@ def upload_model(
     min_confidence: float,
     top_k: int,
 ) -> str:
+   
+    filename = os.path.basename(model_file.filename)
     models_json_path = os.path.join(user_folder, "models.json")
     if os.path.exists(models_json_path):
         with open(models_json_path, "r") as json_file:
@@ -34,17 +36,15 @@ def upload_model(
     else:
         models_data = []
 
-    model_id_md = check_models_metadata(models_data, model_id, graph_type)
-    model_subfolder = os.path.join(user_folder, model_id, graph_type)
+    try:
+        model_id_md = check_models_metadata(models_data, model_id, graph_type)
+    except ValueError as e:
+        print(str(e))
+        raise 
+
+    model_subfolder = os.path.join(user_folder, model_id_md)
     os.makedirs(model_subfolder, exist_ok=True)
-
-
-    if model_id_md is None:
-        print(
-            f"Graph type {graph_type} for the model {model_file.filename} already exists. Skipping upload."
-        )
-        return os.path.join(model_subfolder, model_file.filename)
-
+    
     save_model_metadata(
         models_data,
         models_json_path,
@@ -55,14 +55,14 @@ def upload_model(
         min_confidence,
         top_k,
     )
-
-    # Save the model file in the model_id subfolder
-    model_path = os.path.join(model_subfolder, model_file.filename)
+    
+    model_path = f'{model_subfolder}/{filename}'
     print(f"Saving model to {model_path}")
     with open(model_path, "wb") as f:
         shutil.copyfileobj(model_file.file, f)
 
     return model_path
+
 
 
 def save_model_metadata(
@@ -108,9 +108,14 @@ def save_model_metadata(
 
 
 def check_models_metadata(models_data, model_id, graph_type):
-    for model in models_data:
-        if model["model_id"] == model_id:
+    for model in models_data:  
+        if model.get("model_id") == model_id:
             if graph_type in model.get("graph_type", []):
-                return None
+                raise ValueError(
+                    f"Graph type '{graph_type}' for model ID '{model_id}' already exists."
+                )
             return model_id
+    
     return str(uuid.uuid4())
+
+

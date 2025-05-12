@@ -3,17 +3,11 @@ import os
 
 class EdgesDataframe:
     def __init__(self, user_id, model_filename, df_filename, edges_df=None):
-        USERS_PATH = os.getenv("USERS_PATH", "users")
-        DATAFRAMES_PATH = os.getenv("DATAFRAMES_PATH", "dataframes")
 
-        # Construct the full path using os.path.join
-        user_folder_path = os.path.join(USERS_PATH, user_id)
-        df_file_path = os.path.join(user_folder_path, DATAFRAMES_PATH, f"{df_filename}.csv")
-
-        print(f"Dataframe file path: {df_file_path}")
+        print(f"Dataframe file path: {df_filename}")
         
         self.model_filename = model_filename
-        self.df_filename = df_file_path
+        self.df_filename = df_filename
         self.edges_df = pd.DataFrame() if edges_df is None else edges_df
 
     def get_dataframe(self):
@@ -21,8 +15,23 @@ class EdgesDataframe:
 
     def save_dataframe(self):
         try:
+            # Extract directory path from the file path
+            directory = os.path.dirname(self.df_filename)
+            
+            # Create directories if they don't exist
+            if directory:  # Only if there is a directory path
+                os.makedirs(directory, exist_ok=True)
+                print(f'Ensured directory exists: {directory}')
+            
+            # Check if file already exists
+            if os.path.exists(self.df_filename):
+                print(f'File already exists, skipping save: {self.df_filename}')
+                return
+            
+            # Save the dataframe only if file doesn't exist
             self.edges_df.to_csv(self.df_filename, index=False)
             print(f'Edges dataframe has been saved: {self.df_filename}')
+        
         except Exception as e:
             print(f'Error saving dataframe: {str(e)}')
 

@@ -7,7 +7,7 @@ from .preprocessing.heap_processor import HeapProcessor
 from .preprocessing.graph.graph_builder import GraphBuilder
 from .preprocessing.hierarchical_clustering_builder import HierarchicalClusteringBuilder
 from .preprocessing.z_builder import ZBuilder
-
+from utilss.enums.graph_types import GraphTypes
 
 class NMA:
     def __init__(
@@ -47,12 +47,11 @@ class NMA:
         self.edges_df = None
         self.Z = None
 
-        if graph_type == "dissimilarity":
+        if graph_type == GraphTypes.DISSIMILARITY.value:
             self.heap_type = HeapType.MINIMUM.value
-        elif graph_type == "similarity" or graph_type == "count":
+        elif graph_type == GraphTypes.SIMILARITY.value or graph_type == GraphTypes.COUNT.value:
             self.heap_type = HeapType.MAXIMUM.value
 
-        self.TBD_graph = None
 
         self._preprocessing(X, y, batch_size)
 
