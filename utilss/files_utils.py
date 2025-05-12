@@ -3,7 +3,11 @@ import shutil
 from fastapi import UploadFile
 import json
 import uuid
+import numpy as np
 from utilss.classes.user import User
+import tensorflow as tf
+import importlib.util
+from tensorflow.keras.applications.resnet50 import preprocess_input
 from utilss.uuid_utils import is_valid_uuid
 
 def upload(upload_dir: str, model_file: UploadFile) -> str:
