@@ -1,10 +1,7 @@
 import tensorflow as tf
 import numpy as np
-# import time
-# from enums.attack_type import AttackType
-# from enums.hierarchical_cluster_types import HierarchicalClusterType
 from utilss.classes.adversarial_attacks.adversarial_attack import AdversarialAttack
-# from utilss.classes.score_calculator import Scoring
+
 
 class FGSMAttack(AdversarialAttack):
     """
