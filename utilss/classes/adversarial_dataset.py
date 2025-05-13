@@ -1,7 +1,7 @@
 from sklearn.model_selection import train_test_split
 import numpy as np
 from utilss.classes.score_calculator import ScoreCalculator
-from utilss.files_utils import load_numpy_from_directory, get_labels_from_dataset_info, preprocess_numpy_image
+from utilss.files_utils import load_numpy_from_directory, get_labels_from_dataset_info
 import tensorflow as tf
 import os
 

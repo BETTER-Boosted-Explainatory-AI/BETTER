@@ -28,6 +28,7 @@ class FGSMAttack(AdversarialAttack):
         Returns:
             Adversarial image
         """
+        print("Starting FGSM attack...")
         # Important: Make sure image is in the format expected by the model
         # For ResNet, this is typically BGR with specific mean subtraction
         
@@ -35,10 +36,10 @@ class FGSMAttack(AdversarialAttack):
         x_adv = tf.identity(image)
         
         # Get number of classes
-        num_classes = model.model.output_shape[1]
+        num_classes = model.output_shape[1]
         
         # Get current prediction
-        current_pred = model.model(image)
+        current_pred = model(image)
         original_class_idx = tf.argmax(current_pred[0]).numpy()
         
         # Choose a target approximately opposite in the class space
@@ -50,7 +51,7 @@ class FGSMAttack(AdversarialAttack):
 
         with tf.GradientTape() as tape:
             tape.watch(x_adv)
-            pred = model.model(x_adv)
+            pred = model(x_adv)
             # For targeted attack, we want to maximize the probability of the target class
             loss = tf.keras.losses.categorical_crossentropy(target, pred)
 
@@ -70,5 +71,7 @@ class FGSMAttack(AdversarialAttack):
 
         # We need to clip in a way that after deprocessing, the values stay in [0,255]
         x_adv = tf.clip_by_value(x_adv, -mean, 255.0 - mean)
+
+        x_adv = tf.squeeze(x_adv, axis=0)
         
         return x_adv

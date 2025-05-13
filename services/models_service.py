@@ -87,28 +87,6 @@ def query_predictions(dataset, model_filename, image_path):
     else:
         raise ValueError(f"Unsupported dataset: {dataset}")
 
-# def get_preprocess_function(model):
-#     print("Determining preprocessing function based on model layers...")
-#     preprocess_map = {
-#         "resnet50": resnet50_preprocess,
-#         "vgg16": vgg16_preprocess,
-#         "inception_v3": inception_v3_preprocess,
-#         "mobilenet": mobilenet_preprocess,
-#         "efficientnet": efficientnet_preprocess,
-#         "xception": xception_preprocess,
-#     }
-
-#     for layer in model.layers:
-#         layer_name = layer.name.lower()
-#         print(f"Checking layer: {layer_name}")
-#         for model_name in preprocess_map.keys():
-#             if model_name in layer_name:
-#                 print(f"Detected model type: {model_name}")
-#                 return preprocess_map[model_name]
-
-#     # If no matching model type is found, use generic normalization
-#     print("No supported model type found in the layers. Falling back to generic normalization.")
-#     return lambda x: x / 255.0  # Generic normalization to [0, 1]
 
 def get_preprocess_function(model):
     print("Determining preprocessing function based on model configuration...")

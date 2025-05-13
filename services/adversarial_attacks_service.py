@@ -1,9 +1,12 @@
 from utilss.classes.adversarial_dataset import AdversarialDataset
 from utilss.classes.adversarial_detector import AdversarialDetector
 from utilss.classes.score_calculator import ScoreCalculator
-from utilss.files_utils import get_user_models_info, get_model_files, get_labels_from_dataset_info, preprocess_image
+from utilss.files_utils import get_user_models_info, get_model_files, get_labels_from_dataset_info, preprocess_image, encode_image_to_base64
 from utilss.classes.adversarial_attacks.adversarial_attack_factory import get_attack
 import tensorflow as tf
+import numpy as np
+import io
+from PIL import Image
 import os
 
 
@@ -87,7 +90,7 @@ def detect_adversarial_image(model_id, graph_type, image, user_folder):
     
     return ('Adversarial' if label == 1 else 'Clean')
 
-def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_folder):
+def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_folder, epsilon, alpha, overshoot, num_steps, classes_number):
     model_info = get_user_models_info(user_folder, model_id)
 
     if model_info is None:
@@ -101,8 +104,26 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_fo
         else:
             raise ValueError(f"Model file {model_file} does not exist")
         
-        adversarial_attack = get_attack(attack_type)
-        adversarial_image = adversarial_attack.attack(model, image)
+        dataset = model_info["dataset"]
+        labels = get_labels_from_dataset_info(dataset)
+
+        preprocessed_image = preprocess_image(model, image)
+        adversarial_attack = get_attack(attack_type, class_names=labels)
+        adversarial_image = adversarial_attack.attack(model, preprocessed_image)
+
+        pil_image = Image.open(io.BytesIO(image)).convert("RGB")
+        image_array = np.array(pil_image)
+        original_image_base64 = encode_image_to_base64(image_array)
+        print(f"image encoded to base64: {original_image_base64}")
+        print(f"Encoding adversarial image to base64")
+        adversarial_image_base64 = encode_image_to_base64(adversarial_image)
+        print(f"adversarial image encoded to base64: {adversarial_image_base64}")
+
+        # Return both images as Base64 strings
+        return {
+            "original_image": original_image_base64,
+            "adversarial_image": adversarial_image_base64
+        }
         
 
 

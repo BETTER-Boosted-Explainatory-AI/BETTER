@@ -6,3 +6,7 @@ class DetectorResponse(BaseModel):
 class DetectionResult(BaseModel):
     label: str
     probability: float
+
+class AnalysisResult(BaseModel):
+    original_image: str  # Base64-encoded string of the original image
+    adversarial_image: str  # Base64-encoded string of the adversarial image

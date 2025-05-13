@@ -12,6 +12,7 @@ from data.datasets.cifar100_info import CIFAR100_INFO
 from data.datasets.imagenet_info import IMAGENET_INFO
 from PIL import Image
 import io
+import base64
 
 def upload(upload_dir: str, model_file: UploadFile) -> str:
     os.makedirs(upload_dir, exist_ok=True)
@@ -230,3 +231,24 @@ def preprocess_numpy_image(model, image):
     image_preprocessed = preprocess_input(image)
 
     return image_preprocessed
+
+def encode_image_to_base64(image):
+    """
+    Encode a NumPy array image to a Base64 string.
+    """
+    if isinstance(image, np.ndarray):
+        # Convert NumPy array to PIL Image
+        image = Image.fromarray((image * 255).astype(np.uint8)) if image.max() <= 1 else Image.fromarray(image.astype(np.uint8))
+    elif isinstance(image, tf.Tensor):
+        # Convert Tensor to NumPy array
+        image = Image.fromarray(image.numpy().astype(np.uint8))
+
+    # Save the image to a BytesIO buffer
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    # Encode the image to Base64
+    print(f"Encoding image to base64")
+    image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return image_base64

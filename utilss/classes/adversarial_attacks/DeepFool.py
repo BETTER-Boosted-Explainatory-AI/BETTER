@@ -183,6 +183,7 @@ class DeepFoolAttack(AdversarialAttack):
         Returns:
             perturbed_image, original_label, adversarial_label, original_probs, adversarial_probs
         """
+        print("Starting DeepFool attack...")
 
         # Make a copy of the image to avoid modifying the original
         x_adv = image

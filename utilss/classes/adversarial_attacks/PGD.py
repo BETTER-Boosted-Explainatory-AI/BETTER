@@ -18,10 +18,11 @@ class PGDAttack(AdversarialAttack):
         Perform targeted PGD attack to force prediction toward a class far from the original class.
         Automatically selects a target class far from the original class group.
         """
+        print("Starting PGD attack...")
         # Get number of classes
-        num_classes = model.model.output_shape[1]
+        num_classes = model.output_shape[1]
         # Get current prediction
-        current_pred = model.model(image)
+        current_pred = model(image)
         original_class_idx = tf.argmax(current_pred[0]).numpy()
         
         # Choose a target approximately opposite in the class space
@@ -38,7 +39,7 @@ class PGDAttack(AdversarialAttack):
         for _ in range(self.num_steps):
             with tf.GradientTape() as tape:
                 tape.watch(x_adv)
-                pred = model.model(x_adv)
+                pred = model(x_adv)
                 # For targeted attack, we want to maximize the probability of the target class
                 # or minimize the distance between prediction and target
                 loss = tf.keras.losses.categorical_crossentropy(target, pred)
@@ -54,5 +55,7 @@ class PGDAttack(AdversarialAttack):
             
             # Ensure values stay in the valid range
             x_adv = tf.clip_by_value(x_adv, -123.68, 151.061)
+        
+        x_adv = tf.squeeze(x_adv, axis=0)
 
         return x_adv
