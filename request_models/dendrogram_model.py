@@ -19,9 +19,10 @@ class DendrogramResult(BaseModel):
         from_attributes = True
 
 class NamingClusterRequest(BaseModel):
+    user_id: uuid.UUID
+    model_id: uuid.UUID
+    graph_type: str
+    selected_labels: List[str]
     cluster_id: int
-    dendrogram_filename: str
     new_name: str
 
-class NamingClusterResult(BaseModel):
-    message: str

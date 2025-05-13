@@ -61,7 +61,7 @@ d----- users
 
 ### Dendrogram
 
-- **Endpoint**: `http://127.0.0.1:8000//dendrograms`
+- **Endpoint**: `http://127.0.0.1:8000/dendrograms`
 - **Methods**: `POST`
 
 ```bash
@@ -70,6 +70,22 @@ d----- users
     "model_id": "uuid",
     "graph_type":  "count",
     "selected_labels": ["Persian_cat", "tabby", "Madagascar_cat", "Egyptian_cat", "pug", "boxer", "Norwich_terrier", "kuvasz", "minivan"]
+}
+```
+
+### Change Cluster Name
+
+- **Endpoint**: `http://127.0.0.1:8000//dendrograms/auto_naming`
+- **Methods**: `PUT`
+
+```bash
+{
+    "user_id": "uuid",
+    "model_id": "uuid",
+    "graph_type":  "count",
+    "selected_labels": ["Persian_cat", "tabby", "Madagascar_cat", "Egyptian_cat", "pug", "boxer", "Norwich_terrier", "kuvasz", "minivan"],
+    "cluster_id": 1263,
+    "new_name": "Cats"
 }
 ```
 

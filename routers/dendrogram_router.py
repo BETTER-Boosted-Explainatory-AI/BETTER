@@ -1,6 +1,6 @@
 import os
 from fastapi import APIRouter, HTTPException, status
-from request_models.dendrogram_model import DendrogramRequest, DendrogramResult, NamingClusterRequest, NamingClusterResult
+from request_models.dendrogram_model import DendrogramRequest, DendrogramResult, NamingClusterRequest
 from services.dendrogram_service import _get_sub_dendrogram, _rename_cluster
 
 dendrogram_router = APIRouter()
@@ -29,7 +29,7 @@ async def get_sub_dendrogram(sub_dendrogram_data: DendrogramRequest) -> Dendrogr
 
 @dendrogram_router.put(
     "/dendrograms/naming_clusters", 
-    response_model=NamingClusterResult,
+    response_model=DendrogramResult,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
@@ -37,10 +37,15 @@ async def get_sub_dendrogram(sub_dendrogram_data: DendrogramRequest) -> Dendrogr
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-async def update_naming(naming_cluster_data: NamingClusterRequest) -> NamingClusterResult:
+async def update_naming(naming_cluster_data: NamingClusterRequest) -> DendrogramResult:
+    user_id = naming_cluster_data.user_id
+    model_id = naming_cluster_data.model_id
+    graph_type = naming_cluster_data.graph_type
+    selected_labels = naming_cluster_data.selected_labels
     cluster_id = naming_cluster_data.cluster_id
     new_name = naming_cluster_data.new_name
-    dendrogram_filename = naming_cluster_data.dendrogram_filename
-    _rename_cluster(cluster_id, new_name, dendrogram_filename)
 
-    return NamingClusterResult(message="Cluster name updated successfully")
+    sub_dendrogram = _rename_cluster(user_id, model_id, graph_type, selected_labels, cluster_id, new_name)
+    if sub_dendrogram is None:
+        raise HTTPException(status_code=404, detail="Sub Hierarchical Clustering was not created")
+    return DendrogramResult(**sub_dendrogram)
