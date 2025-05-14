@@ -31,6 +31,8 @@ class WhiteBoxTesting:
             (edges_df['source'].isin(mapped_sources)) & 
             (edges_df['target'].isin(mapped_targets))
         ]
+        print(filtered_edges_ds_switched.head())
+        
 
         # Combine both filtered datasets
         combined_filtered_edges_ds = pd.concat([filtered_edges_ds, filtered_edges_ds_switched])

@@ -18,3 +18,11 @@ class Dataset(ABC):
     @abstractmethod
     def get_test_image_by_id(self, image_id):
         pass
+
+    @abstractmethod
+    def get_source_label(self, label):
+        pass
+
+    @abstractmethod
+    def get_target_label(self, label):
+        pass

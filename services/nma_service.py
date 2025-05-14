@@ -42,12 +42,11 @@ def _create_nma(model_file, graph_type, dataset_str, user_id, min_confidence, to
 
         nma = NMA(
             loaded_model.model,
-            dataset.x_train,
-            dataset.y_train,
+            dataset,
             labels,
             graph_type=graph_type,
             top_k=top_k,
-            min_confidence=min_confidence,
+            min_confidence=min_confidence           
         )
         
         edges_df_obj = EdgesDataframe(model_file.name, dataframe_filename, nma.edges_df)

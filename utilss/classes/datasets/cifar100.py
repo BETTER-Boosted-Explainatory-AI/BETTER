@@ -5,6 +5,7 @@ from .dataset import Dataset
 import matplotlib.pyplot as plt
 from data.datasets.cifar100_info import CIFAR100_INFO
 
+
 class Cifar100(Dataset):
     def __init__(self):
         super().__init__(CIFAR100_INFO["dataset"], CIFAR100_INFO["threshold"], CIFAR100_INFO["infinity"], CIFAR100_INFO["labels"])
@@ -13,7 +14,7 @@ class Cifar100(Dataset):
         self.x_test = None
         self.y_test = None
         self.y_train_mapped = None
-        self.y_test_mapped = None 
+        self.y_test_mapped = None
 
     def unpickle(self, file):
         with open(file, 'rb') as fo:
@@ -77,3 +78,9 @@ class Cifar100(Dataset):
             raise ValueError("Invalid image_id")
 
         return image, label
+        
+    def get_source_label(self, label):
+        return self.label_to_class_name(label)
+
+    def get_target_label(self, label):
+        return label

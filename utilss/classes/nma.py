@@ -13,13 +13,10 @@ class NMA:
     def __init__(
         self,
         model,
-        X,
-        y,
+        dataset_class,
         labels,
-        graph_type="similarity",
+        graph_type=GraphTypes.SIMILARITY.value,
         top_k=4,
-        graph_threshold=1e-6,
-        infinity=10,
         min_confidence=0.8,
         save_connections=True,
         batch_size=32,
@@ -53,7 +50,7 @@ class NMA:
             self.heap_type = HeapType.MAXIMUM.value
 
 
-        self._preprocessing(X, y, batch_size)
+        self._preprocessing(dataset_class)
 
     def _get_image_probabilities_by_id(self, image_id):
         probabilities_df = self.edges_df[self.edges_df["image_id"] == image_id]
@@ -66,8 +63,11 @@ class NMA:
             .reset_index(name="count")
         )
 
-    def _preprocessing(self, X, y, batch_size):
+    def _preprocessing(self,dataset_class):
         try:
+            X = dataset_class.x_train
+            y= dataset_class.y_train
+            
             graph = Graph(directed=False)
             graph.add_vertices(self.labels)
 
@@ -110,7 +110,7 @@ class NMA:
 
                                 if current_label != pred_label:
                                     edge_data = builder.update_graph(
-                                        graph, current_label, pred_label, pred_prob, i
+                                        graph, current_label, pred_label, pred_prob, i, dataset_class
                                     )
                                     # Only append edge_data if it's not None (not a self-loop)
                                     if edge_data is not None:

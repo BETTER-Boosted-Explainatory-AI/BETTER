@@ -16,7 +16,7 @@ class GraphBuilder:
             return 1
         return pred_prob
     
-    def update_graph(self, graph, source_label, target_label, probability, image_id):
+    def update_graph(self, graph, source_label, target_label, probability, image_id, dataset_class):
         if source_label == target_label:
             return None
  
@@ -27,11 +27,11 @@ class GraphBuilder:
             graph.es[edge_id]["weight"] += weight 
         else:
             graph.add_edge(source_label, target_label, weight=weight)
-            
+        
         edge_data = {
             "image_id": image_id,
-            "source": source_label,
-            "target": target_label,
+            "source": dataset_class.get_source_label(source_label),
+            "target": dataset_class.get_target_label(target_label),
             "target_probability": probability,
         }
         
