@@ -3,7 +3,7 @@ from utilss.classes.adversarial_detector import AdversarialDetector
 from utilss.classes.score_calculator import ScoreCalculator
 from utilss.files_utils import get_user_models_info, get_model_files, get_labels_from_dataset_info, preprocess_image, encode_image_to_base64, deprocess_resnet_image, preprocess_deepfool_image, preprocess_loaded_image
 from utilss.classes.adversarial_attacks.adversarial_attack_factory import get_attack
-from services.models_service import get_top_k_predictions, query_model, _get_model_filename
+from services.models_service import get_top_k_predictions, query_model
 import tensorflow as tf
 import numpy as np
 import io
@@ -91,7 +91,9 @@ def detect_adversarial_image(model_id, graph_type, image, user_folder):
     
     return ('Adversarial' if label == 1 else 'Clean')
 
-def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_folder, epsilon, alpha, overshoot, num_steps, classes_number):
+def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_folder, **kwargs
+                                # epsilon, alpha, overshoot, num_steps, classes_number
+                                ):
     model_info = get_user_models_info(user_folder, model_id)
 
     if model_info is None:
@@ -116,7 +118,7 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_fo
         else:
             preprocessed_image = preprocess_loaded_image(model, image)
 
-        adversarial_attack = get_attack(attack_type, class_names=labels)
+        adversarial_attack = get_attack(attack_type, class_names=labels, **kwargs)
         adversarial_image = adversarial_attack.attack(model, preprocessed_image)
 
         pil_image = Image.open(io.BytesIO(image)).convert("RGB")
@@ -133,17 +135,10 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_fo
         original_predictions = get_top_k_predictions(model, original_image_preprocessed, labels)
         original_verbal_explaination = query_model(original_predictions[0][0], dendrogram_filename)
 
-        print(f"Top K predictions for the original image:")
-        for k_label, k_prob in original_predictions:
-            print(f"{k_label}: {k_prob:.4f}")
-
         # Get top K predictions for the adversarial image
         adversarial_predictions = get_top_k_predictions(model, adversarial_image_preprocessed, labels)
         adversarial_verbal_explaination = query_model(adversarial_predictions[0][0], dendrogram_filename)
 
-        print(f"Top K predictions for the adversarial image:")
-        for k_label, k_prob in adversarial_predictions:
-            print(f"{k_label}: {k_prob:.4f}")
         # Return both images as Base64 strings
         return {
             "original_image": original_image_base64,
@@ -154,16 +149,3 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_fo
             "adversarial_verbal_explaination": adversarial_verbal_explaination,
         }
         
-
-
-
-
-    
-
-    
-
-    
-
-
-    
-

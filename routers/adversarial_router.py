@@ -94,9 +94,21 @@ async def analyze_adversarial(
         BASE_DIR = os.getenv("USERS_PATH", "users")
         user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
         image_content = await image.read()
+        # analysis_result = analysis_adversarial_image(
+        #     current_model_id, graph_type, attack_type, image_content, user_folder,
+        #     epsilon, alpha, overshoot, num_steps, classes_number
+        # )
         analysis_result = analysis_adversarial_image(
-            current_model_id, graph_type, attack_type, image_content, user_folder,
-            epsilon, alpha, overshoot, num_steps, classes_number
+        model_id=current_model_id,
+        graph_type=graph_type,
+        attack_type=attack_type,
+        image=image_content,
+        user_folder=user_folder,
+        epsilon=epsilon,
+        alpha=alpha,
+        num_steps=num_steps,
+        overshoot=overshoot,
+        num_classes=classes_number
         )
         if analysis_result is None:
             raise HTTPException(status_code=404, detail="Detection result not found")

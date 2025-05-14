@@ -13,8 +13,12 @@ class FGSMAttack(AdversarialAttack):
     and distance-based hierarchical clustering.
     """
     
-    def __init__(self):
-        super().__init__(epsilon=11, alpha=0.1, num_steps=1)
+    def __init__(self, **kwargs):
+        super().__init__(
+            epsilon=kwargs.get("epsilon") if kwargs.get("epsilon") is not None else 11,
+            alpha=kwargs.get("alpha") if kwargs.get("alpha") is not None else 0.1,
+            num_steps=kwargs.get("num_steps") if kwargs.get("num_steps") is not None else 1
+            )
     
     def attack(self, model, image):
         """

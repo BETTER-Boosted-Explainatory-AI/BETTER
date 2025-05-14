@@ -13,21 +13,24 @@ class DeepFoolAttack(AdversarialAttack):
     and distance-based hierarchical clustering.
     """
     
-    def __init__(self, class_names, overshoot=0.02, num_classes=10, batch_gradients=True):
+    def __init__(self, class_names, batch_gradients=True, **kwargs):
         """
         Initialize DeepFool attack.
         
         Args:
             model: The model to attack
             class_names: List of class names
-            Z_full: The hierarchical clustering data
-            preprocess_input: Function to preprocess inputs for the model
-            cluster_type: Type of clustering (SIMILARITY, DISSIMILARITY, CONFUSION_MATRIX)
         """
-        super().__init__(epsilon=1, alpha=0.1, num_steps=70)
+        # super().__init__(epsilon=1, alpha=0.1, num_steps=70)
+        print(kwargs)
+        super().__init__(
+            epsilon=kwargs.get("epsilon") if kwargs.get("epsilon") is not None else 1,
+            alpha=kwargs.get("alpha") if kwargs.get("alpha") is not None else 0.1,
+            num_steps=kwargs.get("num_steps") if kwargs.get("num_steps") is not None else 70
+            )
         self.class_names = class_names
-        self.overshoot = overshoot
-        self.num_classes = num_classes
+        self.overshoot = kwargs.get("overshoot") if kwargs.get("overshoot") is not None else 0.02
+        self.num_classes = kwargs.get("num_classes") if kwargs.get("num_classes") is not None else 10
         self.batch_gradients = batch_gradients
 
     def preprocess_image_array(self, model, img_array):
