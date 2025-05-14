@@ -1,6 +1,6 @@
 [
     {
-        "model_id": "db9f2ab0-e9b5-4bb7-afde-1d902f5404a8",
+        "model_id": "00683a8f-2982-4de9-a106-86e50683c610",
         "file_name": "cifar100_resnet.keras",
         "dataset": "cifar100",
         "graph_type": [
@@ -12,7 +12,7 @@
         "top_k": 4
     },
     {
-        "model_id": "717ca699-031d-48ea-ac88-e092faaf30a9",
+        "model_id": "1b6fc75d-4337-4d9a-9a46-e07d05df74e5",
         "file_name": "resnet50_imagenet.keras",
         "dataset": "imagenet",
         "graph_type": [

@@ -1,7 +1,6 @@
 from utilss.classes.whitebox_testing import WhiteBoxTesting
 from utilss.classes.edges_dataframe import EdgesDataframe
-from .models_service import _get_model_path, _get_model_filename
-from utilss.files_utils import get_user_models_info
+from .models_service import _get_model_path, _get_model_filename, get_user_models_info
 from fastapi import HTTPException, status
 import os
 
@@ -21,7 +20,7 @@ def _get_edges_dataframe_path(user_id, model_id, graph_type):
 def get_white_box_analysis(current_user, current_model_id, graph_type, source_labels, target_labels):
     user_id = current_user.get_user_id()
     model_info = get_user_models_info(current_user.get_models_json_path(), current_model_id)
-    print(f"Model info: {model_info}")
+
     if model_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

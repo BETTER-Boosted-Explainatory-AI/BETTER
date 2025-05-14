@@ -194,8 +194,7 @@ def query_predictions(dataset, model_filename, image_path):
     else:
         raise ValueError(f"Unsupported dataset: {dataset}")
 
-def get_user_models_info(user_folder: str, model_id: str):
-    models_json_path = os.path.join(user_folder, "models.json")
+def get_user_models_info(models_json_path: str, model_id: str):
     if os.path.exists(models_json_path):
         with open(models_json_path, "r") as json_file:
             models_data = json.load(json_file)
@@ -210,13 +209,14 @@ def get_user_models_info(user_folder: str, model_id: str):
 
 def get_model_info(models_data, model_id):
     for model in models_data:
-        if model["model_id"] == model_id:
+        if str(model["model_id"]) == str(model_id):
             return {
                 "model_id": model["model_id"],
                 "file_name": model["file_name"],
                 "dataset": model["dataset"],
                 "graph_type": model["graph_type"],
             }
+            
     # If no match is found, return None
     print(f"Model {model_id} doesn't exist.")
     return None
