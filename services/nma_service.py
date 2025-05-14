@@ -50,7 +50,7 @@ def _create_nma(model_file, graph_type, dataset_str, user_id, min_confidence, to
             min_confidence=min_confidence,
         )
         
-        edges_df_obj = EdgesDataframe(user_id, model_file.name, dataframe_filename, nma.edges_df)
+        edges_df_obj = EdgesDataframe(model_file.name, dataframe_filename, nma.edges_df)
         edges_df_obj.save_dataframe()
         print(nma.Z)            
         

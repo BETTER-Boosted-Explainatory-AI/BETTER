@@ -89,8 +89,6 @@ d----- users
 }
 ```
 
-
-
 ### Whitebox Testing
 - **Endpoint**: `http://127.0.0.1:8001/whitebox_testing/`
 - **Methods**: `POST`
@@ -98,10 +96,11 @@ d----- users
 
 ```bash
 {
-    "model_filename":"cifar100_resnet",
-    "source_labels":["forest", "maple_tree", "oak_tree", "willow_tree", "pine_tree", "palm_tree"],
-    "target_labels":["girl", "boy", "woman", "man","baby"],
-    "edges_data_filename": "edges_dissimilarity_cifar100"
+    "user_id": "uuid",
+    "model_id": "uuid",
+    "graph_type":  "count",
+    "source_labels": ["Persian_cat", "tabby", "Madagascar_cat", "Egyptian_cat"],
+    "target_labels": ["pug", "boxer", "Norwich_terrier", "kuvasz"]
 }
 ```
 

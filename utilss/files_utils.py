@@ -13,6 +13,7 @@ from data.datasets.cifar100_info import CIFAR100_INFO
 from data.datasets.imagenet_info import IMAGENET_INFO
 from PIL import Image
 import io
+import uuid
 
 def upload(upload_dir: str, model_file: UploadFile) -> str:
     os.makedirs(upload_dir, exist_ok=True)
@@ -125,8 +126,8 @@ def check_models_metadata(models_data, model_id, graph_type):
             return model_id
     return str(uuid.uuid4())
         
-def get_user_models_info(user_folder: str, model_id: str):
-    models_json_path = os.path.join(user_folder, "models.json")
+def get_user_models_info(models_json_path: str, model_id: str):
+    print(f"Loading models metadata from {models_json_path}")
     if os.path.exists(models_json_path):
         with open(models_json_path, "r") as json_file:
             models_data = json.load(json_file)
@@ -140,8 +141,10 @@ def get_user_models_info(user_folder: str, model_id: str):
         return get_model_info(models_data, model_id)
 
 def get_model_info(models_data, model_id):
+    curr_model_id = str(model_id)
     for model in models_data:
-        if model["model_id"] == model_id:
+        uuid1 = str(model["model_id"])
+        if uuid1 == curr_model_id:
             return {
                 "model_id": model["model_id"],
                 "file_name": model["file_name"],

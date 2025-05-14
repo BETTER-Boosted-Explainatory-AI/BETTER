@@ -12,10 +12,39 @@ from tensorflow.keras.applications.efficientnet import preprocess_input as effic
 from tensorflow.keras.applications.xception import preprocess_input as xception_preprocess
 from utilss.enums.datasets_enum import DatasetsEnum
 from services.dataset_service import _get_dataset_config
-
+from fastapi import HTTPException, status
+import json
 
 def get_model():
     return None
+
+def _check_model_path(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+            detail="user_id is required"
+        )
+    
+    if model_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+            detail="model_id is required"
+        )
+    
+    if graph_type is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+            detail="graph_type is required"
+        )
+    
+    model_path = _get_model_path(user_id, model_id)
+    if model_path is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Could not find model directory"
+        )
+    return model_path
+
 
 def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
     # Construct the model path based on user_id and model_id
@@ -28,8 +57,18 @@ def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
     else:
         return None
 
-def save_model():
-    return None
+def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
+    model_path = _get_model_path(user_id, model_id)
+    if model_path is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Could not find model directory"
+        )
+    for file_name in os.listdir(model_path):
+        if file_name.endswith(".keras"):
+            model_filename = os.path.join(model_path, file_name)
+            return model_filename
+        
 
 def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any]) -> Model:
     print(f"Loading model {model_path} for dataset {dataset_str}")

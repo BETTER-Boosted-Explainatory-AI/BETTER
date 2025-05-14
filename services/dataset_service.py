@@ -28,3 +28,4 @@ def _get_dataset_labels(dataset_str: str) -> List[str]:
         return IMAGENET_INFO["labels"]
     else:
         raise ValueError(f"Invalid dataset: {dataset_str}")
+    

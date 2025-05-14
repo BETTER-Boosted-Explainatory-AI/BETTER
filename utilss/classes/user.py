@@ -95,5 +95,3 @@ class User:
     
     def get_current_model(self):
         return self.current_model
-
-        
