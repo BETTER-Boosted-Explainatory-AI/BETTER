@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, status, Form, UploadFile, Depends
-from services.adversarial_attacks_service import create_logistic_regression_detector, detect_adversarial_image
+from services.adversarial_attacks_service import create_logistic_regression_detector, detect_adversarial_image, analysis_adversarial_image
 from services.users_service import get_current_session_user
 from utilss.classes.user import User
 from typing import List, Optional
-from request_models.adversarial_model import DetectorResponse
+from request_models.adversarial_model import DetectorResponse, AnalysisResult, DetectionResult
 import os
 
 adversarial_router = APIRouter()
@@ -67,6 +67,74 @@ async def detect_query(
         return DetectorResponse(result=detection_result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-        
-        
+    
+@adversarial_router.post(
+    "/adversarial/analyze",
+    status_code=status.HTTP_200_OK,
+    response_model=AnalysisResult,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
+    }
+)
+async def analyze_adversarial(
+    current_model_id: str = Form(...),
+    graph_type: str = Form(...),
+    image: UploadFile = Form(...),
+    attack_type: str = Form(...),
+    epsilon: Optional[float] = Form(None),
+    alpha: Optional[float] = Form(None),
+    overshoot: Optional[float] = Form(None),
+    num_steps: Optional[int] = Form(None),
+    classes_number: Optional[int] = Form(None),
+    current_user: User = Depends(get_current_session_user)
+):
+    try:
+        BASE_DIR = os.getenv("USERS_PATH", "users")
+        user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
+        image_content = await image.read()
+        # analysis_result = analysis_adversarial_image(
+        #     current_model_id, graph_type, attack_type, image_content, user_folder,
+        #     epsilon, alpha, overshoot, num_steps, classes_number
+        # )
+        analysis_result = analysis_adversarial_image(
+        model_id=current_model_id,
+        graph_type=graph_type,
+        attack_type=attack_type,
+        image=image_content,
+        user_folder=user_folder,
+        epsilon=epsilon,
+        alpha=alpha,
+        num_steps=num_steps,
+        overshoot=overshoot,
+        num_classes=classes_number
+        )
+        if analysis_result is None:
+            raise HTTPException(status_code=404, detail="Detection result not found")
 
+        # Convert original predictions to DetectionResult objects
+        original_predictions_result = [
+            DetectionResult(label=k_label, probability=float(k_prob))
+            for k_label, k_prob in analysis_result["original_predictions"]
+        ]
+
+        # Convert adversarial predictions to DetectionResult objects
+        adversarial_predictions_result = [
+            DetectionResult(label=k_label, probability=float(k_prob))
+            for k_label, k_prob in analysis_result["adversarial_predictions"]
+        ]
+
+        # Create the AnalysisResult object
+        result = AnalysisResult(
+            original_image=analysis_result["original_image"],
+            original_predicition=original_predictions_result,
+            original_verbal_explaination=analysis_result["original_verbal_explaination"],
+            adversarial_image=analysis_result["adversarial_image"],
+            adversarial_prediction=adversarial_predictions_result,
+            adversarial_verbal_explaination=analysis_result["adversarial_verbal_explaination"],
+        )
+
+        return result.model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) 

@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from typing import Dict, Any, Optional
 from utilss.classes.model import Model
 from utilss.classes.dendrogram import Dendrogram
@@ -14,6 +15,73 @@ from utilss.enums.datasets_enum import DatasetsEnum
 from services.dataset_service import _get_dataset_config
 from fastapi import HTTPException, status
 import json
+
+def get_top_k_predictions(model, image, class_names, top_k=5):
+    # Get predictions from the model
+    predictions = model.predict(image)
+
+    # Flatten the predictions array if it's 2D (e.g., shape (1, num_classes))
+    if len(predictions.shape) == 2:
+        predictions = predictions[0]  # Extract the first (and only) batch
+
+    # Get the indices of the top-k predictions
+    top_indices = np.argsort(predictions)[-top_k:][::-1]
+
+    # Get the top-k probabilities and corresponding labels
+    top_probs = predictions[top_indices]
+    top_labels = [class_names[i] for i in top_indices]
+
+    return list(zip(top_labels, top_probs))
+
+
+
+def get_preprocess_function(model):
+    print("Determining preprocessing function based on model configuration...")
+    preprocess_map = {
+        "resnet50": resnet50_preprocess,
+        "vgg16": vgg16_preprocess,
+        "inception_v3": inception_v3_preprocess,
+        "mobilenet": mobilenet_preprocess,
+        "efficientnet": efficientnet_preprocess,
+        "xception": xception_preprocess,
+    }
+
+    # Check the model's configuration for a match
+    model_config = model.get_config()
+    if "name" in model_config:
+        model_name = model_config["name"].lower()
+        print(f"Model name: {model_name}")
+        for key in preprocess_map.keys():
+            if key in model_name:
+                print(f"Detected model type: {key}")
+                return preprocess_map[key]
+
+    for layer in model.layers:
+        layer_name = layer.name.lower()
+        print(f"Checking layer: {layer_name}")
+        for model_name in preprocess_map.keys():
+            if model_name in layer_name:
+                print(f"Detected model type: {model_name}")
+                return preprocess_map[model_name]
+
+    # If no matching model type is found, use generic normalization
+    print("No supported model type found in the configuration. Falling back to generic normalization.")
+    return lambda x: x / 255.0  # Generic normalization to [0, 1]
+
+
+# Cached preprocessing function
+_cached_preprocess_function = {}
+
+def get_cached_preprocess_function(model):
+    """
+    Get the cached preprocessing function for the given model.
+    If not cached, fetch it and store it in the cache.
+    """
+    global _cached_preprocess_function
+    model_id = id(model)  # Use the model's unique ID as the cache key
+    if model_id not in _cached_preprocess_function:
+        _cached_preprocess_function[model_id] = get_preprocess_function(model)
+    return _cached_preprocess_function[model_id]
 
 def get_model():
     return None
@@ -102,7 +170,7 @@ def delete_model():
 
 def query_model(top_label: str, dendrogram_filenaem: str):
     dendrogram = Dendrogram(dendrogram_filenaem)
-    dendrogram.load_dendrogram_from_json()
+    dendrogram.load_dendrogram()
     consistensy = dendrogram.find_name_hierarchy(dendrogram.Z_tree_format, top_label)
     print(f"Consistency for {top_label}: {consistensy}")
     return consistensy
@@ -126,25 +194,56 @@ def query_predictions(dataset, model_filename, image_path):
     else:
         raise ValueError(f"Unsupported dataset: {dataset}")
 
-def get_preprocess_function(model):
-    print("Determining preprocessing function based on model layers...")
-    preprocess_map = {
-        "resnet50": resnet50_preprocess,
-        "vgg16": vgg16_preprocess,
-        "inception_v3": inception_v3_preprocess,
-        "mobilenet": mobilenet_preprocess,
-        "efficientnet": efficientnet_preprocess,
-        "xception": xception_preprocess,
-    }
+def get_user_models_info(user_folder: str, model_id: str):
+    models_json_path = os.path.join(user_folder, "models.json")
+    if os.path.exists(models_json_path):
+        with open(models_json_path, "r") as json_file:
+            models_data = json.load(json_file)
+    else:
+        models_data = []
+        raise ValueError(f"Models metadata file '{models_json_path}' not found.")
+    
+    if model_id is None:
+        return models_data
+    else:
+        return get_model_info(models_data, model_id)
 
-    for layer in model.layers:
-        layer_name = layer.name.lower()
-        for model_name in preprocess_map.keys():
-            if model_name in layer_name:
-                print(f"Detected model type: {model_name}")
-                return preprocess_map[model_name]
+def get_model_info(models_data, model_id):
+    for model in models_data:
+        if model["model_id"] == model_id:
+            return {
+                "model_id": model["model_id"],
+                "file_name": model["file_name"],
+                "dataset": model["dataset"],
+                "graph_type": model["graph_type"],
+            }
+    # If no match is found, return None
+    print(f"Model {model_id} doesn't exist.")
+    return None
 
-    # If no matching model type is found, use generic normalization
-    print("No supported model type found in the layers. Falling back to generic normalization.")
-    return lambda x: x / 255.0  # Generic normalization to [0, 1]
+def get_model_files(user_folder: str, model_info: dict, graph_type: str):
+        model_subfolder = os.path.join(user_folder, model_info["model_id"])
+        model_file = os.path.join(model_subfolder, model_info["file_name"])
+        if not os.path.exists(model_file):
+            model_file = None
+            raise ValueError(f"Model file {model_file} does not exist")
+        model_graph_folder = os.path.join(model_subfolder, graph_type)
+        Z_file = os.path.join(model_graph_folder, "dendrogram.pkl")
+        if not os.path.exists(Z_file):
+            Z_file = None
+            print(f"Z file {Z_file} does not exist")
+        dendrogram_file = os.path.join(model_graph_folder, 'dendrogram.json')
+        if not os.path.exists(dendrogram_file):
+            dendrogram_file = None
+            print(f"Dendrogram file {dendrogram_file} does not exist")
+        detector_filename = os.path.join(model_graph_folder, 'logistic_regression_model.pkl')
+        if not os.path.exists(detector_filename):
+            detector_filename = None
+            print(f"Detector model file {detector_filename} does not exist")
+        dataframe_filename = os.path.join(model_graph_folder, 'edges_df.csv')
+        if not os.path.exists(dataframe_filename):
+            dataframe_filename = None
+            print(f"Dataframe file {dataframe_filename} does not exist")
+        return {"model_file": model_file, "Z_file": Z_file, "dendrogram": dendrogram_file, "detector_filename": detector_filename, "dataframe": dataframe_filename, "model_graph_folder": model_graph_folder}
+        
 
