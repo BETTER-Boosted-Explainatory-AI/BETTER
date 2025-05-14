@@ -1,9 +1,10 @@
 from utilss.classes.adversarial_dataset import AdversarialDataset
 from utilss.classes.adversarial_detector import AdversarialDetector
 from utilss.classes.score_calculator import ScoreCalculator
-from utilss.files_utils import get_user_models_info, get_model_files, get_labels_from_dataset_info, preprocess_image, encode_image_to_base64, deprocess_resnet_image, preprocess_deepfool_image, preprocess_loaded_image
+from utilss.photos_utils import preprocess_image, encode_image_to_base64, deprocess_resnet_image, preprocess_deepfool_image, preprocess_loaded_image
+from services.dataset_service import _get_dataset_labels
 from utilss.classes.adversarial_attacks.adversarial_attack_factory import get_attack
-from services.models_service import get_top_k_predictions, query_model
+from services.models_service import get_top_k_predictions, query_model, get_user_models_info, get_model_files
 import tensorflow as tf
 import numpy as np
 import io
@@ -64,7 +65,7 @@ def detect_adversarial_image(model_id, graph_type, image, user_folder):
 
         dataset = model_info["dataset"]
         Z_full = model_files["Z_file"]
-        labels = get_labels_from_dataset_info(dataset)
+        labels = _get_dataset_labels(dataset)
 
         if os.path.exists(model_file):
             model = tf.keras.models.load_model(model_file)
@@ -91,9 +92,7 @@ def detect_adversarial_image(model_id, graph_type, image, user_folder):
     
     return ('Adversarial' if label == 1 else 'Clean')
 
-def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_folder, **kwargs
-                                # epsilon, alpha, overshoot, num_steps, classes_number
-                                ):
+def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_folder, **kwargs):
     model_info = get_user_models_info(user_folder, model_id)
 
     if model_info is None:
@@ -109,7 +108,7 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_fo
         
         model_path = model_files["model_graph_folder"]
         dataset = model_info["dataset"]
-        labels = get_labels_from_dataset_info(dataset)
+        labels = _get_dataset_labels(dataset)
 
         dendrogram_filename = f'{model_path}/dendrogram'
 

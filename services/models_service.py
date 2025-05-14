@@ -195,5 +195,56 @@ def query_predictions(dataset, model_filename, image_path):
     else:
         raise ValueError(f"Unsupported dataset: {dataset}")
 
+def get_user_models_info(user_folder: str, model_id: str):
+    models_json_path = os.path.join(user_folder, "models.json")
+    if os.path.exists(models_json_path):
+        with open(models_json_path, "r") as json_file:
+            models_data = json.load(json_file)
+    else:
+        models_data = []
+        raise ValueError(f"Models metadata file '{models_json_path}' not found.")
+    
+    if model_id is None:
+        return models_data
+    else:
+        return get_model_info(models_data, model_id)
 
+def get_model_info(models_data, model_id):
+    for model in models_data:
+        if model["model_id"] == model_id:
+            return {
+                "model_id": model["model_id"],
+                "file_name": model["file_name"],
+                "dataset": model["dataset"],
+                "graph_type": model["graph_type"],
+            }
+    # If no match is found, return None
+    print(f"Model {model_id} doesn't exist.")
+    return None
+
+def get_model_files(user_folder: str, model_info: dict, graph_type: str):
+        model_subfolder = os.path.join(user_folder, model_info["model_id"])
+        model_file = os.path.join(model_subfolder, model_info["file_name"])
+        if not os.path.exists(model_file):
+            model_file = None
+            raise ValueError(f"Model file {model_file} does not exist")
+        model_graph_folder = os.path.join(model_subfolder, graph_type)
+        Z_file = os.path.join(model_graph_folder, "dendrogram.pkl")
+        if not os.path.exists(Z_file):
+            Z_file = None
+            print(f"Z file {Z_file} does not exist")
+        dendrogram_file = os.path.join(model_graph_folder, 'dendrogram.json')
+        if not os.path.exists(dendrogram_file):
+            dendrogram_file = None
+            print(f"Dendrogram file {dendrogram_file} does not exist")
+        detector_filename = os.path.join(model_graph_folder, 'logistic_regression_model.pkl')
+        if not os.path.exists(detector_filename):
+            detector_filename = None
+            print(f"Detector model file {detector_filename} does not exist")
+        dataframe_filename = os.path.join(model_graph_folder, 'edges_df.csv')
+        if not os.path.exists(dataframe_filename):
+            dataframe_filename = None
+            print(f"Dataframe file {dataframe_filename} does not exist")
+        return {"model_file": model_file, "Z_file": Z_file, "dendrogram": dendrogram_file, "detector_filename": detector_filename, "dataframe": dataframe_filename, "model_graph_folder": model_graph_folder}
+        
 
