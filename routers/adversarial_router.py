@@ -117,8 +117,10 @@ async def analyze_adversarial(
         result = AnalysisResult(
             original_image=analysis_result["original_image"],
             original_predicition=original_predictions_result,
+            original_verbal_explaination=analysis_result["original_verbal_explaination"],
             adversarial_image=analysis_result["adversarial_image"],
             adversarial_prediction=adversarial_predictions_result,
+            adversarial_verbal_explaination=analysis_result["adversarial_verbal_explaination"],
         )
 
         return result.model_dump()

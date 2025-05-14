@@ -163,6 +163,10 @@ def get_model_files(user_folder: str, model_info: dict, graph_type: str):
         if not os.path.exists(Z_file):
             Z_file = None
             print(f"Z file {Z_file} does not exist")
+        dendrogram_file = os.path.join(model_graph_folder, 'dendrogram.json')
+        if not os.path.exists(dendrogram_file):
+            dendrogram_file = None
+            print(f"Dendrogram file {dendrogram_file} does not exist")
         detector_filename = os.path.join(model_graph_folder, 'logistic_regression_model.pkl')
         if not os.path.exists(detector_filename):
             detector_filename = None
@@ -171,7 +175,7 @@ def get_model_files(user_folder: str, model_info: dict, graph_type: str):
         if not os.path.exists(dataframe_filename):
             dataframe_filename = None
             print(f"Dataframe file {dataframe_filename} does not exist")
-        return {"model_file": model_file, "Z_file": Z_file, "detector_filename": detector_filename, "dataframe": dataframe_filename, "model_graph_folder": model_graph_folder}
+        return {"model_file": model_file, "Z_file": Z_file, "dendrogram": dendrogram_file, "detector_filename": detector_filename, "dataframe": dataframe_filename, "model_graph_folder": model_graph_folder}
         
 def load_numpy_from_directory(model ,directory):
     """
