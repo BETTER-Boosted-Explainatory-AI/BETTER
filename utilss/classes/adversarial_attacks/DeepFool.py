@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from utilss.classes.adversarial_attacks.adversarial_attack import AdversarialAttack
-from services.models_service import get_preprocess_function, get_cached_preprocess_function
+from services.models_service import get_cached_preprocess_function
 
 class DeepFoolAttack(AdversarialAttack):
     """
