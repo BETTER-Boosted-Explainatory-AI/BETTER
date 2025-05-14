@@ -3,7 +3,7 @@ from services.adversarial_attacks_service import create_logistic_regression_dete
 from services.users_service import get_current_session_user
 from utilss.classes.user import User
 from typing import List, Optional
-from request_models.adversarial_model import DetectorResponse, AnalysisResult
+from request_models.adversarial_model import DetectorResponse, AnalysisResult, DetectionResult
 import os
 
 adversarial_router = APIRouter()
@@ -94,13 +94,33 @@ async def analyze_adversarial(
         BASE_DIR = os.getenv("USERS_PATH", "users")
         user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
         image_content = await image.read()
-        analysis_result = analysis_adversarial_image(current_model_id, graph_type, attack_type ,image_content, user_folder, epsilon, alpha, overshoot, num_steps, classes_number)
+        analysis_result = analysis_adversarial_image(
+            current_model_id, graph_type, attack_type, image_content, user_folder,
+            epsilon, alpha, overshoot, num_steps, classes_number
+        )
         if analysis_result is None:
             raise HTTPException(status_code=404, detail="Detection result not found")
-        return AnalysisResult(original_image=analysis_result["original_image"], adversarial_image=analysis_result["adversarial_image"])
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)
-)
-        
-        
 
+        # Convert original predictions to DetectionResult objects
+        original_predictions_result = [
+            DetectionResult(label=k_label, probability=float(k_prob))
+            for k_label, k_prob in analysis_result["original_predictions"]
+        ]
+
+        # Convert adversarial predictions to DetectionResult objects
+        adversarial_predictions_result = [
+            DetectionResult(label=k_label, probability=float(k_prob))
+            for k_label, k_prob in analysis_result["adversarial_predictions"]
+        ]
+
+        # Create the AnalysisResult object
+        result = AnalysisResult(
+            original_image=analysis_result["original_image"],
+            original_predicition=original_predictions_result,
+            adversarial_image=analysis_result["adversarial_image"],
+            adversarial_prediction=adversarial_predictions_result,
+        )
+
+        return result.model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) 

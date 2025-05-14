@@ -1,8 +1,9 @@
 from utilss.classes.adversarial_dataset import AdversarialDataset
 from utilss.classes.adversarial_detector import AdversarialDetector
 from utilss.classes.score_calculator import ScoreCalculator
-from utilss.files_utils import get_user_models_info, get_model_files, get_labels_from_dataset_info, preprocess_image, encode_image_to_base64
+from utilss.files_utils import get_user_models_info, get_model_files, get_labels_from_dataset_info, preprocess_image, encode_image_to_base64, deprocess_resnet_image, preprocess_deepfool_image, preprocess_loaded_image
 from utilss.classes.adversarial_attacks.adversarial_attack_factory import get_attack
+from services.models_service import get_top_k_predictions
 import tensorflow as tf
 import numpy as np
 import io
@@ -71,7 +72,7 @@ def detect_adversarial_image(model_id, graph_type, image, user_folder):
         else:
             raise ValueError(f"Model file {model_file} does not exist")
         
-    image_preprocessed = preprocess_image(model, image)
+    image_preprocessed = preprocess_loaded_image(model, image)
 
     print(f"Image preprocessed successfully.")
 
@@ -107,22 +108,41 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_fo
         dataset = model_info["dataset"]
         labels = get_labels_from_dataset_info(dataset)
 
-        preprocessed_image = preprocess_image(model, image)
+        if attack_type == "deepfool":
+            preprocessed_image = preprocess_deepfool_image(model, image)
+        else:
+            preprocessed_image = preprocess_loaded_image(model, image)
+
         adversarial_attack = get_attack(attack_type, class_names=labels)
         adversarial_image = adversarial_attack.attack(model, preprocessed_image)
 
         pil_image = Image.open(io.BytesIO(image)).convert("RGB")
         image_array = np.array(pil_image)
         original_image_base64 = encode_image_to_base64(image_array)
-        print(f"image encoded to base64: {original_image_base64}")
-        print(f"Encoding adversarial image to base64")
+        if attack_type != "deepfool":
+            adversarial_image = deprocess_resnet_image(adversarial_image)
         adversarial_image_base64 = encode_image_to_base64(adversarial_image)
-        print(f"adversarial image encoded to base64: {adversarial_image_base64}")
 
+        original_image_preprocessed = preprocess_loaded_image(model, image)
+        adversarial_image_preprocessed = preprocess_image(model, adversarial_image)
+
+        # Get top K predictions for the original image
+        original_predictions = get_top_k_predictions(model, original_image_preprocessed, labels)
+
+        print(f"Top K predictions for the original image:")
+        for k_label, k_prob in original_predictions:
+            print(f"{k_label}: {k_prob:.4f}")
+        # Get top K predictions for the adversarial image
+        adversarial_predictions = get_top_k_predictions(model, adversarial_image_preprocessed, labels)
+        print(f"Top K predictions for the adversarial image:")
+        for k_label, k_prob in adversarial_predictions:
+            print(f"{k_label}: {k_prob:.4f}")
         # Return both images as Base64 strings
         return {
             "original_image": original_image_base64,
-            "adversarial_image": adversarial_image_base64
+            "original_predictions": original_predictions,
+            "adversarial_image": adversarial_image_base64,
+            "adversarial_predictions": adversarial_predictions,
         }
         
 
