@@ -1,8 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from dotenv import load_dotenv
 import os
+
+from utilss.exception_handlers import http_exception_handler, generic_exception_handler, validation_exception_handler
 
 from routers.nma_router import nma_router
 from routers.whitebox_testing_router import whitebox_testing_router
@@ -12,7 +15,7 @@ from routers.adversarial_router import adversarial_router
 from routers.users_router import users_router
 from routers.dendrogram_router import dendrogram_router
 
-import numpy as np
+# import numpy as np
 
 load_dotenv()
 
@@ -27,6 +30,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add custom exception handlers
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # Global variable to store the loaded ImageNet instance
 imagenet_instance = None
