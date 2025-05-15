@@ -89,5 +89,10 @@ class User:
     
     def get_current_model(self):
         return self.current_model
+    
+    def get_user_folder(self):
+        USERS_PATH = os.getenv("USERS_PATH")
+        user_folder_path = os.path.join(USERS_PATH, self.user_id)
+        return user_folder_path
 
         

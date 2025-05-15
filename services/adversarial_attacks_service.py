@@ -18,13 +18,13 @@ def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_
     X_train, y_train, X_test, y_test = adversarial_dataset.create_logistic_regression_dataset()
     return {"X_train": X_train, "y_train": y_train, "X_test": X_test, "y_test": y_test}
 
-def create_logistic_regression_detector(model_id: str, graph_type: str, clean_images: list, adversarial_images: list, user_folder: str):
-    model_info = get_user_models_info(user_folder, model_id)
+def create_logistic_regression_detector(model_id, graph_type, clean_images, adversarial_images, user):
+    model_info = get_user_models_info(user, model_id)
 
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
-        model_files = get_model_files(user_folder, model_info, graph_type)
+        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
         model_graph_folder = model_files["model_graph_folder"]
         model_file = model_files["model_file"]
         Z_file = model_files["Z_file"]
@@ -39,7 +39,7 @@ def create_logistic_regression_detector(model_id: str, graph_type: str, clean_im
 
     return adversarial_detector
 
-def detect_adversarial_image(model_id, graph_type, image, user_folder):
+def detect_adversarial_image(model_id, graph_type, image, user):
     """
     Detect if an image is adversarial using the trained logistic regression detector.
     
@@ -54,12 +54,12 @@ def detect_adversarial_image(model_id, graph_type, image, user_folder):
     - Prediction (Clean or Adversarial) and probability
     """
 
-    model_info = get_user_models_info(user_folder, model_id)
+    model_info = get_user_models_info(user, model_id)
 
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
-        model_files = get_model_files(user_folder, model_info, graph_type)
+        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
         model_graph_folder = model_files["model_graph_folder"]
         model_file = model_files["model_file"]
 
@@ -92,13 +92,13 @@ def detect_adversarial_image(model_id, graph_type, image, user_folder):
     
     return ('Adversarial' if label == 1 else 'Clean')
 
-def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user_folder, **kwargs):
-    model_info = get_user_models_info(user_folder, model_id)
+def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, **kwargs):
+    model_info = get_user_models_info(user, model_id)
 
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
-        model_files = get_model_files(user_folder, model_info, graph_type)
+        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
         model_file = model_files["model_file"]
         if os.path.exists(model_file):
             model = tf.keras.models.load_model(model_file)

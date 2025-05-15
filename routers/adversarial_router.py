@@ -26,10 +26,8 @@ async def generate_adversarial_detector(
     current_user: User = Depends(get_current_session_user)  
 ):
     try:
-        BASE_DIR = os.getenv("USERS_PATH", "users")  # Base directory for user data
-        user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
         detector = create_logistic_regression_detector(
-            current_model_id, graph_type, clean_images, adversarial_images, user_folder
+            current_model_id, graph_type, clean_images, adversarial_images, current_user
         )
 
         if detector is None:
@@ -58,10 +56,8 @@ async def detect_query(
     current_user: User = Depends(get_current_session_user)
 ):
     try:
-        BASE_DIR = os.getenv("USERS_PATH", "users")
-        user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
         image_content = await image.read()
-        detection_result = detect_adversarial_image(current_model_id, graph_type, image_content, user_folder)
+        detection_result = detect_adversarial_image(current_model_id, graph_type, image_content, current_user)
         if detection_result is None:
             raise HTTPException(status_code=404, detail="Detection result not found")
         return DetectorResponse(result=detection_result)
@@ -91,19 +87,13 @@ async def analyze_adversarial(
     current_user: User = Depends(get_current_session_user)
 ):
     try:
-        BASE_DIR = os.getenv("USERS_PATH", "users")
-        user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
         image_content = await image.read()
-        # analysis_result = analysis_adversarial_image(
-        #     current_model_id, graph_type, attack_type, image_content, user_folder,
-        #     epsilon, alpha, overshoot, num_steps, classes_number
-        # )
         analysis_result = analysis_adversarial_image(
         model_id=current_model_id,
         graph_type=graph_type,
         attack_type=attack_type,
         image=image_content,
-        user_folder=user_folder,
+        user=current_user,
         epsilon=epsilon,
         alpha=alpha,
         num_steps=num_steps,
