@@ -121,8 +121,5 @@ class ImageNet(Dataset):
         dir_to_readable = IMAGENET_INFO["directory_to_readable"]
         return dir_to_readable[label]
     
-    def get_source_label(self, label):
-        return self.directory_to_labels_conversion(label)
-
-    def get_target_label(self, label):
+    def get_label_readable_name(self, label):
         return self.directory_to_labels_conversion(label)

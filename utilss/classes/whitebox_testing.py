@@ -8,23 +8,20 @@ class WhiteBoxTesting:
         self.problematic_imgs = None
 
     def find_problematic_images(self, source_labels, target_labels, edges_df, dataset_str):
-        mapped_sources = source_labels
-        mapped_targets = target_labels
 
         # Filter where source is in source_labels and target is in target_labels
         filtered_edges_ds = edges_df[
-            (edges_df['source'].isin(mapped_sources)) & 
-            (edges_df['target'].isin(mapped_targets))
+            (edges_df['source'].isin(source_labels)) & 
+            (edges_df['target'].isin(target_labels))
         ]
 
         # Filter where source is in target_labels and target is in source_labels
         filtered_edges_ds_switched = edges_df[
-            (edges_df['source'].isin(mapped_sources)) & 
-            (edges_df['target'].isin(mapped_targets))
+            (edges_df['source'].isin(target_labels)) & 
+            (edges_df['target'].isin(source_labels))
         ]
         print(filtered_edges_ds_switched.head())
         
-
         # Combine both filtered datasets
         combined_filtered_edges_ds = pd.concat([filtered_edges_ds, filtered_edges_ds_switched])
         print("Combined filtered edges dataset:")

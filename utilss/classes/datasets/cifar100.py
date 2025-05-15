@@ -5,7 +5,6 @@ from .dataset import Dataset
 import matplotlib.pyplot as plt
 from data.datasets.cifar100_info import CIFAR100_INFO
 
-
 class Cifar100(Dataset):
     def __init__(self):
         super().__init__(CIFAR100_INFO["dataset"], CIFAR100_INFO["threshold"], CIFAR100_INFO["infinity"], CIFAR100_INFO["labels"])
@@ -13,9 +12,7 @@ class Cifar100(Dataset):
         self.y_train = None
         self.x_test = None
         self.y_test = None
-        self.y_train_mapped = None
-        self.y_test_mapped = None
-
+        
     def unpickle(self, file):
         with open(file, 'rb') as fo:
             data_dict = pickle.load(fo, encoding='bytes')  # Load data
@@ -43,8 +40,8 @@ class Cifar100(Dataset):
 
         self.x_test = test_batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
         self.y_test = np.array(test_batch[b'fine_labels'])
-        self.y_train_mapped = self._map_y_labels(self.y_train)
-        self.y_test_mapped = self._map_y_labels(self.y_test)
+        self.y_train = self._map_y_labels(self.y_train)
+        self.y_test = self._map_y_labels(self.y_test)
 
         print("Dataset loaded successfully")
         return True
@@ -79,8 +76,5 @@ class Cifar100(Dataset):
 
         return image, label
         
-    def get_source_label(self, label):
-        return self.label_to_class_name(label)
-
-    def get_target_label(self, label):
+    def get_label_readable_name(self, label):
         return label

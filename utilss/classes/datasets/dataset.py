@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class Dataset(ABC):
     def __init__(self, name, threshold, infinity, labels):
         self.name = name
@@ -20,9 +21,5 @@ class Dataset(ABC):
         pass
 
     @abstractmethod
-    def get_source_label(self, label):
-        pass
-
-    @abstractmethod
-    def get_target_label(self, label):
+    def get_label_readable_name(self, label):
         pass
