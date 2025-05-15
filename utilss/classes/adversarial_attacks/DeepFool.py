@@ -21,8 +21,7 @@ class DeepFoolAttack(AdversarialAttack):
             model: The model to attack
             class_names: List of class names
         """
-        # super().__init__(epsilon=1, alpha=0.1, num_steps=70)
-        print(kwargs)
+
         super().__init__(
             epsilon=kwargs.get("epsilon") if kwargs.get("epsilon") is not None else 1,
             alpha=kwargs.get("alpha") if kwargs.get("alpha") is not None else 0.1,
