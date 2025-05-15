@@ -1,8 +1,12 @@
-from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form
+from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Depends
 from services.models_service import query_model, query_predictions
-from utilss.files_utils import upload
 from request_models.query_model import QueryResponse
-import os
+from utilss.classes.user import User
+from services.users_service import get_current_session_user
+from utilss.photos_utils import encode_image_to_base64
+from PIL import Image, UnidentifiedImageError
+import io
+import numpy as np
 
 query_router = APIRouter()
 
@@ -16,33 +20,48 @@ query_router = APIRouter()
     },
     response_model=QueryResponse  # Use the Pydantic model for response
 )
-async def upload_image(
-    model_filename: str = Form(...),
-    dataset: str = Form(...),
+async def verbal_explaination_query(
+    current_model_id: str = Form(...),
+    graph_type: str = Form(...),
     image: UploadFile = File(...),
-    dendrogram_filename: str = Form(...),
-) -> QueryResponse:
+    current_user: User = Depends(get_current_session_user)
+):
     try:
-        PHOTOS_DIR = os.getenv("UPLOAD_DIR")
-        if not PHOTOS_DIR:
+        if image.size is 0:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Upload photos directory not configured"
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Image file is required."
             )
 
-        image_path = upload(PHOTOS_DIR, image)
-        top_label, top_3_predictions = query_predictions(dataset, model_filename, image_path)
-        query_result = query_model(top_label, dendrogram_filename)
+        if not graph_type:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Graph type is required."
+            )
+        
+        image_content = await image.read()
+        try:
+            pil_image = Image.open(io.BytesIO(image_content)).convert("RGB")
+        except UnidentifiedImageError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Uploaded file is not a valid image."
+            )
+        
+        top_label, top_predictions = query_predictions(current_model_id, graph_type, image_content, current_user)
+        query_result = query_model(top_label, current_model_id, graph_type, current_user)
+        image_array = np.array(pil_image)
+        image_base64 = encode_image_to_base64(image_array)
 
-        return QueryResponse(query_result=query_result, top_3_predictions=top_3_predictions)
-
+        return QueryResponse(query_result=query_result, top_predictions=top_predictions, image=image_base64)
+    
+    except HTTPException as http_exc:
+    # Re-raise HTTPException to preserve its status code and message
+        raise http_exc
+    
     except Exception as e:
         # Proper error handling
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=str(e)
         ) 
-    finally:
-        # Ensure file is closed and removed after processing
-        if 'image_path' in locals() and os.path.exists(image_path):
-            os.unlink(image_path)

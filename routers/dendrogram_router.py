@@ -1,7 +1,8 @@
-import os
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from request_models.dendrogram_model import DendrogramRequest, DendrogramResult, NamingClusterRequest
 from services.dendrogram_service import _get_sub_dendrogram, _rename_cluster
+from services.users_service import get_current_session_user
+from utilss.classes.user import User
 
 dendrogram_router = APIRouter()
 
@@ -15,11 +16,11 @@ dendrogram_router = APIRouter()
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-async def get_sub_dendrogram(sub_dendrogram_data: DendrogramRequest) -> DendrogramResult:
-    user_id = sub_dendrogram_data.user_id
+async def get_sub_dendrogram(sub_dendrogram_data: DendrogramRequest, current_user: User = Depends(get_current_session_user)) -> DendrogramResult:
     model_id = sub_dendrogram_data.model_id
     graph_type = sub_dendrogram_data.graph_type
     selected_labels = sub_dendrogram_data.selected_labels
+    user_id = current_user.user_id
     sub_dendrogram = _get_sub_dendrogram(user_id, model_id, graph_type, selected_labels)
     
     if sub_dendrogram is None:
@@ -37,13 +38,13 @@ async def get_sub_dendrogram(sub_dendrogram_data: DendrogramRequest) -> Dendrogr
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-async def update_naming(naming_cluster_data: NamingClusterRequest) -> DendrogramResult:
-    user_id = naming_cluster_data.user_id
+async def update_naming(naming_cluster_data: NamingClusterRequest, current_user: User = Depends(get_current_session_user)) -> DendrogramResult:
     model_id = naming_cluster_data.model_id
     graph_type = naming_cluster_data.graph_type
     selected_labels = naming_cluster_data.selected_labels
     cluster_id = naming_cluster_data.cluster_id
     new_name = naming_cluster_data.new_name
+    user_id = current_user.user_id
 
     sub_dendrogram = _rename_cluster(user_id, model_id, graph_type, selected_labels, cluster_id, new_name)
     if sub_dendrogram is None:
