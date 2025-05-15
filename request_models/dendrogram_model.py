@@ -4,7 +4,6 @@ import uuid
 
 
 class DendrogramRequest(BaseModel):
-    user_id: uuid.UUID
     model_id: uuid.UUID
     graph_type: str
     selected_labels: List[str]
@@ -19,7 +18,6 @@ class DendrogramResult(BaseModel):
         from_attributes = True
 
 class NamingClusterRequest(BaseModel):
-    user_id: uuid.UUID
     model_id: uuid.UUID
     graph_type: str
     selected_labels: List[str]
