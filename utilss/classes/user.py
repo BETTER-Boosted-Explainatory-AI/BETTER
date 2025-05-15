@@ -18,7 +18,7 @@ class User:
         users_json_path = os.path.join(USERS_PATH, "users.json")
         user_folder_path = os.path.join(USERS_PATH, self.user_id)
         models_json_path = os.path.join(user_folder_path, "models.json")
-        models_folder_path = os.path.join(user_folder_path, "models")
+        models_folder_path = os.path.join(user_folder_path, self.current_model)
 
         # Ensure the base directory exists
         os.makedirs(USERS_PATH, exist_ok=True)
@@ -82,16 +82,17 @@ class User:
 
         with open(models_json_path, "w") as file:
             json.dump({"models": self.models}, file, indent=4)
-    
-    def get_models_folder_path(self):
-        USERS_PATH = os.getenv("USERS_PATH")
-        user_folder_path = os.path.join(USERS_PATH, self.user_id)
-        models_folder_path = os.path.join(user_folder_path, "models")
-        return models_folder_path
-    
+
     def set_current_model(self, model_name: str):
         self.current_model = model_name
         return self.current_model
     
     def get_current_model(self):
         return self.current_model
+    
+    def get_user_folder(self):
+        USERS_PATH = os.getenv("USERS_PATH")
+        user_folder_path = os.path.join(USERS_PATH, self.user_id)
+        return user_folder_path
+
+        

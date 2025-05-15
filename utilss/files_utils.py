@@ -7,16 +7,16 @@ import numpy as np
 import tensorflow as tf
 from utilss.photos_utils import preprocess_numpy_image
 
-def upload(upload_dir: str, model_file: UploadFile) -> str:
-    os.makedirs(upload_dir, exist_ok=True)
-    model_path = os.path.join(upload_dir, model_file.filename)
+# def upload(upload_dir: str, model_file: UploadFile) -> str:
+#     os.makedirs(upload_dir, exist_ok=True)
+#     model_path = os.path.join(upload_dir, model_file.filename)
 
-    print(f"Saving model to {model_path}")
+#     print(f"Saving model to {model_path}")
 
-    with open(model_path, "wb") as f:
-        shutil.copyfileobj(model_file.file, f)
+#     with open(model_path, "wb") as f:
+#         shutil.copyfileobj(model_file.file, f)
 
-    return model_path
+#     return model_path
 
 
 def upload_model(
