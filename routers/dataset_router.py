@@ -1,10 +1,7 @@
-import os
 from fastapi import APIRouter, HTTPException, status
 from request_models.dataset_model import DatasetLabelsResult
-from typing import List
 
 from services.dataset_service import _get_dataset_labels
-
 
 datasets_router = APIRouter()
 

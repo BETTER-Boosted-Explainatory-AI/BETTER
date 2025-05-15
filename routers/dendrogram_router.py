@@ -1,4 +1,3 @@
-import os
 from fastapi import APIRouter, HTTPException, status, Depends
 from request_models.dendrogram_model import DendrogramRequest, DendrogramResult, NamingClusterRequest
 from services.dendrogram_service import _get_sub_dendrogram, _rename_cluster

@@ -33,8 +33,8 @@ class AdversarialDataset:
             self.clear_images = load_numpy_from_directory(self.model, f"{DATASET_PATH}{dataset}/clean")
             self.adversarial_images = load_numpy_from_directory(self.model, f"{DATASET_PATH}{dataset}/adversarial")
         else:
-            self.clear_images = clean_images
-            self.adversarial_images = adversarial_images
+            self.clear_images = load_numpy_from_directory(self.model,clean_images)
+            self.adversarial_images = load_numpy_from_directory(self.model,adversarial_images)
 
         self.labels = _get_dataset_labels(dataset)
         if self.labels is None:

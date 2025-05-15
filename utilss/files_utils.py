@@ -3,21 +3,10 @@ import shutil
 from fastapi import UploadFile
 import json
 import uuid
+import io
 import numpy as np
 import tensorflow as tf
 from utilss.photos_utils import preprocess_numpy_image
-
-# def upload(upload_dir: str, model_file: UploadFile) -> str:
-#     os.makedirs(upload_dir, exist_ok=True)
-#     model_path = os.path.join(upload_dir, model_file.filename)
-
-#     print(f"Saving model to {model_path}")
-
-#     with open(model_path, "wb") as f:
-#         shutil.copyfileobj(model_file.file, f)
-
-#     return model_path
-
 
 def upload_model(
     user_folder: str,
@@ -118,18 +107,34 @@ def check_models_metadata(models_data, model_id, graph_type):
             return model_id
     return str(uuid.uuid4())
         
-def load_numpy_from_directory(model ,directory):
+def load_numpy_from_directory(model ,source):
     """
     Load images from a given directory. Assumes images are stored as .npy files.
     """
-    print(f"Loading images from {directory}")
     images = []
-    for filename in os.listdir(directory):
-        if filename.endswith(".npy"):
-            file_path = os.path.join(directory, filename)
-            image = np.load(file_path)
-            preprocess_image = preprocess_numpy_image(model, image)
-            images.append(preprocess_image)
+    if isinstance(source, str):  # Case 1: Directory path
+        print(f"Loading images from directory: {source}")
+        for filename in os.listdir(source):
+            if filename.endswith(".npy"):
+                file_path = os.path.join(source, filename)
+                image = np.load(file_path)
+                preprocess_image = preprocess_numpy_image(model, image)
+                images.append(preprocess_image)
+
+    elif isinstance(source, list):  # Case 2: List of UploadFile objects
+        print(f"Loading images from user-provided files: {len(source)} files")
+        for upload_file in source:
+            if upload_file.filename.endswith(".npy"):
+                # Read the file content
+                file_content = upload_file.file.read()
+                # Convert the content to a NumPy array
+                image = np.load(io.BytesIO(file_content))
+                preprocess_image = preprocess_numpy_image(model, image)
+                images.append(preprocess_image)
+
+    else:
+        raise ValueError("Source must be a directory path (str) or a list of UploadFile objects.")
+
     return images
 
 def load_raw_image(file_path):

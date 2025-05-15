@@ -4,7 +4,6 @@ from services.users_service import get_current_session_user
 from utilss.classes.user import User
 from typing import List, Optional
 from request_models.adversarial_model import DetectorResponse, AnalysisResult, DetectionResult
-import os
 
 adversarial_router = APIRouter()
 
@@ -26,6 +25,25 @@ async def generate_adversarial_detector(
     current_user: User = Depends(get_current_session_user)  
 ):
     try:
+
+        # Validate clean_images
+        if clean_images:
+            for file in clean_images:
+                if not file.filename.endswith(".npy"):
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail=f"Invalid file type for clean_images: {file.filename}. Only .npy files are allowed."
+                    )
+
+        # Validate adversarial_images
+        if adversarial_images:
+            for file in adversarial_images:
+                if not file.filename.endswith(".npy"):
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail=f"Invalid file type for adversarial_images: {file.filename}. Only .npy files are allowed."
+                    )
+                
         detector = create_logistic_regression_detector(
             current_model_id, graph_type, clean_images, adversarial_images, current_user
         )
@@ -35,6 +53,8 @@ async def generate_adversarial_detector(
         
         # Return an instance of DetectorResponse
         return DetectorResponse(result="Detector created successfully")
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -127,4 +147,5 @@ async def analyze_adversarial(
 
         return result.model_dump()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
+    

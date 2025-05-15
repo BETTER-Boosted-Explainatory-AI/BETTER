@@ -148,7 +148,7 @@ def query_predictions(model_id, graph_type, image, user):
     return top_label, top_3_predictions
 
 
-def get_user_models_info(user: str, model_id: str):
+def get_user_models_info(user, model_id):
     models_json_path = user.get_models_json_path()
     if os.path.exists(models_json_path):
         with open(models_json_path, "r") as json_file:
