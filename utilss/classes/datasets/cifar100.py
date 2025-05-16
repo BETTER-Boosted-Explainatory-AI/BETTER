@@ -59,7 +59,7 @@ class Cifar100(Dataset):
         # Check if the image_id is within the range of training data
         if image_id < len(self.x_train):
             image = self.x_train[image_id]
-            label = self.y_train_mapped[image_id]
+            label = self.y_train[image_id]
             print(f"Train image ID {image_id}: label {label}") 
         else:
             raise ValueError("Invalid image_id")
@@ -69,7 +69,7 @@ class Cifar100(Dataset):
     def get_test_image_by_id(self, image_id):
         if image_id < len(self.x_test):
             image = self.x_test[image_id]
-            label = self.y_test_mapped[image_id]
+            label = self.y_test[image_id]
             print(f"Test image ID {image_id}: label {label}")
         else:
             raise ValueError("Invalid image_id")

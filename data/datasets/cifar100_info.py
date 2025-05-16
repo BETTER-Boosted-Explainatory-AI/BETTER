@@ -3,7 +3,7 @@ CIFAR100_INFO = {
     "threshold": 1e-5,
     "top_k": 4,
     "min_confidence": 0.8,
-    "infinity": 500,
+    "infinity": 100,
     "labels_len": 100,
     "labels": [
         "apple",

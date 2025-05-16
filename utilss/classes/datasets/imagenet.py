@@ -96,26 +96,48 @@ class ImageNet(Dataset):
         self.directory_labels = IMAGENET_INFO["directory_labels"]
         print("loaded imagenet dataset")
 
-    def get_train_image_by_id(self, image_id):
-        # Implement the logic to get an image by its ID from the ImageNet dataset
+    # def get_train_image_by_id(self, image_id):
+    #     # Implement the logic to get an image by its ID from the ImageNet dataset
         
-        print(f"Getting image with ID: {image_id}")
-        data = self.train_data
-        batch_index = image_id // len(data[0][0])
-        image_index = image_id % len(data[0][0])
-        image = data[batch_index][0][image_index]
-        label = data[batch_index][1][image_index]
+    #     print(f"Getting image with ID: {image_id}")
+    #     data = self.x_train
+    #     batch_index = image_id // len(data[0][0])
+    #     image_index = image_id % len(data[0][0])
+    #     image = data[batch_index][0][image_index]
+    #     label = data[batch_index][1][image_index]
+    #     return image, label
+    
+    # def get_test_image_by_id(self, image_id):
+    #     # Implement the logic to get an image by its ID from the ImageNet dataset
+    #     print(f"Getting image with ID: {image_id}")
+    #     data = self.x_test
+    #     batch_index = image_id // len(data[0][0])
+    #     image_index = image_id % len(data[0][0])
+    #     image = data[batch_index][0][image_index]
+    #     label = data[batch_index][1][image_index]
+    #     return image, label
+
+    def get_train_image_by_id(self, image_id):
+        # Check if the image_id is within the range of training data
+        if image_id < len(self.x_train):
+            image = self.x_train[image_id]
+            label = self.y_train[image_id]
+            print(f"Train image ID {image_id}: label {label}") 
+        else:
+            raise ValueError("Invalid image_id")
+
         return image, label
     
     def get_test_image_by_id(self, image_id):
-        # Implement the logic to get an image by its ID from the ImageNet dataset
-        print(f"Getting image with ID: {image_id}")
-        data = self.test_data
-        batch_index = image_id // len(data[0][0])
-        image_index = image_id % len(data[0][0])
-        image = data[batch_index][0][image_index]
-        label = data[batch_index][1][image_index]
+        if image_id < len(self.x_test):
+            image = self.x_test[image_id]
+            label = self.y_test[image_id]
+            print(f"Test image ID {image_id}: label {label}")
+        else:
+            raise ValueError("Invalid image_id")
+
         return image, label
+
 
     def directory_to_labels_conversion(self, label):
         dir_to_readable = IMAGENET_INFO["directory_to_readable"]
