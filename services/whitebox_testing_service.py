@@ -22,7 +22,6 @@ def _get_edges_dataframe_path(user_id, model_id, graph_type):
 
     return edges_df_path
 
-
 def get_white_box_analysis(current_user, current_model_id, graph_type, source_labels, target_labels):
     user_id = current_user.get_user_id()
     model_info = get_user_models_info(current_user, current_model_id)
@@ -49,43 +48,26 @@ def get_white_box_analysis(current_user, current_model_id, graph_type, source_la
     problematic_imgs_dict = whitebox_testing.find_problematic_images(
         source_labels, target_labels, df, dataset_str)
     imgs_list = []
-
-    # for image_id, matches in problematic_imgs_dict.items():
-    #     img, label = dataset.get_train_image_by_id(image_id)
-    #     pil_image = Image.open(io.BytesIO(img)).convert("RGB")
-    #     image_array = np.array(pil_image)
-    #     original_image_base64 = encode_image_to_base64(image_array)
-        
-    #     imgs_list.append({
-    #         "image": original_image_base64,
-    #         "image_id": image_id,
-    #         "matches": matches,
-    #     })
     
     for image_id, matches in problematic_imgs_dict.items():
-        img, label = dataset.get_train_image_by_id(image_id)
-        
-        # If img is a numpy array (which is likely the case)
-        if isinstance(img, np.ndarray):
-            # Convert numpy array directly to PIL Image
-            pil_image = Image.fromarray(img)
-            if pil_image.mode != "RGB":
-                pil_image = pil_image.convert("RGB")
-        else:
-            # Only try BytesIO if you're sure img contains binary image data
-            try:
-                pil_image = Image.open(io.BytesIO(img)).convert("RGB")
-            except Exception:
-                # Handle the error or provide a fallback
-                continue
-                
-        image_array = np.array(pil_image)
-        original_image_base64 = encode_image_to_base64(image_array)
-        
-        imgs_list.append({
-            "image": original_image_base64,
-            "image_id": image_id,
-            "matches": matches,
-        })
-
+        try:
+            img, label = dataset.get_train_image_by_id(image_id)
+            
+            # Process the image for encoding
+            if img.max() <= 1.0:
+                # If normalized to [0,1], scale to [0,255]
+                img = (img * 255).astype(np.uint8)
+            
+            # Directly encode the properly processed image
+            original_image_base64 = encode_image_to_base64(img)
+            
+            imgs_list.append({
+                "image": original_image_base64,
+                "image_id": image_id,
+                "matches": matches,
+            })
+        except Exception as e:
+            print(f"Error processing image {image_id}: {str(e)}")
+            # Optionally continue to next image or handle the error
+    
     return imgs_list
