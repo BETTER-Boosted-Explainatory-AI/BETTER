@@ -10,10 +10,16 @@ import numpy as np
 import io
 from PIL import Image
 import os
+import logging
+from utilss import debug_utils
 
+# Set up logging
+logger = logging.getLogger(__name__)
 
 def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_filename, dataset) -> AdversarialDataset:
     """Create an adversarial dataset based on the provided configuration."""
+    logger.info("Creating adversarial dataset")
+
     adversarial_dataset = AdversarialDataset(Z_file, clean_images, adversarial_images, model_filename, dataset)
     X_train, y_train, X_test, y_test = adversarial_dataset.create_logistic_regression_dataset()
     return {"X_train": X_train, "y_train": y_train, "X_test": X_test, "y_test": y_test}
@@ -31,7 +37,7 @@ def create_logistic_regression_detector(model_id, graph_type, clean_images, adve
         
     adversarial_detector = AdversarialDetector(model_graph_folder)
     if adversarial_detector.does_detector_exist():
-        print("Adversarial detector already exists.")
+        logger.info("Adversarial detector already exists.")
         return adversarial_detector
     else:
         adversarial_dataset = _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_file, model_info["dataset"])
@@ -53,6 +59,8 @@ def detect_adversarial_image(model_id, graph_type, image, user):
     Returns:
     - Prediction (Clean or Adversarial) and probability
     """
+    logger.info("Detecting adversarial image")
+    logger.debug(f"Model ID: {model_id}, Graph Type: {graph_type}")
 
     model_info = get_user_models_info(user, model_id)
 
@@ -69,13 +77,12 @@ def detect_adversarial_image(model_id, graph_type, image, user):
 
         if os.path.exists(model_file):
             model = tf.keras.models.load_model(model_file)
-            print(f"Model loaded successfully from '{model_file}'.")
+            logger.info(f"Model loaded successfully from '{model_file}'.")
         else:
             raise ValueError(f"Model file {model_file} does not exist")
         
     image_preprocessed = preprocess_loaded_image(model, image)
 
-    print(f"Image preprocessed successfully.")
 
     detector = AdversarialDetector(model_graph_folder)
     score_calculator = ScoreCalculator(Z_full, labels)
@@ -89,10 +96,16 @@ def detect_adversarial_image(model_id, graph_type, image, user):
     # Use the detector to classify the image
     feature = [[score]]  # Wrap the score in a 2D array
     label = detector.predict(feature)[0]  # Predict the label (0 = clean, 1 = adversarial)
+
+    logger.info(f"Adversarial score: {score}, Label: {label}")
     
     return ('Adversarial' if label == 1 else 'Clean')
 
 def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, **kwargs):
+
+    logger.info("Analyzing adversarial image")
+    logger.debug(f"Model ID: {model_id}, Graph Type: {graph_type}, Attack Type: {attack_type}")
+
     model_info = get_user_models_info(user, model_id)
 
     if model_info is None:
@@ -102,15 +115,12 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, *
         model_file = model_files["model_file"]
         if os.path.exists(model_file):
             model = tf.keras.models.load_model(model_file)
-            print(f"Model loaded successfully from '{model_file}'.")
+            logger.info(f"Model loaded successfully from '{model_file}'.")
         else:
             raise ValueError(f"Model file {model_file} does not exist")
         
-        model_path = model_files["model_graph_folder"]
         dataset = model_info["dataset"]
         labels = _get_dataset_labels(dataset)
-
-        dendrogram_filename = f'{model_path}/dendrogram'
 
         if attack_type == "deepfool":
             preprocessed_image = preprocess_deepfool_image(model, image)
@@ -132,11 +142,13 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, *
 
         # Get top K predictions for the original image
         original_predictions = get_top_k_predictions(model, original_image_preprocessed, labels)
-        original_verbal_explaination = query_model(original_predictions[0][0], dendrogram_filename)
+        original_verbal_explaination = query_model(original_predictions[0][0], model_id, graph_type, user)
+
 
         # Get top K predictions for the adversarial image
         adversarial_predictions = get_top_k_predictions(model, adversarial_image_preprocessed, labels)
-        adversarial_verbal_explaination = query_model(adversarial_predictions[0][0], dendrogram_filename)
+        adversarial_verbal_explaination = query_model(adversarial_predictions[0][0], model_id, graph_type, user)
+
 
         # Return both images as Base64 strings
         return {

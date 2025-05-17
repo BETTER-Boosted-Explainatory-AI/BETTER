@@ -7,9 +7,10 @@ import io
 import numpy as np
 import tensorflow as tf
 from utilss.photos_utils import preprocess_numpy_image
+from utilss.classes.user import User
 
 def upload_model(
-    user_folder: str,
+    current_user: User,
     model_id: str,
     model_file: UploadFile,
     dataset: str,
@@ -19,7 +20,7 @@ def upload_model(
 ) -> str:
    
     filename = os.path.basename(model_file.filename)
-    models_json_path = os.path.join(user_folder, "models.json")
+    models_json_path = os.path.join(current_user.get_user_folder(), "models.json")
     if os.path.exists(models_json_path):
         with open(models_json_path, "r") as json_file:
             models_data = json.load(json_file)
@@ -32,7 +33,7 @@ def upload_model(
         print(str(e))
         raise 
 
-    model_subfolder = os.path.join(user_folder, model_id_md)
+    model_subfolder = os.path.join(current_user.get_user_folder(), model_id_md)
     os.makedirs(model_subfolder, exist_ok=True)
     
     save_model_metadata(
@@ -51,7 +52,7 @@ def upload_model(
     with open(model_path, "wb") as f:
         shutil.copyfileobj(model_file.file, f)
 
-    return model_path
+    return model_path, model_id_md
 
 def save_model_metadata(
     models_data, models_json_path, model_id, model_filename, dataset, graph_type, min_confidence, top_k,
@@ -142,3 +143,19 @@ def load_raw_image(file_path):
     # Load the numpy array and convert back to tensor
     img_example = np.load(file_path)
     return tf.convert_to_tensor(img_example, dtype=tf.float32)
+
+
+def update_current_model(user, model_id, graph_type, model_filename, dataset, min_confidence, top_k):
+    """
+    Update the current model for the user
+    """
+    model_metadata = {
+        "model_id": model_id,
+        "file_name": model_filename,
+        "dataset": dataset,
+        "graph_type": graph_type,
+        "min_confidence": min_confidence,
+        "top_k": top_k
+    }
+
+    user.set_current_model(model_metadata)

@@ -2,9 +2,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 import logging
+from utilss import debug_utils
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
