@@ -19,12 +19,8 @@ class AdversarialDataset:
             print(f"Model loaded successfully from '{model_filename}'.")
         except Exception as e:
             raise ValueError(f"Error loading model from '{model_filename}': {e}")
-
-        DATA_PATH = os.getenv("DATA_PATH")
-        if DATA_PATH is None:
-            raise ValueError("DATA_PATH environment variable is not set.")
         
-        DATASET_PATH = os.getenv("DATASET_PATH")
+        DATASET_PATH = os.getenv("DATASETS_PATH")
         if DATASET_PATH is None:
             raise ValueError("DATASET_PATH environment variable is not set.")
 
