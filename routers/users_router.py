@@ -19,7 +19,6 @@ def register_user(user_create_request: UserCreateRequest) -> dict:
     try:
         email = user_create_request.email
         password = user_create_request.password
-        print(f"Creating user with email: {email}")
         user = initialize_user(email=email, password=password)
         print(f"User {user.user_id} created with email {user.email}")
         return {"message": "User created successfully", "user_id": user.user_id}

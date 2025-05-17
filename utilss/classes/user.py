@@ -18,7 +18,7 @@ class User:
         users_json_path = os.path.join(USERS_PATH, "users.json")
         user_folder_path = os.path.join(USERS_PATH, self.user_id)
         models_json_path = os.path.join(user_folder_path, "models.json")
-        models_folder_path = os.path.join(user_folder_path, self.current_model)
+        current_model_json = os.path.join(user_folder_path, "current_model.json")
 
         # Ensure the base directory exists
         os.makedirs(USERS_PATH, exist_ok=True)
@@ -43,11 +43,13 @@ class User:
 
         # Create user folder and models.json
         os.makedirs(user_folder_path, exist_ok=True)
-        with open(models_json_path, "w") as file:
-            json.dump({"models": self.models}, file, indent=4)
 
-        # Create models folder
-        os.makedirs(models_folder_path, exist_ok=True)
+        with open(models_json_path, "w") as file:
+            json.dump([], file, indent=4)
+
+        with open(current_model_json, "w") as file:
+            json.dump({}, file, indent=4)
+
 
     def load_models(self):
         # Logic to load models from the database
@@ -57,8 +59,8 @@ class User:
 
         if os.path.exists(models_json_path):
             with open(models_json_path, "r") as file:
-                data = json.load(file)
-                self.models = data.get("models", [])
+                # data = json.load(file)
+                self.models = json.load(file)
         else:
             print(f"No models found for user {self.user_id}")
 
@@ -74,17 +76,22 @@ class User:
         models_json_path = os.path.join(user_folder_path, "models.json")
         return models_json_path
     
-    def add_model(self, model_name: str):
-        self.models.append(model_name)
+    def add_model(self, model_info: dict):
+        self.models.append(model_info)
         USERS_PATH = os.getenv("USERS_PATH")
         user_folder_path = os.path.join(USERS_PATH, self.user_id)
         models_json_path = os.path.join(user_folder_path, "models.json")
 
         with open(models_json_path, "w") as file:
-            json.dump({"models": self.models}, file, indent=4)
+            json.dump([self.models], file, indent=4)
 
-    def set_current_model(self, model_name: str):
-        self.current_model = model_name
+    def set_current_model(self, model_info: dict):
+        self.current_model = model_info
+        USERS_PATH = os.getenv("USERS_PATH")
+        user_folder_path = os.path.join(USERS_PATH, self.user_id)
+        current_model_json = os.path.join(user_folder_path, "current_model.json")
+        with open(current_model_json, "w") as file:
+            json.dump(self.current_model, file, indent=4)
         return self.current_model
     
     def get_current_model(self):

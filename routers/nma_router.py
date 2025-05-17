@@ -32,10 +32,8 @@ async def create_nma(
     top_k: int = Form(5),
 ) -> Dict[str, str]:
     try:
-        BASE_DIR = os.getenv("USERS_PATH", "users")
-        user_folder = os.path.join(BASE_DIR, str(current_user.user_id))
-        model_path = upload_model(user_folder, model_id, model_file, dataset, graph_type, min_confidence, top_k)
-        init_z = _create_nma(model_path, graph_type, dataset, current_user.user_id, min_confidence, top_k)
+        model_path, model_id_md = upload_model(current_user, model_id, model_file, dataset, graph_type, min_confidence, top_k)
+        init_z = _create_nma(model_path, graph_type, dataset, current_user, min_confidence, top_k, model_id_md)
         
         if init_z is None:
             raise HTTPException(status_code=404, detail="Hierarchical Clustering was not created")

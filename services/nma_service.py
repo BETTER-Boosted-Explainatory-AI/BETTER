@@ -7,8 +7,9 @@ from utilss.classes.edges_dataframe import EdgesDataframe
 from utilss.classes.dendrogram import Dendrogram
 from utilss.enums.datasets_enum import DatasetsEnum
 from utilss.enums.graph_types import GraphTypes
+from utilss.files_utils import update_current_model
 
-def _create_nma(model_file, graph_type, dataset_str, user_id, min_confidence, top_k):
+def _create_nma(model_file, graph_type, dataset_str, user, min_confidence, top_k, model_id_md):
     if model_file is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
@@ -26,7 +27,7 @@ def _create_nma(model_file, graph_type, dataset_str, user_id, min_confidence, to
     
     try:
         loaded_model = _load_model(dataset_str, model_file.name, dataset_config)
-        model_directory = _get_model_path(user_id, loaded_model.model_path)
+        model_directory = _get_model_path(user.user_id, loaded_model.model_path)
         if model_directory is None:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
@@ -60,6 +61,16 @@ def _create_nma(model_file, graph_type, dataset_str, user_id, min_confidence, to
         
         init_sub_z = dendrogram.get_sub_dendrogram_formatted(dataset_config["init_selected_labels"])
         print(init_sub_z)
+
+        update_current_model(
+            user,
+            model_id_md,
+            graph_type,
+            model_file.filename,
+            dataset,
+            min_confidence,
+            top_k,
+        )
         return init_sub_z
     
     except Exception as e:
