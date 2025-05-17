@@ -28,7 +28,7 @@ async def get_model_info(current_user: User = Depends(get_current_session_user))
 
 @model_router.get(
     "/models/current", 
-    response_model=ModelResult, 
+    response_model=ModelRequest, 
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
@@ -36,7 +36,7 @@ async def get_model_info(current_user: User = Depends(get_current_session_user))
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-async def get_current_model_info(current_user: User = Depends(get_current_session_user)) -> ModelResult:
+async def get_current_model_info(current_user: User = Depends(get_current_session_user)) -> ModelRequest:
     curr_model_info = current_user.get_current_model()
     
     if curr_model_info is None:
@@ -46,7 +46,7 @@ async def get_current_model_info(current_user: User = Depends(get_current_sessio
 
 @model_router.put(
     "/models/current", 
-    response_model=ModelResult, 
+    response_model=ModelRequest, 
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
@@ -54,7 +54,7 @@ async def get_current_model_info(current_user: User = Depends(get_current_sessio
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )  
-async def set_current_model_info(model: ModelRequest, current_user: User = Depends(get_current_session_user)) -> ModelResult:
+async def set_current_model_info(model: ModelRequest, current_user: User = Depends(get_current_session_user)) -> ModelRequest:
     model_dict = model.model_dump(exclude_unset=True) 
     curr_model_info = current_user.set_current_model(model_dict)
     
