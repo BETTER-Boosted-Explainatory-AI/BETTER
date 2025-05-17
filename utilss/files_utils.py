@@ -53,8 +53,6 @@ def upload_model(
 
     return model_path
 
-
-
 def save_model_metadata(
     models_data, models_json_path, model_id, model_filename, dataset, graph_type, min_confidence, top_k,
 ) -> None:
