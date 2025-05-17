@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from request_models.model_model import ModelRequest, ModelResult
+from request_models.model_model import ModelRequest, ModelsResult, CurrentModelRequest
 from services.users_service import get_current_session_user
 from utilss.classes.user import User
 from services.models_service import get_user_models_info
@@ -9,7 +9,7 @@ model_router = APIRouter()
 
 @model_router.get(
     "/models", 
-    response_model=List[ModelResult], 
+    response_model=List[ModelsResult], 
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
@@ -17,7 +17,7 @@ model_router = APIRouter()
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-async def get_model_info(current_user: User = Depends(get_current_session_user)) -> List[ModelResult]:
+async def get_model_info(current_user: User = Depends(get_current_session_user)) -> List[ModelsResult]:
     models_info = get_user_models_info(current_user, None)
     
     if models_info is None:
@@ -54,8 +54,16 @@ async def get_current_model_info(current_user: User = Depends(get_current_sessio
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )  
-async def set_current_model_info(model: ModelRequest, current_user: User = Depends(get_current_session_user)) -> ModelRequest:
+async def set_current_model_info(model: CurrentModelRequest, current_user: User = Depends(get_current_session_user)) -> ModelRequest:
     model_dict = model.model_dump(exclude_unset=True) 
+    models_info = get_user_models_info(current_user, model.model_id)
+    model_dict = {
+        "model_id": models_info["model_id"],
+        "file_name": models_info["file_name"],
+        "dataset": models_info["dataset"],
+        "graph_type": model_dict.get("graph_type")
+    }
+    
     curr_model_info = current_user.set_current_model(model_dict)
     
     if curr_model_info is None:

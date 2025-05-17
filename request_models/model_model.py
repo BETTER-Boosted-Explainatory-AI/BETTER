@@ -7,8 +7,12 @@ class ModelRequest(BaseModel):
     dataset: str
     graph_type: str
     
-class ModelResult(BaseModel):
+class ModelsResult(BaseModel):
     model_id: str
     file_name: str
     dataset: str
     graph_type: List[str]
+
+class CurrentModelRequest(BaseModel):
+    model_id: str
+    graph_type: str
