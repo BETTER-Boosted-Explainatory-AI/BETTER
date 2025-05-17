@@ -1,6 +1,5 @@
 import numpy as np
 import tensorflow as tf
-# from services.models_service import get_cached_preprocess_function
 from tensorflow.keras.applications.resnet50 import preprocess_input as resnet50_preprocess
 from tensorflow.keras.applications.vgg16 import preprocess_input as vgg16_preprocess
 from tensorflow.keras.applications.inception_v3 import preprocess_input as inception_v3_preprocess
