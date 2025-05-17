@@ -9,7 +9,7 @@ dendrogram_router = APIRouter()
 @dendrogram_router.post(
     "/dendrograms", 
     response_model=DendrogramResult,
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
@@ -20,13 +20,12 @@ async def get_sub_dendrogram(sub_dendrogram_data: DendrogramRequest, current_use
     model_id = sub_dendrogram_data.model_id
     graph_type = sub_dendrogram_data.graph_type
     selected_labels = sub_dendrogram_data.selected_labels
-    user_id = current_user.user_id
-    sub_dendrogram = _get_sub_dendrogram(user_id, model_id, graph_type, selected_labels)
+    sub_dendrogram, selected_labels = _get_sub_dendrogram(current_user, model_id, graph_type, selected_labels)
     
     if sub_dendrogram is None:
         raise HTTPException(status_code=404, detail="Sub Hierarchical Clustering was not created")
     
-    return DendrogramResult(**sub_dendrogram)
+    return DendrogramResult(**sub_dendrogram, selected_labels=selected_labels)
 
 @dendrogram_router.put(
     "/dendrograms/naming_clusters", 
