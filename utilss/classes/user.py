@@ -8,7 +8,7 @@ class User:
         self.email = email
         self.password = password ## only for testing, will be hashed by aws incognito in the future
         self.models = models if models is not None else []
-        self.current_model = None
+        self.current_model = self.load_current_model()
 
     def create_user(self):
         # Logic to create a new user in the database
@@ -95,7 +95,20 @@ class User:
         return self.current_model
     
     def get_current_model(self):
+        if self.current_model is None:
+            self.load_current_model()
         return self.current_model
+    
+    def load_current_model(self):
+        USERS_PATH = os.getenv("USERS_PATH")
+        user_folder_path = os.path.join(USERS_PATH, self.user_id)
+        current_model_json = os.path.join(user_folder_path, "current_model.json")
+
+        if os.path.exists(current_model_json):
+            with open(current_model_json, "r") as file:
+                self.current_model = json.load(file)
+        else:
+            print(f"No current model found for user {self.user_id}")
     
     def get_user_folder(self):
         USERS_PATH = os.getenv("USERS_PATH")

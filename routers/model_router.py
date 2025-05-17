@@ -9,7 +9,7 @@ model_router = APIRouter()
 
 @model_router.get(
     "/models", 
-    response_model=List[ModelResult],  # <-- Return a plain list
+    response_model=List[ModelResult], 
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
@@ -26,25 +26,39 @@ async def get_model_info(current_user: User = Depends(get_current_session_user))
     return models_info
 
 
-
-@model_router.post(
-    "/models", 
-    response_model=ModelResult,
-    status_code=status.HTTP_201_CREATED,
+@model_router.get(
+    "/models/current", 
+    response_model=ModelResult, 
+    status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-async def get_model_info(model_data: ModelRequest, current_user: User = Depends(get_current_session_user)) -> ModelResult:
-    model_id = None
-    if model_data:
-        model_id = model_data.model_id
-        
-    model_info = get_user_models_info(current_user, model_id)
+async def get_current_model_info(current_user: User = Depends(get_current_session_user)) -> ModelResult:
+    curr_model_info = current_user.get_current_model()
     
-    if model_info is None:
+    if curr_model_info is None:
         raise HTTPException(status_code=404, detail="Model not found")
     
-    return ModelResult(**model_info)
+    return curr_model_info
+
+@model_router.put(
+    "/models/current", 
+    response_model=ModelResult, 
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
+    }
+)  
+async def set_current_model_info(model: ModelRequest, current_user: User = Depends(get_current_session_user)) -> ModelResult:
+    model_dict = model.model_dump(exclude_unset=True) 
+    curr_model_info = current_user.set_current_model(model_dict)
+    
+    if curr_model_info is None:
+        raise HTTPException(status_code=404, detail="Model not found")
+    
+    return curr_model_info
