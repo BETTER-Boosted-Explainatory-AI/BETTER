@@ -9,6 +9,11 @@ from services.dataset_service import _get_dataset_labels
 from utilss.enums.datasets_enum import DatasetsEnum
 from fastapi import HTTPException, status
 import json
+import logging
+from utilss import debug_utils
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 def get_top_k_predictions(model, image, class_names, top_k=5):
     # Get predictions from the model
@@ -24,6 +29,8 @@ def get_top_k_predictions(model, image, class_names, top_k=5):
     # Get the top-k probabilities and corresponding labels
     top_probs = predictions[top_indices]
     top_labels = [class_names[i] for i in top_indices]
+
+    logger.debug(f"Top {top_k} predictions: {list(zip(top_labels, top_probs))}")
 
     return list(zip(top_labels, top_probs))
 
@@ -49,7 +56,12 @@ def _check_model_path(user_id: str, model_id: str, graph_type: str) -> Optional[
             detail="graph_type is required"
         )
     
+    logger.info(f"Checking model path for user_id: {user_id}, model_id: {model_id}, graph_type: {graph_type}")
+
     model_path = _get_model_path(user_id, model_id)
+
+    logger.debug(f"Model path: {model_path}")
+
     if model_path is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
@@ -67,6 +79,7 @@ def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
     if os.path.exists(model_path):
         return model_path
     else:
+        logger.debug(f"Model path {model_path} does not exist")
         return None
 
 def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
@@ -83,7 +96,7 @@ def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optiona
         
 
 def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any]) -> Model:
-    print(f"Loading model {model_path} for dataset {dataset_str}")
+    logger.info(f"Loading model {model_path} for dataset {dataset_str}")
 
     if dataset_str != DatasetsEnum.IMAGENET.value and dataset_str != DatasetsEnum.CIFAR100.value:
         raise ValueError(f"Invalid dataset: {dataset_str}")
@@ -102,7 +115,8 @@ def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any
     )
 
 def construct_model(model_path: str, dataset_config: Dict[str, Any]) -> Model:
-        print(f"Loading model {model_path} for dataset {dataset_config['dataset']}")
+        logger.info(f"Loading model {model_path} for dataset {dataset_config['dataset']}")
+
         if not os.path.exists(model_path):
             raise FileNotFoundError(f'Model {model_path} does not exist')
         resnet_model = tf.keras.models.load_model(model_path)
@@ -122,7 +136,11 @@ def query_model(top_label, model_id, graph_type, user):
     dendrogram = Dendrogram(dendrogram_filename)
     dendrogram.load_dendrogram()
     consistensy = dendrogram.find_name_hierarchy(dendrogram.Z_tree_format, top_label)
-    print(f"Consistency for {top_label}: {consistensy}")
+    if consistensy is None:
+        raise ValueError(f"Label {top_label} not found in dendrogram")
+    else:
+        logger.debug(f"Top label: {top_label}")
+        logger.debug(f"Consistency: {consistensy}")
     return consistensy
 
 def query_predictions(model_id, graph_type, image, user):
@@ -137,7 +155,7 @@ def query_predictions(model_id, graph_type, image, user):
     model_filename = model_files["model_file"]
     if os.path.exists(model_filename):
         current_model = tf.keras.models.load_model(model_filename)
-        print(f"Model loaded successfully from '{model_filename}'.")
+        logger.debug(f"Model loaded successfully from '{model_filename}'.")
     else:
         raise ValueError(f"Model file {model_filename} does not exist")
     preprocessed_image = preprocess_loaded_image(current_model, image)
@@ -152,6 +170,7 @@ def get_user_models_info(user, model_id):
     if os.path.exists(models_json_path):
         with open(models_json_path, "r") as json_file:
             models_data = json.load(json_file)
+        logger.debug(f"Models data loaded from {models_json_path}")
     else:
         models_data = []
         raise ValueError(f"Models metadata file '{models_json_path}' not found.")
@@ -172,32 +191,43 @@ def get_model_info(models_data, model_id):
             }
             
     # If no match is found, return None
-    print(f"Model {model_id} doesn't exist.")
+    logger.debug(f"Model ID {model_id} not found in models data.")
     return None
 
 def get_model_files(user_folder: str, model_info: dict, graph_type: str):
+        logger.info(f"Getting model files for user folder: {user_folder}, model info: {model_info}, graph type: {graph_type}")
+
         model_subfolder = os.path.join(user_folder, model_info["model_id"])
         model_file = os.path.join(model_subfolder, model_info["file_name"])
         if not os.path.exists(model_file):
             model_file = None
             raise ValueError(f"Model file {model_file} does not exist")
+        
         model_graph_folder = os.path.join(model_subfolder, graph_type)
+        if not os.path.exists(model_graph_folder):
+            model_graph_folder = None
+            raise ValueError(f"Model graph folder {model_graph_folder} does not exist")
+
         Z_file = os.path.join(model_graph_folder, "dendrogram.pkl")
         if not os.path.exists(Z_file):
             Z_file = None
-            print(f"Z file {Z_file} does not exist")
+            logger.debug(f"Z file {Z_file} does not exist")
+
         dendrogram_file = os.path.join(model_graph_folder, 'dendrogram.json')
         if not os.path.exists(dendrogram_file):
             dendrogram_file = None
-            print(f"Dendrogram file {dendrogram_file} does not exist")
+            logger.debug(f"Dendrogram file {dendrogram_file} does not exist")
+
         detector_filename = os.path.join(model_graph_folder, 'logistic_regression_model.pkl')
         if not os.path.exists(detector_filename):
             detector_filename = None
-            print(f"Detector model file {detector_filename} does not exist")
+            logger.debug(f"Detector model file {detector_filename} does not exist")
+
         dataframe_filename = os.path.join(model_graph_folder, 'edges_df.csv')
         if not os.path.exists(dataframe_filename):
             dataframe_filename = None
-            print(f"Dataframe file {dataframe_filename} does not exist")
+            logger.debug(f"Dataframe file {dataframe_filename} does not exist")
+
         return {"model_file": model_file, "Z_file": Z_file, "dendrogram": dendrogram_file, "detector_filename": detector_filename, "dataframe": dataframe_filename, "model_graph_folder": model_graph_folder}
         
 

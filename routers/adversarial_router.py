@@ -4,6 +4,11 @@ from services.users_service import get_current_session_user
 from utilss.classes.user import User
 from typing import List, Optional
 from request_models.adversarial_model import DetectorResponse, AnalysisResult, DetectionResult
+import logging
+from utilss import debug_utils
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 adversarial_router = APIRouter()
 
@@ -25,6 +30,7 @@ async def generate_adversarial_detector(
     current_user: User = Depends(get_current_session_user)  
 ):
     try:
+        logger.info("Starting to generate adversarial detector")
 
         # Validate clean_images
         if clean_images:
