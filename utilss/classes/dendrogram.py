@@ -232,14 +232,14 @@ class Dendrogram:
         
     def rename_cluster(self, cluster_id, new_name):
         """
-        Rename a cluster in the dendrogram hierarchy, only if the new name is unique.
+        Rename a cluster in the dendrogram hierarchy, only if the new name is unique and the node is not a leaf.
 
         Args:
             cluster_id (int): The ID of the cluster to rename
             new_name (str): The new name for the cluster
 
         Returns:
-            dict: The updated dendrogram hierarchy, or None if name exists
+            dict: The updated dendrogram hierarchy, or None if name exists or node is a leaf
         """
         print(f"Renaming cluster {cluster_id} to {new_name}")
 
@@ -257,11 +257,26 @@ class Dendrogram:
             print(f"Name '{new_name}' already exists. Rename aborted.")
             return None
 
-        def rename_node(node):
+        # Find the node by cluster_id
+        def find_node(node):
             if node.get('id') == cluster_id:
-                node['name'] = new_name
+                return node
             for child in node.get('children', []):
-                rename_node(child)
+                result = find_node(child)
+                if result:
+                    return result
+            return None
 
-        rename_node(self.Z_tree_format)
+        target_node = find_node(self.Z_tree_format)
+        if target_node is None:
+            print(f"Cluster ID {cluster_id} not found.")
+            return None
+
+        # If the node is a leaf (no children), do not rename
+        if 'children' not in target_node or not target_node['children']:
+            print(f"Cluster ID {cluster_id} is a leaf. Rename aborted.")
+            return None
+
+        # Rename the node
+        target_node['name'] = new_name
         return self.Z_tree_format
