@@ -1,5 +1,5 @@
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import HTTPException, Depends
+# from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import HTTPException
 from services.auth_service import verify_cognito_jwt
 from utilss.classes.user import User
 
@@ -9,10 +9,7 @@ def initialize_user(id, email) -> User:
     user.create_user()
     return user
 
-security = HTTPBearer()
-
-def get_current_session_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    token = credentials.credentials
+def get_current_session_user(token: str):
     try:
         payload = verify_cognito_jwt(token)
         user_id = payload.get("sub")
@@ -21,3 +18,11 @@ def get_current_session_user(credentials: HTTPAuthorizationCredentials = Depends
         return User(user_id=user_id, email=email)
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid or expired token: {str(e)}")
+    
+    
+def find_user_in_db(user_id, email) -> User:
+    """Find a user in the database."""
+    user = User(user_id=user_id, email=email)
+    if not user.find_user_in_db():
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
