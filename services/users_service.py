@@ -1,42 +1,23 @@
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import HTTPException, Depends
+from services.auth_service import verify_cognito_jwt
 from utilss.classes.user import User
-import json
-import os
 
-def initialize_user(email: str, password: str) -> User:
+def initialize_user(id, email) -> User:
     """Initialize a new user."""
-    user = User(user_id=None, email=email, password=password)
+    user = User(user_id=id, email=email)
     user.create_user()
     return user
 
-def mock_login(email: str, password: str) -> User:
-    """
-    Mock login function to simulate user authentication using users.json.
-    """
-    # Path to the users.json file
-    USERS_PATH = os.getenv("USERS_PATH")
-    users_json_path = os.path.join(USERS_PATH, "users.json")
+security = HTTPBearer()
 
-    # Load users from the JSON file
+def get_current_session_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
     try:
-        with open(users_json_path, "r") as file:
-            users = json.load(file)
-    except FileNotFoundError:
-        return {"error": "Users database not found"}
-    except json.JSONDecodeError:
-        return {"error": "Invalid users database format"}
-
-    # Find the user by email
-    user = next((u for u in users if u["email"] == email), None)
-    if not user:
-        return {"error": "User not found"}
-
-    # Validate the password
-    if user["password"] != password:
-        return {"error": "Invalid password"}
-    
-    user_class = User(user_id=user['id'], email=user['email'], password=user['password'])
-    user_class.load_models()
-    return user_class
-
-def get_current_session_user():
-    return User(user_id="290924d2-6952-47f8-8308-7807d886e5b8", email="nurixhbh@gmail.com", password="123")
+        payload = verify_cognito_jwt(token)
+        user_id = payload.get("sub")
+        email = payload.get("email")
+        print(f"Active user: {user_id} with email {email}")
+        return User(user_id=user_id, email=email)
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid or expired token: {str(e)}")

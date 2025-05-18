@@ -3,10 +3,10 @@ import json
 import uuid
 
 class User:
-    def __init__(self, user_id: uuid ,email: str, password: str, models: list = None):
+    def __init__(self, user_id: uuid ,email: str, models: list = None):
         self.user_id = user_id if user_id is not None else str(uuid.uuid4())
         self.email = email
-        self.password = password ## only for testing, will be hashed by aws incognito in the future
+        # self.password = password ## only for testing, will be hashed by aws incognito in the future
         self.models = models if models is not None else []
         self.current_model = None
 
@@ -27,7 +27,7 @@ class User:
         user_data = {
             "id": self.user_id,
             "email": self.email,
-            "password": self.password  ## only for testing, will be hashed by aws incognito in the future
+            # "password": self.password  ## only for testing, will be hashed by aws incognito in the future
         }
 
         if os.path.exists(users_json_path):
@@ -59,7 +59,6 @@ class User:
 
         if os.path.exists(models_json_path):
             with open(models_json_path, "r") as file:
-                # data = json.load(file)
                 self.models = json.load(file)
         else:
             print(f"No models found for user {self.user_id}")
