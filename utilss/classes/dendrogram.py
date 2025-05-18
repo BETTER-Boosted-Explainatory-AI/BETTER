@@ -5,6 +5,7 @@ import os
 import numpy as np
 import pickle
 
+
 class Dendrogram:
     def __init__(self, dendrogram_filename, Z=None):
         self.Z = Z
@@ -228,29 +229,39 @@ class Dendrogram:
         
         # If no match is found in this branch
         return None
-    
+        
     def rename_cluster(self, cluster_id, new_name):
         """
-        Rename a cluster in the dendrogram hierarchy.
-        
+        Rename a cluster in the dendrogram hierarchy, only if the new name is unique.
+
         Args:
             cluster_id (int): The ID of the cluster to rename
             new_name (str): The new name for the cluster
-        
+
         Returns:
-            dict: The updated dendrogram hierarchy
+            dict: The updated dendrogram hierarchy, or None if name exists
         """
         print(f"Renaming cluster {cluster_id} to {new_name}")
+
+        # Collect all existing names in the dendrogram
+        def collect_names(node, names):
+            names.add(node.get('name'))
+            for child in node.get('children', []):
+                collect_names(child, names)
+
+        existing_names = set()
+        collect_names(self.Z_tree_format, existing_names)
+
+        # Only rename if the new name does not exist
+        if new_name in existing_names:
+            print(f"Name '{new_name}' already exists. Rename aborted.")
+            return None
+
         def rename_node(node):
-            # If this is the target cluster, rename it
             if node.get('id') == cluster_id:
                 node['name'] = new_name
-            
-            # If the node has children, recursively rename them
-            if 'children' in node:
-                for child in node['children']:
-                    rename_node(child)
-        
-        # Start renaming from the root
+            for child in node.get('children', []):
+                rename_node(child)
+
         rename_node(self.Z_tree_format)
         return self.Z_tree_format
