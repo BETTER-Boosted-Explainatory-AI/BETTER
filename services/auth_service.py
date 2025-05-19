@@ -53,6 +53,21 @@ def cognito_login(user_create_request):
                 }
             )
 
+def confirm_user_signup(email: str, confirmation_code: str):
+    """
+    Confirm a user's signup using the code sent to their email.
+    """
+
+    secret_hash = get_secret_hash(email, cognito_client_id, cognito_client_secret)
+    
+    response = incognito_client.confirm_sign_up(
+        ClientId=cognito_client_id,
+        Username=email,
+        ConfirmationCode=confirmation_code,
+        SecretHash=secret_hash
+    )
+    return response
+
 # Download and cache the JWKS (public keys)
 JWKS_URL = f"https://cognito-idp.{aws_region}.amazonaws.com/{cognito_user_pool_id}/.well-known/jwks.json"
 jwks = requests.get(JWKS_URL).json()

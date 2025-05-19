@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, status, Request, Response, Cookie
+from fastapi import APIRouter, HTTPException, status, Response
 from services.users_service import initialize_user
-from request_models.users_model import UserCreateRequest
-from services.auth_service import cognito_sign_up, cognito_login
+from request_models.users_model import UserCreateRequest, ConfirmUserRequest
+from services.auth_service import cognito_sign_up, cognito_login, confirm_user_signup
 from services.users_service import get_current_session_user
 from botocore.exceptions import ClientError
 
@@ -24,10 +24,34 @@ def register_user(user_create_request: UserCreateRequest) -> dict:
         cognito_user = cognito_sign_up(user_create_request)
         user_id = cognito_user['UserSub']
         email = user_create_request.email
-        print(f"User {user_id} created with email {email}")
-        user = initialize_user(id=user_id, email=email)
-        print(f"User {user.user_id} created with email {user.email}")
-        return {"message": "User created successfully", "user_id": user.user_id}
+        # print(f"User {user_id} created with email {email}")
+        # user = initialize_user(id=user_id, email=email)
+        # print(f"User {user.user_id} created with email {user.email}")
+        user_dict = {"id":user_id, "email": email}
+        return {"message": "User created successfully", "user": user_dict}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@users_router.post(
+    "/confirm",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
+    }
+)
+def confirm_user(user_confirm_request: ConfirmUserRequest) -> dict:
+    """
+    Confirm a user's registration with the code sent to their email.
+    """
+    try:
+        response = confirm_user_signup(user_confirm_request.email, user_confirm_request.confirmation_code)
+        if not response:
+            raise HTTPException(status_code=400, detail="Invalid confirmation code or email")
+        user = initialize_user(id=user_confirm_request.id, email=user_confirm_request.email)
+        if not user:
+            raise HTTPException(status_code=500, detail="Failed to create user in database")
+        return {"message": "User confirmed successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
