@@ -24,9 +24,6 @@ def register_user(user_create_request: UserCreateRequest) -> dict:
         cognito_user = cognito_sign_up(user_create_request)
         user_id = cognito_user['UserSub']
         email = user_create_request.email
-        # print(f"User {user_id} created with email {email}")
-        # user = initialize_user(id=user_id, email=email)
-        # print(f"User {user.user_id} created with email {user.email}")
         user_dict = {"id":user_id, "email": email}
         return {"message": "User created successfully", "user": user_dict}
     except Exception as e:
