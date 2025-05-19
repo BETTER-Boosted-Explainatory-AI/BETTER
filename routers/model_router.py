@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from request_models.model_model import ModelRequest, ModelResult
-from services.users_service import get_current_session_user
+from services.users_service import require_authenticated_user
 from utilss.classes.user import User
 from services.models_service import get_user_models_info
 
@@ -16,7 +16,7 @@ model_router = APIRouter()
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-async def get_model_info(model_data: ModelRequest, current_user: User = Depends(get_current_session_user)) -> ModelResult:
+async def get_model_info(model_data: ModelRequest, current_user: User = Depends(require_authenticated_user)) -> ModelResult:
     model_id = None
     if model_data:
         model_id = model_data.model_id

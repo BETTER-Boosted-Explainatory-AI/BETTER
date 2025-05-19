@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Request
+from fastapi import APIRouter, HTTPException, status, Request, Response, Cookie
 from services.users_service import initialize_user
 # from request_models.users_model import UserCreateRequest
 # from services.auth_service import cognito_sign_up, cognito_login
@@ -59,7 +59,7 @@ users_router = APIRouter()
     }
 )
 
-async def cognito_callback(request: Request):
+async def cognito_callback(request: Request, response: Response):
     """
     Receives Cognito tokens from frontend, verifies them, and processes user session.
     """
@@ -69,10 +69,18 @@ async def cognito_callback(request: Request):
         if not auth_header or not auth_header.startswith("Bearer "):
             raise HTTPException(status_code=400, detail="Authorization header missing or invalid")
         token = auth_header.split("Bearer ")[1]
+
+        response.set_cookie(
+            key="session_token",
+            value=token,
+            httponly=True,      # Prevents JS access
+            secure=True,        # Only sent over HTTPS
+            samesite="lax",     # Adjust as needed
+            max_age=3600        # 1 hour, adjust as needed
+        )
         
         # Verify the token and process user session
         user = get_current_session_user(token)
-        print(f"User retrieved: {user}")
 
         if not user:
             raise HTTPException(status_code=401, detail="Invalid token")
@@ -88,3 +96,13 @@ async def cognito_callback(request: Request):
         return {"message": "Cognito callback processed successfully", "user": user}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+# @users_router.get("/me")
+# async def get_current_user(session_token: str = Cookie(None)):
+#     if not session_token:
+#         raise HTTPException(status_code=401, detail="Not authenticated")
+#     user = get_current_session_user(session_token)
+#     if not user:
+#         raise HTTPException(status_code=401, detail="Invalid session token")
+#     return {"user": user}
