@@ -75,8 +75,6 @@ class User:
         return self.current_model
     
     def get_current_model(self):
-        if self.current_model is None:
-            self.load_current_model()
         return self.current_model
     
     def get_user_folder(self):
