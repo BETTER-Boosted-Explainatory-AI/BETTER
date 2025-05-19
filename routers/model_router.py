@@ -17,12 +17,6 @@ model_router = APIRouter()
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-async def get_model_info(model_data: ModelRequest, current_user: User = Depends(require_authenticated_user)) -> ModelsResult:
-    model_id = None
-    if model_data:
-        model_id = model_data.model_id
-        
-    model_info = get_user_models_info(current_user, model_id)
 async def get_model_info(current_user: User = Depends(require_authenticated_user)) -> List[ModelsResult]:
     models_info = get_user_models_info(current_user, None)
     

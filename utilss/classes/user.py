@@ -74,7 +74,16 @@ class User:
             json.dump(self.current_model, file, indent=4)
         return self.current_model
     
+    def load_current_model(self):
+        if os.path.exists(self.current_model_json):
+            with open(self.current_model_json, "r") as file:
+                self.current_model = json.load(file)
+        else:
+            print(f"No current model found for user {self.user_id}")
+
     def get_current_model(self):
+        if self.current_model is None:
+            self.load_current_model()
         return self.current_model
     
     def get_user_folder(self):
