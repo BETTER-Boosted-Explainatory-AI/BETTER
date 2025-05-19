@@ -3,6 +3,7 @@ from services.users_service import initialize_user
 from request_models.users_model import UserCreateRequest
 from services.auth_service import cognito_sign_up, cognito_login
 from services.users_service import get_current_session_user
+from botocore.exceptions import ClientError
 
 users_router = APIRouter()
 
@@ -38,13 +39,39 @@ def register_user(user_create_request: UserCreateRequest) -> dict:
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-def login_user(user_create_request: UserCreateRequest):
+def login_user(user_create_request: UserCreateRequest, response: Response) -> dict:
     """
     Mock login function to simulate user authentication.
     """
     try:
-        response = cognito_login(user_create_request)
-        return {"message": "Login successful", "auth_result": response.get("AuthenticationResult")}
+        cognito_response = cognito_login(user_create_request)
+        if not cognito_response:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        auth_header = cognito_response.get("AuthenticationResult")
+        id_token = auth_header.get("IdToken")
+
+        response.set_cookie(
+            key="session_token",
+            value=id_token,
+            httponly=True,      # Prevents JS access
+            secure=False,      # Only for local testing, set to True in production!
+            # secure=True,        # Only sent over HTTPS
+            samesite="lax",     # Adjust as needed
+            max_age=3600        # 1 hour, adjust as needed
+        )
+
+        user = get_current_session_user(id_token)
+        user_dict = {"id":user.user_id, "email": user.email}
+
+        return {"message": "Login successful", "user": user_dict}
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        if error_code == "NotAuthorizedException":
+            raise HTTPException(status_code=401, detail="Incorrect username or password")
+        elif error_code == "UserNotFoundException":
+            raise HTTPException(status_code=404, detail="User not found")
+        else:
+            raise HTTPException(status_code=500, detail="An unknown error occurred")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
