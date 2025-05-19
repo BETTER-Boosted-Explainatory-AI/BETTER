@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, De
 from request_models.nma_model import NMAResult
 from typing import Dict
 from utilss.files_utils import upload_model
-from services.users_service import get_current_session_user
+from services.users_service import require_authenticated_user
 from utilss.classes.user import User
 from services.nma_service import (
     _create_nma,
@@ -23,7 +23,7 @@ nma_router = APIRouter()
     },
 )
 async def create_nma(
-    current_user: User = Depends(get_current_session_user),
+    current_user: User = Depends(require_authenticated_user),
     model_file: UploadFile = File(...),
     dataset: str = Form(...),
     graph_type: str = Form(...),

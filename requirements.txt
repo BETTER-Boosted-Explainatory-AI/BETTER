@@ -14,3 +14,9 @@ igraph
 python-dotenv
 python-multipart
 pydantic[email]
+authlib
+werkzeug
+flask
+requests
+python-jose
+boto3
