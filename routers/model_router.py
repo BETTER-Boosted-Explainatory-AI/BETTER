@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
+from services.users_service import require_authenticated_user
 from request_models.model_model import ModelRequest, ModelsResult, CurrentModelRequest
-from services.users_service import get_current_session_user
 from utilss.classes.user import User
 from services.models_service import get_user_models_info
 from typing import List
@@ -17,7 +17,13 @@ model_router = APIRouter()
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-async def get_model_info(current_user: User = Depends(get_current_session_user)) -> List[ModelsResult]:
+async def get_model_info(model_data: ModelRequest, current_user: User = Depends(require_authenticated_user)) -> ModelsResult:
+    model_id = None
+    if model_data:
+        model_id = model_data.model_id
+        
+    model_info = get_user_models_info(current_user, model_id)
+async def get_model_info(current_user: User = Depends(require_authenticated_user)) -> List[ModelsResult]:
     models_info = get_user_models_info(current_user, None)
     
     if models_info is None:
@@ -36,7 +42,7 @@ async def get_model_info(current_user: User = Depends(get_current_session_user))
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-async def get_current_model_info(current_user: User = Depends(get_current_session_user)) -> ModelRequest:
+async def get_current_model_info(current_user: User = Depends(require_authenticated_user)) -> ModelRequest:
     curr_model_info = current_user.get_current_model()
     
     if curr_model_info is None:
@@ -54,7 +60,7 @@ async def get_current_model_info(current_user: User = Depends(get_current_sessio
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )  
-async def set_current_model_info(model: CurrentModelRequest, current_user: User = Depends(get_current_session_user)) -> ModelRequest:
+async def set_current_model_info(model: CurrentModelRequest, current_user: User = Depends(require_authenticated_user)) -> ModelRequest:
     model_dict = model.model_dump(exclude_unset=True) 
     models_info = get_user_models_info(current_user, model.model_id)
     model_dict = {
