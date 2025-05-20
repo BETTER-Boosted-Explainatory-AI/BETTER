@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, status, Response
+from fastapi import APIRouter, HTTPException, status, Response, Depends
 from services.users_service import initialize_user
 from request_models.users_model import UserCreateRequest, ConfirmUserRequest
 from services.auth_service import cognito_sign_up, cognito_login, confirm_user_signup
-from services.users_service import get_current_session_user
+from services.users_service import get_current_session_user, require_authenticated_user
+from utilss.classes.user import User
 from botocore.exceptions import ClientError
 
 users_router = APIRouter()
@@ -97,6 +98,18 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
         raise HTTPException(status_code=500, detail=str(e))
     
 
+@users_router.get(
+    "/me",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
+    }
+)
+def get_active_user_info(current_user: User = Depends(require_authenticated_user)):
+    user_dict = {"id":current_user.user_id, "email": current_user.email}
+    return {"message": "User information retrieved successfully", "user": user_dict}
+    
 ## login and register through cognito UI
 # @users_router.post(
 #     "/cognito/callback",
@@ -144,13 +157,3 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
 #         return {"message": "Cognito callback processed successfully", "user": user}
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=str(e))
-    
-
-# @users_router.get("/me")
-# async def get_current_user(session_token: str = Cookie(None)):
-#     if not session_token:
-#         raise HTTPException(status_code=401, detail="Not authenticated")
-#     user = get_current_session_user(session_token)
-#     if not user:
-#         raise HTTPException(status_code=401, detail="Invalid session token")
-#     return {"user": user}
