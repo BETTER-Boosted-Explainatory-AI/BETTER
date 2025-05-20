@@ -2,6 +2,7 @@ import boto3
 import os
 from botocore.exceptions import NoCredentialsError, ClientError
 
+
 class S3Handler:
     """Handler for S3 operations."""
     
