@@ -1,12 +1,9 @@
 import os
-import tempfile
-import shutil
-import numpy as np
 from typing import Dict, List, Any
+import numpy as np
 from utilss.s3_connector.s3_handler import S3Handler
 
 class S3ImagenetLoader:
-
     def __init__(self, s3_handler=None, bucket_name=None):
         """Initialize with an S3 handler."""
         self.bucket_name = bucket_name or os.environ.get('S3_BUCKET_NAME')
@@ -15,40 +12,28 @@ class S3ImagenetLoader:
             
         self.s3_handler = s3_handler or S3Handler(bucket_name=self.bucket_name)
     
-    def load_imagenet_folder(self, folder_type: str) -> str:
-        temp_dir = tempfile.mkdtemp()
-        
-        try:
-            files = self.s3_handler.get_folder_contents('imagenet', folder_type)
-            
-            if not files:
-                print(f"Warning: No files found in folder: imagenet/{folder_type}")
-                return temp_dir
-            
-            # Download all files to temp directory
-            for s3_key in files:
-                relative_path = s3_key.replace(f"imagenet/{folder_type}/", '')
-                local_path = os.path.join(temp_dir, relative_path)
-                
-                os.makedirs(os.path.dirname(local_path), exist_ok=True)
-                self.s3_handler.download_file(s3_key, local_path)
-            
-            return temp_dir
-        except Exception as e:
-            shutil.rmtree(temp_dir)
-            raise e
+    def load_imagenet_folder(self, folder_type: str) -> List[str]:
+        """List all files in an ImageNet folder"""
+        return self.s3_handler.get_folder_contents('imagenet', folder_type)
     
+    def get_imagenet_classes(self) -> List[str]:
+        """Get all ImageNet class directories from train folder"""
+        return self.s3_handler.get_imagenet_classes()
     
-    def load_imagenet_train(self) -> str:
-        temp_dir = tempfile.mkdtemp()
-        try:
-            self.s3_handler.get_imagenet_train_with_subdirs(temp_dir)
-            return temp_dir
-        except Exception as e:
-            shutil.rmtree(temp_dir)
-            raise e
+    def get_class_images(self, class_dir: str) -> List[str]:
+        """Get all images for a specific ImageNet class"""
+        return self.s3_handler.get_imagenet_class_data(class_dir)
+    
+    def get_image_data(self, image_key: str) -> bytes:
+        """Get image data for a specific image"""
+        return self.s3_handler.get_object_data(image_key)
+    
+    def get_image_stream(self, image_key: str):
+        """Get image as a stream for processing without downloading"""
+        return self.s3_handler.get_object_stream(image_key)
     
     def load_imagenet_numpy_files(self, folder_type: str) -> Dict[str, np.ndarray]:
+        """Load NumPy (.npy) files from ImageNet clean/adversarial folders"""
         if folder_type not in ['clean', 'adversarial']:
             raise ValueError(f"Invalid folder type for numpy data: {folder_type}")
             
