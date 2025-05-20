@@ -1,12 +1,17 @@
 import os
+import sys
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(project_root)
+
 import tempfile
 import shutil
-from typing import Dict, Any, List, Tuple, Optional
 import numpy as np
 from utilss.s3_connector.s3_handler import S3Handler
 from utilss.s3_connector.s3_cifar_loader import S3CifarLoader
 from utilss.s3_connector.s3_imagenet_loader import S3ImagenetLoader
 from enums.datasets_enum import DatasetsEnum
+
 
 class S3DatasetLoader:
     def __init__(self, s3_handler=None, bucket_name=None):
@@ -18,8 +23,8 @@ class S3DatasetLoader:
         self.cifar_loader = S3CifarLoader(s3_handler=self.s3_handler)
         self.imagenet_loader = S3ImagenetLoader(s3_handler=self.s3_handler)
     
+    
     def load_from_s3(self, dataset_name):
-        """Load dataset from S3 bucket."""
         temp_dir = tempfile.mkdtemp()
         
         try:
@@ -36,7 +41,6 @@ class S3DatasetLoader:
                 print(f"Warning: No files found in S3 bucket with prefix: {folder_prefix}")
             
             for s3_key in s3_files:
-                # Keep the relative path structure
                 relative_path = s3_key.replace(folder_prefix, '')
                 local_path = os.path.join(temp_dir, relative_path)
                 
@@ -50,9 +54,6 @@ class S3DatasetLoader:
             raise e
     
     def load_folder(self, dataset_name, folder_type):
-        """
-        Load a specific folder (clean/adversarial/train)
-        """
         if dataset_name == DatasetsEnum.CIFAR100.value:
             return self.cifar_loader.load_cifar100_folder(folder_type)
         elif dataset_name == DatasetsEnum.IMAGENET.value:
@@ -61,39 +62,18 @@ class S3DatasetLoader:
             raise ValueError(f"Unsupported dataset: {dataset_name}")
     
     def load_single_image(self, image_key):
-        """
-        Load a single image from S3
-        
-        Args:
-            image_key (str): S3 key for the image
-            
-        Returns:
-            bytes: Image data
-        """
         return self.s3_handler.get_single_image(image_key)
     
     def load_imagenet_train(self):
         return self.imagenet_loader.load_imagenet_train()
     
     def load_cifar100_numpy(self, folder_type):
-        """
-        Load CIFAR-100 data as NumPy arrays
-        
-        Args:
-            folder_type (str): Type of folder (adversarial or clean)
-            
-        Returns:
-            tuple: (images, labels) as NumPy arrays
-        """
         return self.cifar_loader.load_cifar100_as_numpy(folder_type)
     
     def load_cifar100_meta(self):
         return self.cifar_loader.load_cifar100_meta()
     
     def load_dataset_split(self, dataset_name, split_type):
-        """
-        Load test or train dataset as is
-        """
         if split_type not in ['test', 'train']:
             raise ValueError(f"Invalid split type: {split_type}")
         
@@ -121,16 +101,6 @@ class S3DatasetLoader:
             raise
     
     def load_numpy_data(self, dataset_name, folder_type):
-        """
-        Load NumPy data (.npy files) from clean/adversarial folders
-        
-        Args:
-            dataset_name (str): Name of the dataset (cifar100 or imagenet)
-            folder_type (str): Type of folder (clean or adversarial)
-            
-        Returns:
-            dict: Dictionary of NumPy arrays with keys as file names
-        """
         if dataset_name == DatasetsEnum.CIFAR100.value:
             return self.cifar_loader.load_cifar100_numpy_files(folder_type)
         elif dataset_name == DatasetsEnum.IMAGENET.value:

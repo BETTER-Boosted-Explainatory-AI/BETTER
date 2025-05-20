@@ -18,6 +18,7 @@ class S3CifarLoader:
             
         self.s3_handler = s3_handler or S3Handler(bucket_name=self.bucket_name)
     
+    
     def load_cifar100_folder(self, folder_type: str) -> str:
         temp_dir = tempfile.mkdtemp()
         
@@ -46,6 +47,7 @@ class S3CifarLoader:
         
         return self.s3_handler.get_cifar100_as_numpy(folder_type)
     
+    
     def load_cifar100_numpy_files(self, folder_type: str) -> Dict[str, np.ndarray]:
         """
         Load NumPy (.npy) files from CIFAR-100 clean/adversarial folders
@@ -54,6 +56,7 @@ class S3CifarLoader:
             raise ValueError(f"Invalid folder type for numpy data: {folder_type}")
             
         return self.s3_handler.get_numpy_data('cifar100', folder_type)
+    
     
     def load_cifar100_meta(self) -> Dict:
         return self.s3_handler.get_cifar100_meta()

@@ -95,15 +95,6 @@ class S3Handler:
         return local_dir
     
     def get_cifar100_as_numpy(self, folder_type):
-        """
-        Get CIFAR-100 data (adversarial or clean) as NumPy arrays
-        
-        Args:
-            folder_type (str): Type of folder (adversarial or clean)
-            
-        Returns:
-            tuple: (images, labels) as NumPy arrays
-        """
         prefix = f"cifar100/{folder_type}/"
         s3_files = self.list_images(prefix)
         
