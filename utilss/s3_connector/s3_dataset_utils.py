@@ -1,10 +1,24 @@
-import shutil
 import os
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, List, Tuple, Any
 import numpy as np
-from utilss.classes.datasets.dataset_factory import DatasetFactory
 from utilss.s3_connector.s3_dataset_loader import S3DatasetLoader
 
+def load_dataset_numpy(dataset_str: str, folder_type: str) -> Dict[str, np.ndarray]:
+    """
+    Load NumPy data (.npy files) from clean/adversarial folders
+    """
+    bucket_name = os.environ.get('S3_BUCKET_NAME')
+    if not bucket_name:
+        raise ValueError("S3_BUCKET_NAME environment variable must be set")
+    s3_loader = S3DatasetLoader(bucket_name=bucket_name)
+    
+    return s3_loader.load_numpy_data(dataset_str, folder_type)
+
+def load_cifar100_adversarial_or_clean(folder_type: str) -> Dict[str, np.ndarray]:
+    return load_dataset_numpy('cifar100', folder_type)
+
+def load_imagenet_adversarial_or_clean(folder_type: str) -> Dict[str, np.ndarray]:
+    return load_dataset_numpy('imagenet', folder_type)
 
 def get_dataset_config(dataset_str: str) -> Dict[str, Any]:
     """Get dataset configuration based on dataset string from S3."""
@@ -16,42 +30,7 @@ def get_dataset_config(dataset_str: str) -> Dict[str, Any]:
     
     return s3_loader.get_dataset_info(dataset_str)
 
-
-def load_dataset(dataset_str: str):
-    """Load the dataset from S3."""
-    bucket_name = os.environ.get('S3_BUCKET_NAME')
-    if not bucket_name:
-        raise ValueError("S3_BUCKET_NAME environment variable must be set")
-        
-    s3_loader = S3DatasetLoader(bucket_name=bucket_name)
-    
-    dataset_config = get_dataset_config(dataset_str)
-    
-    temp_dir = s3_loader.load_from_s3(dataset_str)
-    
-    try:
-        dataset_name = dataset_config["dataset"]
-        dataset = DatasetFactory.create_dataset(dataset_name)
-        
-        dataset.load(dataset_name, data_dir=temp_dir)
-    finally:
-        # Clean up
-        shutil.rmtree(temp_dir)
-    
-    return dataset
-
-
-def get_dataset_labels(dataset_str: str) -> List[str]:
-    """Get dataset labels from S3."""
-    # Get dataset info from S3
-    dataset_config = get_dataset_config(dataset_str)
-    
-    # Return the labels
-    return dataset_config["labels"]
-
-
-
-def load_dataset_folder(dataset_str: str, folder_type: str):
+def load_dataset_folder(dataset_str: str, folder_type: str) -> str:
     """
     Load a specific folder (clean/adversarial/train) from a dataset
     """
@@ -63,10 +42,15 @@ def load_dataset_folder(dataset_str: str, folder_type: str):
     
     return s3_loader.load_folder(dataset_str, folder_type)
 
-
 def load_single_image(image_key: str) -> bytes:
     """
     Load a single image from S3
+    
+    Args:
+        image_key (str): S3 key for the image
+        
+    Returns:
+        bytes: Image data
     """
     bucket_name = os.environ.get('S3_BUCKET_NAME')
     if not bucket_name:
@@ -75,7 +59,6 @@ def load_single_image(image_key: str) -> bytes:
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
     return s3_loader.load_single_image(image_key)
-
 
 def load_imagenet_train() -> str:
     """
@@ -87,62 +70,24 @@ def load_imagenet_train() -> str:
     bucket_name = os.environ.get('S3_BUCKET_NAME')
     if not bucket_name:
         raise ValueError("S3_BUCKET_NAME environment variable must be set")
-        
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
     return s3_loader.load_imagenet_train()
 
-
-def load_cifar100_numpy(folder_type: str) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Load CIFAR-100 data as NumPy arrays
-    
-    Args:
-        folder_type (str): Type of folder (adversarial or clean)
-        
-    Returns:
-        tuple: (images, labels) as NumPy arrays
-    """
-    bucket_name = os.environ.get('S3_BUCKET_NAME')
-    if not bucket_name:
-        raise ValueError("S3_BUCKET_NAME environment variable must be set")
-        
-    s3_loader = S3DatasetLoader(bucket_name=bucket_name)
-    
-    return s3_loader.load_cifar100_numpy(folder_type)
-
-
 def load_cifar100_meta() -> Dict:
-    """
-    Load CIFAR-100 meta data
-    
-    Returns:
-        dict: Meta data for CIFAR-100
-    """
     bucket_name = os.environ.get('S3_BUCKET_NAME')
     if not bucket_name:
         raise ValueError("S3_BUCKET_NAME environment variable must be set")
-        
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
     return s3_loader.load_cifar100_meta()
 
-
 def load_dataset_split(dataset_str: str, split_type: str) -> str:
     """
     Load test or train dataset as is
-    
-    Args:
-        dataset_str (str): Dataset name
-        split_type (str): Type of split (test or train)
-        
-    Returns:
-        str: Path to local directory with downloaded data
     """
     bucket_name = os.environ.get('S3_BUCKET_NAME')
     if not bucket_name:
         raise ValueError("S3_BUCKET_NAME environment variable must be set")
-        
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
-    
     return s3_loader.load_dataset_split(dataset_str, split_type)
