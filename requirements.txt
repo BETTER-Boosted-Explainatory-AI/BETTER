@@ -20,3 +20,4 @@ flask
 requests
 python-jose
 boto3
+tensorflow-io

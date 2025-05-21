@@ -6,7 +6,9 @@ from utilss.classes.dendrogram import Dendrogram
 import tensorflow as tf
 from utilss.photos_utils import preprocess_loaded_image
 from services.dataset_service import get_dataset_labels
-
+import boto3
+import io
+from botocore.exceptions import ClientError
 from utilss.enums.datasets_enum import DatasetsEnum
 from fastapi import HTTPException, status
 import json
@@ -71,18 +73,49 @@ def _check_model_path(user_id: str, model_id: str, graph_type: str) -> Optional[
     return model_path
 
 
-def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
-    # Construct the model path based on user_id and model_id
-    BASE_DIR = os.getenv("USERS_PATH", "users")
-    model_path = os.path.join(BASE_DIR, str(user_id), str(model_id))
+# def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
+#     # Construct the model path based on user_id and model_id
+#     BASE_DIR = os.getenv("USERS_PATH", "users")
+#     model_path = os.path.join(BASE_DIR, str(user_id), str(model_id))
     
-    # Check if the model path exists
-    if os.path.exists(model_path):
-        return model_path
-    else:
-        logger.debug(f"Model path {model_path} does not exist")
-        return None
+#     # Check if the model path exists
+#     if os.path.exists(model_path):
+#         return model_path
+#     else:
+#         logger.debug(f"Model path {model_path} does not exist")
+#         return None
 
+
+def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
+    """
+    Get the model path in S3 based on user_id and model_id
+    """
+    
+    s3_client = boto3.client('s3')
+    bucket_name = os.getenv("S3_USERS_BUCKET_NAME")
+    
+    # Construct the S3 prefix (equivalent to directory path in S3)
+    s3_prefix = f"{str(user_id)}/{str(model_id)}/"
+    
+    # Check if this prefix exists in S3
+    try:
+        response = s3_client.list_objects_v2(
+            Bucket=bucket_name,
+            Prefix=s3_prefix,
+            MaxKeys=1 
+        )
+        
+        # If there are objects with this prefix, the "path" exists
+        if 'Contents' in response:
+            return s3_prefix
+        else:
+            logger.debug(f"S3 prefix {s3_prefix} does not exist in bucket {bucket_name}")
+            return None
+    except ClientError as e:
+        logger.error(f"Error checking S3 prefix {s3_prefix}: {e}")
+        return None
+    
+    
 def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
     model_path = _get_model_path(user_id, model_id)
     if model_path is None:
@@ -96,24 +129,59 @@ def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optiona
             return model_filename
         
 
+# def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any]) -> Model:
+#     logger.info(f"Loading model {model_path} for dataset {dataset_str}")
+
+#     if dataset_str != DatasetsEnum.IMAGENET.value and dataset_str != DatasetsEnum.CIFAR100.value:
+#         raise ValueError(f"Invalid dataset: {dataset_str}")
+
+#     if not os.path.exists(model_path):
+#         raise FileNotFoundError(f'Model {model_path} does not exist')
+    
+#     model = tf.keras.models.load_model(model_path)
+    
+#     print(f"Model {model_path} has been loaded")
+#     return Model(
+#         model, 
+#         dataset_config["top_k"], 
+#         dataset_config["min_confidence"], 
+#         model_path, 
+#         dataset_config["dataset"]
+#     )
+
+
 def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any]) -> Model:
-    logger.info(f"Loading model {model_path} for dataset {dataset_str}")
+    """
+    Load a model directly from S3 using TensorFlow's built-in S3 support
+    """
+    import boto3
+    from botocore.exceptions import ClientError
+    
+    logger.info(f"Loading model from S3: {model_path} for dataset {dataset_str}")
 
     if dataset_str != DatasetsEnum.IMAGENET.value and dataset_str != DatasetsEnum.CIFAR100.value:
         raise ValueError(f"Invalid dataset: {dataset_str}")
 
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f'Model {model_path} does not exist')
+    bucket_name = os.getenv("S3_USERS_BUCKET_NAME")
+    s3_url = f"s3://{bucket_name}/{model_path}"
+    
+    try:
+        model = tf.keras.models.load_model(s3_url)
+        logger.info(f"Model {model_path} has been loaded directly from S3")
+        
+        return Model(
+            model, 
+            dataset_config["top_k"], 
+            dataset_config["min_confidence"], 
+            model_path,
+            dataset_config["dataset"]
+        )
+    except Exception as e:
+        logger.error(f"Error loading model directly from S3: {e}")
+        raise FileNotFoundError(f'Could not load model from {s3_url}: {e}')
 
-    model = tf.keras.models.load_model(model_path)
-    print(f"Model {model_path} has been loaded")
-    return Model(
-        model, 
-        dataset_config["top_k"], 
-        dataset_config["min_confidence"], 
-        model_path, 
-        dataset_config["dataset"]
-    )
+
+
 
 def construct_model(model_path: str, dataset_config: Dict[str, Any]) -> Model:
         logger.info(f"Loading model {model_path} for dataset {dataset_config['dataset']}")
