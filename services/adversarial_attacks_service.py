@@ -45,6 +45,23 @@ def create_logistic_regression_detector(model_id, graph_type, clean_images, adve
 
     return adversarial_detector
 
+def does_detector_exist_(model_id, graph_type, user):
+    model_info = get_user_models_info(user, model_id)
+
+    if model_info is None:
+        raise ValueError(f"Model ID {model_id} not found in models.json")
+    else:
+        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
+        model_graph_folder = model_files["model_graph_folder"]
+        adversarial_detector = AdversarialDetector(model_graph_folder)
+        if adversarial_detector.does_detector_exist():
+            logger.info("Adversarial detector already exists.")
+            return True
+        else:
+            logger.info("Adversarial detector does not exist.")
+            return False
+
+
 def detect_adversarial_image(model_id, graph_type, image, user):
     """
     Detect if an image is adversarial using the trained logistic regression detector.
