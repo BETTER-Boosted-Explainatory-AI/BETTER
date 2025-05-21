@@ -113,10 +113,22 @@ def detect_adversarial_image(model_id, graph_type, image, user):
     # Use the detector to classify the image
     feature = [[score]]  # Wrap the score in a 2D array
     label = detector.predict(feature)[0]  # Predict the label (0 = clean, 1 = adversarial)
+    detection_result = 'Adversarial' if label == 1 else 'Clean'
 
     logger.info(f"Adversarial score: {score}, Label: {label}")
+
+    pil_image = Image.open(io.BytesIO(image)).convert("RGB")
+    image_array = np.array(pil_image)
+    image_base64 = encode_image_to_base64(image_array)
+
+    image_preprocessed = preprocess_loaded_image(model, image)
+    image_predictions = get_top_k_predictions(model, image_preprocessed, labels)
     
-    return ('Adversarial' if label == 1 else 'Clean')
+    return {
+        "image": image_base64,
+        "predictions": image_predictions,
+        "result": detection_result,
+        }
 
 def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, **kwargs):
 

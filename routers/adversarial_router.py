@@ -3,7 +3,7 @@ from services.adversarial_attacks_service import create_logistic_regression_dete
 from services.users_service import require_authenticated_user
 from utilss.classes.user import User
 from typing import List, Optional
-from request_models.adversarial_model import DetectorResponse, AnalysisResult, DetectionResult
+from request_models.adversarial_model import DetectorResponse, AnalysisResult, DetectionResult, PredictionResult
 import logging
 from utilss import debug_utils
 
@@ -68,7 +68,7 @@ async def generate_adversarial_detector(
 @adversarial_router.post(
     "/adversarial/detect",
     status_code=status.HTTP_200_OK,
-    response_model=DetectorResponse,
+    response_model=DetectionResult,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
@@ -86,7 +86,19 @@ async def detect_query(
         detection_result = detect_adversarial_image(current_model_id, graph_type, image_content, current_user)
         if detection_result is None:
             raise HTTPException(status_code=404, detail="Detection result not found")
-        return DetectorResponse(result=detection_result)
+        
+        predictions_result_d = [
+            PredictionResult(label=k_label, probability=float(k_prob))
+            for k_label, k_prob in detection_result["predictions"]
+        ]
+
+        final_result = DetectionResult(
+            image=detection_result["image"],
+            predictions=predictions_result_d,
+            result=detection_result["result"],
+        )
+
+        return final_result.model_dump()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
@@ -131,13 +143,13 @@ async def analyze_adversarial(
 
         # Convert original predictions to DetectionResult objects
         original_predictions_result = [
-            DetectionResult(label=k_label, probability=float(k_prob))
+            PredictionResult(label=k_label, probability=float(k_prob))
             for k_label, k_prob in analysis_result["original_predictions"]
         ]
 
         # Convert adversarial predictions to DetectionResult objects
         adversarial_predictions_result = [
-            DetectionResult(label=k_label, probability=float(k_prob))
+            PredictionResult(label=k_label, probability=float(k_prob))
             for k_label, k_prob in analysis_result["adversarial_predictions"]
         ]
 
