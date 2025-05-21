@@ -109,6 +109,22 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
 def get_active_user_info(current_user: User = Depends(require_authenticated_user)):
     user_dict = {"id":current_user.user_id, "email": current_user.email}
     return {"message": "User information retrieved successfully", "user": user_dict}
+
+
+@users_router.post(
+    "/logout",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {"description": "Logout successful"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
+    }
+)
+def logout_user(response: Response):
+    """
+    Log out the user by clearing the session cookie.
+    """
+    response.delete_cookie(key="session_token")
+    return {"message": "Logout successful"}
     
 ## login and register through cognito UI
 # @users_router.post(
