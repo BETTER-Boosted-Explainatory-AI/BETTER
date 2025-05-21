@@ -4,13 +4,14 @@ from PIL import Image
 from .dataset import Dataset
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from data.datasets.imagenet_info import IMAGENET_INFO
+# from data.datasets.imagenet_info import IMAGENET_INFO
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from services.dataset_service import _get_dataset_config
 
 
 class ImageNet(Dataset):
     def __init__(self):
-        super().__init__(IMAGENET_INFO["dataset"], IMAGENET_INFO["threshold"], IMAGENET_INFO["infinity"], IMAGENET_INFO["labels"])
+        super().__init__(_get_dataset_config("imagenet")["dataset"], _get_dataset_config("imagenet")["threshold"], _get_dataset_config("imagenet")["infinity"], _get_dataset_config("imagenet")["labels"])
         self.x_train = None
         self.y_train = None
         self.x_test = None
@@ -93,7 +94,7 @@ class ImageNet(Dataset):
         self.x_train, self.y_train = self.load_mini_imagenet(train_path)
     #    self.x_test, self.y_test = self.load_mini_imagenet(test_path)
     
-        self.directory_labels = IMAGENET_INFO["directory_labels"]
+        self.directory_labels = _get_dataset_config("imagenet")["directory_labels"]
         print("loaded imagenet dataset")
 
     # def get_train_image_by_id(self, image_id):
@@ -140,7 +141,7 @@ class ImageNet(Dataset):
 
 
     def directory_to_labels_conversion(self, label):
-        dir_to_readable = IMAGENET_INFO["directory_to_readable"]
+        dir_to_readable = _get_dataset_config("imagenet")["directory_to_readable"]
         return dir_to_readable[label]
     
     def get_label_readable_name(self, label):

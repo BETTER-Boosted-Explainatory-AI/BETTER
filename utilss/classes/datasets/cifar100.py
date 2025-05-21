@@ -3,11 +3,12 @@ import pickle
 import numpy as np
 from .dataset import Dataset
 import matplotlib.pyplot as plt
-from data.datasets.cifar100_info import CIFAR100_INFO
+# from data.datasets.cifar100_info import CIFAR100_INFO
+from services.dataset_service import _get_dataset_config
 
 class Cifar100(Dataset):
     def __init__(self):
-        super().__init__(CIFAR100_INFO["dataset"], CIFAR100_INFO["threshold"], CIFAR100_INFO["infinity"], CIFAR100_INFO["labels"])
+        super().__init__(_get_dataset_config("cifar100")["dataset"], _get_dataset_config("cifar100")["threshold"], _get_dataset_config("cifar100")["infinity"], _get_dataset_config("cifar100")["labels"])
         self.x_train = None
         self.y_train = None
         self.x_test = None

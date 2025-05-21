@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import tempfile
 import shutil
 from utilss.enums.datasets_enum import DatasetsEnum
-from s3_handler import S3Handler
+from s3_connector.s3_handler import S3Handler
 
 
 class S3DatasetLoader:
