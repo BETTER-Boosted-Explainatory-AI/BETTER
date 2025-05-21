@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Depends
 from services.whitebox_testing_service import get_white_box_analysis
 from utilss.classes.user import User
-from services.users_service import get_current_session_user
+from services.users_service import require_authenticated_user
 from request_models.whitebox_testing_model import WhiteboxTestingRequest
 
 whitebox_testing_router = APIRouter()
@@ -19,7 +19,7 @@ whitebox_testing_router = APIRouter()
 )
 async def get_whitebox_testing(request: WhiteboxTestingRequest,
                                current_user: User = Depends(
-                                   get_current_session_user)
+                                   require_authenticated_user)
                                ):
 
     problematic_imgs = get_white_box_analysis(

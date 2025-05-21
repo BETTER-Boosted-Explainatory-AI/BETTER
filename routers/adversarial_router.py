@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Form, UploadFile, Depends
 from services.adversarial_attacks_service import create_logistic_regression_detector, detect_adversarial_image, analysis_adversarial_image
-from services.users_service import get_current_session_user
+from services.users_service import require_authenticated_user
 from utilss.classes.user import User
 from typing import List, Optional
 from request_models.adversarial_model import DetectorResponse, AnalysisResult, DetectionResult
@@ -27,7 +27,7 @@ async def generate_adversarial_detector(
     graph_type: str = Form(...),
     clean_images: Optional[List[UploadFile]] = None, 
     adversarial_images: Optional[List[UploadFile]] = None,
-    current_user: User = Depends(get_current_session_user)  
+    current_user: User = Depends(require_authenticated_user)  
 ):
     try:
         logger.info("Starting to generate adversarial detector")
@@ -79,7 +79,7 @@ async def detect_query(
     current_model_id: str = Form(...),
     graph_type: str = Form(...),
     image: UploadFile = Form(...),
-    current_user: User = Depends(get_current_session_user)
+    current_user: User = Depends(require_authenticated_user)
 ):
     try:
         image_content = await image.read()
@@ -110,7 +110,7 @@ async def analyze_adversarial(
     overshoot: Optional[float] = Form(None),
     num_steps: Optional[int] = Form(None),
     classes_number: Optional[int] = Form(None),
-    current_user: User = Depends(get_current_session_user)
+    current_user: User = Depends(require_authenticated_user)
 ):
     try:
         image_content = await image.read()

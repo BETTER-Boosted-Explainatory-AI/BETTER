@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, De
 from services.models_service import query_model, query_predictions
 from request_models.query_model import QueryResponse
 from utilss.classes.user import User
-from services.users_service import get_current_session_user
+from services.users_service import require_authenticated_user
 from utilss.photos_utils import encode_image_to_base64
 from PIL import Image, UnidentifiedImageError
 import io
@@ -24,7 +24,7 @@ async def verbal_explaination_query(
     current_model_id: str = Form(...),
     graph_type: str = Form(...),
     image: UploadFile = File(...),
-    current_user: User = Depends(get_current_session_user)
+    current_user: User = Depends(require_authenticated_user)
 ):
     try:
         if image.size is 0:
