@@ -38,8 +38,8 @@ async def get_model_info(current_user: User = Depends(require_authenticated_user
 )
 async def get_current_model_info(current_user: User = Depends(require_authenticated_user)) -> ModelRequest:
     curr_model_info = current_user.get_current_model()
-    
-    if curr_model_info is None:
+
+    if curr_model_info is None or not curr_model_info.get("model_id"):
         raise HTTPException(status_code=404, detail="Model not found")
     
     return curr_model_info
