@@ -40,7 +40,7 @@ def _load_dataset(dataset_str: str):
     return dataset
 
 
-def _get_dataset_labels(dataset_str: str) -> List[str]:
+def get_dataset_labels(dataset_str: str) -> List[str]:
     """Get dataset labels from S3."""
     # Get dataset info from S3
     dataset_config = _get_dataset_config(dataset_str)

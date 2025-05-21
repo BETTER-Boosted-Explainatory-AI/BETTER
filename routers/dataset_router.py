@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from request_models.dataset_model import DatasetLabelsResult
 
-from services.dataset_service import _get_dataset_labels
+from services.dataset_service import get_dataset_labels
 
 datasets_router = APIRouter()
 
@@ -17,7 +17,7 @@ datasets_router = APIRouter()
 )
 
 async def _get_dataset_labels(dataset_name: str) -> DatasetLabelsResult:
-    dataset_labels = _get_dataset_labels(dataset_name)  # Pass dataset_name correctly
+    dataset_labels = get_dataset_labels(dataset_name)  # Pass dataset_name correctly
 
     if dataset_labels is None:
         raise HTTPException(status_code=404, detail="Couldn't find dataset labels")

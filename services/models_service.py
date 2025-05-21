@@ -5,8 +5,7 @@ from utilss.classes.model import Model
 from utilss.classes.dendrogram import Dendrogram
 import tensorflow as tf
 from utilss.photos_utils import preprocess_loaded_image
-# from services.dataset_service import __get_dataset_labels
-from services.dataset_service import _get_dataset_labels
+from services.dataset_service import get_dataset_labels
 
 from utilss.enums.datasets_enum import DatasetsEnum
 from fastapi import HTTPException, status
@@ -153,7 +152,7 @@ def query_predictions(model_id, graph_type, image, user):
         model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
 
     dataset = model_info["dataset"]
-    labels = _get_dataset_labels(dataset)
+    labels = get_dataset_labels(dataset)
     model_filename = model_files["model_file"]
     if os.path.exists(model_filename):
         current_model = tf.keras.models.load_model(model_filename)

@@ -2,7 +2,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from utilss.classes.score_calculator import ScoreCalculator
 from utilss.files_utils import load_numpy_from_directory
-from services.dataset_service import _get_dataset_labels
+from services.dataset_service import get_dataset_labels
 import tensorflow as tf
 import os
 
@@ -32,7 +32,7 @@ class AdversarialDataset:
             self.clear_images = load_numpy_from_directory(self.model,clean_images)
             self.adversarial_images = load_numpy_from_directory(self.model,adversarial_images)
 
-        self.labels = _get_dataset_labels(dataset)
+        self.labels = get_dataset_labels(dataset)
         if self.labels is None:
             raise ValueError(f"info file for the dataset {dataset} not found'.")      
 

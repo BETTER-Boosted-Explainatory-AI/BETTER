@@ -2,8 +2,7 @@ from utilss.classes.adversarial_dataset import AdversarialDataset
 from utilss.classes.adversarial_detector import AdversarialDetector
 from utilss.classes.score_calculator import ScoreCalculator
 from utilss.photos_utils import preprocess_image, encode_image_to_base64, deprocess_resnet_image, preprocess_deepfool_image, preprocess_loaded_image
-# from services.dataset_service import __get_dataset_labels
-from services.dataset_service import _get_dataset_labels
+from services.dataset_service import get_dataset_labels
 from utilss.classes.adversarial_attacks.adversarial_attack_factory import get_attack
 from services.models_service import get_top_k_predictions, query_model, get_user_models_info, get_model_files
 import tensorflow as tf
@@ -74,7 +73,7 @@ def detect_adversarial_image(model_id, graph_type, image, user):
 
         dataset = model_info["dataset"]
         Z_full = model_files["Z_file"]
-        labels = _get_dataset_labels(dataset)
+        labels = get_dataset_labels(dataset)
 
         if os.path.exists(model_file):
             model = tf.keras.models.load_model(model_file)
@@ -121,7 +120,7 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, *
             raise ValueError(f"Model file {model_file} does not exist")
         
         dataset = model_info["dataset"]
-        labels = _get_dataset_labels(dataset)
+        labels = get_dataset_labels(dataset)
 
         if attack_type == "deepfool":
             preprocessed_image = preprocess_deepfool_image(model, image)
