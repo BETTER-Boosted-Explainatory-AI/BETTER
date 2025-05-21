@@ -23,7 +23,8 @@ def _create_nma(model_file, graph_type, dataset_str, user, min_confidence, top_k
         )
     
     dataset_config = _get_dataset_config(dataset_str)
-    dataset = _load_dataset(dataset_config)
+    # dataset = _load_dataset(dataset_config)
+    dataset = _load_dataset(dataset_str)
     
     try:
         loaded_model = _load_model(dataset_str, model_file.name, dataset_config)

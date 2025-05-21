@@ -2,6 +2,7 @@ from utilss.classes.adversarial_dataset import AdversarialDataset
 from utilss.classes.adversarial_detector import AdversarialDetector
 from utilss.classes.score_calculator import ScoreCalculator
 from utilss.photos_utils import preprocess_image, encode_image_to_base64, deprocess_resnet_image, preprocess_deepfool_image, preprocess_loaded_image
+# from services.dataset_service import __get_dataset_labels
 from services.dataset_service import _get_dataset_labels
 from utilss.classes.adversarial_attacks.adversarial_attack_factory import get_attack
 from services.models_service import get_top_k_predictions, query_model, get_user_models_info, get_model_files

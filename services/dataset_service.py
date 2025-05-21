@@ -6,7 +6,7 @@ from utilss.classes.datasets.dataset_factory import DatasetFactory
 from utilss.s3_connector.s3_dataset_loader import S3DatasetLoader
 
 
-def get_dataset_config(dataset_str: str) -> Dict[str, Any]:
+def _get_dataset_config(dataset_str: str) -> Dict[str, Any]:
     """Get dataset configuration based on dataset string from S3."""
     bucket_name = os.environ.get('S3_BUCKET_NAME')
     if not bucket_name:
@@ -17,7 +17,7 @@ def get_dataset_config(dataset_str: str) -> Dict[str, Any]:
     return s3_loader.get_dataset_info(dataset_str)
 
 
-def load_dataset(dataset_str: str):
+def _load_dataset(dataset_str: str):
     """Load the dataset from S3."""
     bucket_name = os.environ.get('S3_BUCKET_NAME')
     if not bucket_name:
@@ -25,7 +25,7 @@ def load_dataset(dataset_str: str):
         
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
-    dataset_config = get_dataset_config(dataset_str)
+    dataset_config = _get_dataset_config(dataset_str)
     
     temp_dir = s3_loader.load_from_s3(dataset_str)
     
@@ -41,17 +41,17 @@ def load_dataset(dataset_str: str):
     return dataset
 
 
-def get_dataset_labels(dataset_str: str) -> List[str]:
+def _get_dataset_labels(dataset_str: str) -> List[str]:
     """Get dataset labels from S3."""
     # Get dataset info from S3
-    dataset_config = get_dataset_config(dataset_str)
+    dataset_config = _get_dataset_config(dataset_str)
     
     # Return the labels
     return dataset_config["labels"]
 
 
 
-def load_dataset_folder(dataset_str: str, folder_type: str):
+def _load_dataset_folder(dataset_str: str, folder_type: str):
     """
     Load a specific folder (clean/adversarial/train) from a dataset
     """
@@ -128,7 +128,7 @@ def load_cifar100_meta() -> Dict:
     return s3_loader.load_cifar100_meta()
 
 
-def load_dataset_split(dataset_str: str, split_type: str) -> str:
+def _load_dataset_split(dataset_str: str, split_type: str) -> str:
     """
     Load test or train dataset as is
     
@@ -145,4 +145,4 @@ def load_dataset_split(dataset_str: str, split_type: str) -> str:
         
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
-    return s3_loader.load_dataset_split(dataset_str, split_type)
+    return s3_loader._load_dataset_split(dataset_str, split_type)

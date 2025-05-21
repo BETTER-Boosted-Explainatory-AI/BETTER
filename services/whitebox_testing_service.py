@@ -34,7 +34,7 @@ def get_white_box_analysis(current_user, current_model_id, graph_type, source_la
     dataset_str = model_info["dataset"]
 
     dataset_config = _get_dataset_config(dataset_str)
-    dataset = _load_dataset(dataset_config)
+    dataset = _load_dataset(dataset_str)
 
     edges_df_filename = _get_edges_dataframe_path(
         user_id, current_model_id, graph_type)
