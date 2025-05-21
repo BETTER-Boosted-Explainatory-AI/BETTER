@@ -1,10 +1,9 @@
 import shutil
 import os
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple
 import numpy as np
 from utilss.classes.datasets.dataset_factory import DatasetFactory
 from utilss.s3_connector.s3_dataset_loader import S3DatasetLoader
-
 
 def _get_dataset_config(dataset_str: str) -> Dict[str, Any]:
     """Get dataset configuration based on dataset string from S3."""
@@ -48,7 +47,6 @@ def _get_dataset_labels(dataset_str: str) -> List[str]:
     
     # Return the labels
     return dataset_config["labels"]
-
 
 
 def _load_dataset_folder(dataset_str: str, folder_type: str):

@@ -2,8 +2,6 @@ import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from pprint import pprint
-from typing import Dict, Any, List, Tuple, Optional
 import io
 from PIL import Image
 
@@ -32,7 +30,6 @@ from utilss.s3_connector.s3_dataset_utils import (
     load_cifar100_meta,
     load_dataset_split
 )
-
 
 # Color for terminal output
 class TermColors:

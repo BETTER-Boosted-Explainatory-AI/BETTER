@@ -14,3 +14,4 @@ igraph
 python-dotenv
 python-multipart
 pydantic[email]
+boto3
