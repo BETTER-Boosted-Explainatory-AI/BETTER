@@ -160,11 +160,23 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, *
         adversarial_image = adversarial_attack.attack(model, preprocessed_image)
 
         pil_image = Image.open(io.BytesIO(image)).convert("RGB")
+        original_size = pil_image.size
         image_array = np.array(pil_image)
         original_image_base64 = encode_image_to_base64(image_array)
         if attack_type != "deepfool":
             adversarial_image = deprocess_resnet_image(adversarial_image)
-        adversarial_image_base64 = encode_image_to_base64(adversarial_image)
+        else:
+            # DeepFool output is [0,1] float, scale to [0,255]
+            adversarial_image = np.clip(adversarial_image * 255.0, 0, 255).astype(np.uint8)
+        # Convert adversarial_image (numpy array) to PIL Image
+        adv_pil = Image.fromarray(adversarial_image.astype(np.uint8))
+
+        # Resize back to original size
+        adv_resized = adv_pil.resize(original_size, Image.Resampling.BILINEAR)
+
+        # If you need it as a numpy array again:
+        adv_resized_np = np.array(adv_resized)
+        adversarial_image_base64 = encode_image_to_base64(adv_resized_np)
 
         original_image_preprocessed = preprocess_loaded_image(model, image)
         adversarial_image_preprocessed = preprocess_image(model, adversarial_image)
