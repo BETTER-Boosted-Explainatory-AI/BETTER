@@ -16,6 +16,10 @@ class S3ImagenetLoader:
         """List all files in an ImageNet folder"""
         return self.s3_handler.get_folder_contents('imagenet', folder_type)
     
+    def list_test_images(self) -> List[str]:
+        """Return S3 keys for every test-set image."""
+        return self.s3_handler.get_folder_contents('imagenet', 'test')
+    
     def get_imagenet_classes(self) -> List[str]:
         """Get all ImageNet class directories from train folder"""
         return self.s3_handler.get_imagenet_classes()

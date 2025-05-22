@@ -2,6 +2,10 @@ import os
 from typing import Dict, List, Tuple, Any
 import numpy as np
 from utilss.s3_connector.s3_dataset_loader import S3DatasetLoader
+import boto3, io, pickle, logging
+
+log = logging.getLogger(__name__)
+_s3  = boto3.client("s3")  
 
 def load_dataset_numpy(dataset_str: str, folder_type: str) -> Dict[str, np.ndarray]:
 
@@ -87,3 +91,20 @@ def load_dataset_split(dataset_str: str, split_type: str) -> List[str]:
         raise ValueError("S3_BUCKET_NAME environment variable must be set")
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     return s3_loader.load_dataset_split(dataset_str, split_type)
+
+
+def unpickle_from_s3(bucket: str, key: str):
+    """
+    Read a pickle file straight from S3 and return the loaded object.
+
+    Args:
+        bucket (str) : S3 bucket name  (e.g. "better-xai-users")
+        key    (str) : Object key      (e.g. "cifar100/train")
+
+    Returns:
+        Any – whatever was pickled (dict for CIFAR-100)
+    """
+    obj = _s3.get_object(Bucket=bucket, Key=key)
+    data = obj["Body"].read()          # bytes
+    log.debug("Fetched %s (%d bytes)", key, len(data))
+    return pickle.load(io.BytesIO(data), encoding="bytes")

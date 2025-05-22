@@ -19,7 +19,6 @@ class S3CifarLoader:
         return self.s3_handler.get_folder_contents('cifar100', folder_type)
     
     def load_cifar100_as_numpy(self, folder_type: str) -> Tuple[np.ndarray, np.ndarray]:
-        """Load CIFAR-100 dataset as numpy arrays directly from S3"""
         if folder_type not in ['adversarial', 'clean', 'test', 'train']:
             raise ValueError(f"Invalid folder type for CIFAR-100 numpy: {folder_type}")
         

@@ -15,37 +15,46 @@ def _get_dataset_config(dataset_str: str) -> Dict[str, Any]:
     
     return s3_loader.get_dataset_info(dataset_str)
 
-
 def _load_dataset(dataset_str: str):
-    """Load the dataset from S3."""
-    bucket_name = os.environ.get('S3_BUCKET_NAME')
-    if not bucket_name:
-        raise ValueError("S3_BUCKET_NAME environment variable must be set")
-        
-    s3_loader = S3DatasetLoader(bucket_name=bucket_name)
-    
+    """
+    Return a Dataset object populated directly from S3.
+    """
     dataset_config = _get_dataset_config(dataset_str)
-    
-    temp_dir = s3_loader.load_from_s3(dataset_str)
-    
-    try:
-        dataset_name = dataset_config["dataset"]
-        dataset = DatasetFactory.create_dataset(dataset_name)
-        
-        dataset.load(dataset_name, data_dir=temp_dir)
-    finally:
-        # Clean up
-        shutil.rmtree(temp_dir)
-    
+
+    dataset_name = dataset_config["dataset"]        # "cifar100" | "imagenet" | …
+    dataset = DatasetFactory.create_dataset(dataset_name)
+
+    (dataset_name)                     
+
     return dataset
+
+# def _load_dataset(dataset_str: str):
+#     """Load the dataset from S3."""
+#     bucket_name = os.environ.get('S3_BUCKET_NAME')
+#     if not bucket_name:
+#         raise ValueError("S3_BUCKET_NAME environment variable must be set")
+        
+#     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
+    
+#     dataset_config = _get_dataset_config(dataset_str)
+    
+#     temp_dir = s3_loader.load_from_s3(dataset_str)
+    
+#     try:
+#         dataset_name = dataset_config["dataset"]
+#         dataset = DatasetFactory.create_dataset(dataset_name)
+        
+#         dataset.load(dataset_name)
+#     finally:
+#         # Clean up
+#         shutil.rmtree(temp_dir)
+    
+#     return dataset
 
 
 def get_dataset_labels(dataset_str: str) -> List[str]:
     """Get dataset labels from S3."""
-    # Get dataset info from S3
     dataset_config = _get_dataset_config(dataset_str)
-    
-    # Return the labels
     return dataset_config["labels"]
 
 
@@ -143,4 +152,4 @@ def _load_dataset_split(dataset_str: str, split_type: str) -> str:
         
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
-    return s3_loader._load_dataset_split(dataset_str, split_type)
+    return s3_loader.load_dataset_split(dataset_str, split_type)

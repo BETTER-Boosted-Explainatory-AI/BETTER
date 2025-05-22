@@ -1,9 +1,14 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 import numpy as np
 from typing import Dict, Any, Optional
+import tensorflow_io as tfio  
+import tensorflow as tf 
+import logging
 from utilss.classes.model import Model
 from utilss.classes.dendrogram import Dendrogram
-import tensorflow as tf
 from utilss.photos_utils import preprocess_loaded_image
 from services.dataset_service import get_dataset_labels
 import boto3
@@ -12,8 +17,15 @@ from botocore.exceptions import ClientError
 from utilss.enums.datasets_enum import DatasetsEnum
 from fastapi import HTTPException, status
 import json
-import logging
 from utilss import debug_utils
+# Remove ALL duplicate tensorflow imports from the rest of the file
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+
+from dotenv import load_dotenv
+load_dotenv()
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -73,47 +85,47 @@ def _check_model_path(user_id: str, model_id: str, graph_type: str) -> Optional[
     return model_path
 
 
-# def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
-#     # Construct the model path based on user_id and model_id
-#     BASE_DIR = os.getenv("USERS_PATH", "users")
-#     model_path = os.path.join(BASE_DIR, str(user_id), str(model_id))
-    
-#     # Check if the model path exists
-#     if os.path.exists(model_path):
-#         return model_path
-#     else:
-#         logger.debug(f"Model path {model_path} does not exist")
-#         return None
-
-
 def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
-    """
-    Get the model path in S3 based on user_id and model_id
-    """
+    # Construct the model path based on user_id and model_id
+    BASE_DIR = os.getenv("USERS_PATH", "users")
+    model_path = os.path.join(BASE_DIR, str(user_id), str(model_id))
     
-    s3_client = boto3.client('s3')
-    bucket_name = os.getenv("S3_USERS_BUCKET_NAME")
-    
-    # Construct the S3 prefix (equivalent to directory path in S3)
-    s3_prefix = f"{str(user_id)}/{str(model_id)}/"
-    
-    # Check if this prefix exists in S3
-    try:
-        response = s3_client.list_objects_v2(
-            Bucket=bucket_name,
-            Prefix=s3_prefix,
-            MaxKeys=1 
-        )
-        
-        # If there are objects with this prefix, the "path" exists
-        if 'Contents' in response:
-            return s3_prefix
-        else:
-            logger.debug(f"S3 prefix {s3_prefix} does not exist in bucket {bucket_name}")
-            return None
-    except ClientError as e:
-        logger.error(f"Error checking S3 prefix {s3_prefix}: {e}")
+    # Check if the model path exists
+    if os.path.exists(model_path):
+        return model_path
+    else:
+        logger.debug(f"Model path {model_path} does not exist")
         return None
+
+
+# def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
+#     """
+#     Get the model path in S3 based on user_id and model_id
+#     """
+    
+#     s3_client = boto3.client('s3')
+#     bucket_name = os.getenv("S3_USERS_BUCKET_NAME")
+    
+#     # Construct the S3 prefix (equivalent to directory path in S3)
+#     s3_prefix = f"{str(user_id)}/{str(model_id)}/"
+    
+#     # Check if this prefix exists in S3
+#     try:
+#         response = s3_client.list_objects_v2(
+#             Bucket=bucket_name,
+#             Prefix=s3_prefix,
+#             MaxKeys=1 
+#         )
+        
+#         # If there are objects with this prefix, the "path" exists
+#         if 'Contents' in response:
+#             return s3_prefix
+#         else:
+#             logger.debug(f"S3 prefix {s3_prefix} does not exist in bucket {bucket_name}")
+#             return None
+#     except ClientError as e:
+#         logger.error(f"Error checking S3 prefix {s3_prefix}: {e}")
+#         return None
     
     
 def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
@@ -129,56 +141,97 @@ def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optiona
             return model_filename
         
 
-# def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any]) -> Model:
-#     logger.info(f"Loading model {model_path} for dataset {dataset_str}")
-
-#     if dataset_str != DatasetsEnum.IMAGENET.value and dataset_str != DatasetsEnum.CIFAR100.value:
-#         raise ValueError(f"Invalid dataset: {dataset_str}")
-
-#     if not os.path.exists(model_path):
-#         raise FileNotFoundError(f'Model {model_path} does not exist')
-    
-#     model = tf.keras.models.load_model(model_path)
-    
-#     print(f"Model {model_path} has been loaded")
-#     return Model(
-#         model, 
-#         dataset_config["top_k"], 
-#         dataset_config["min_confidence"], 
-#         model_path, 
-#         dataset_config["dataset"]
-#     )
-
-
 def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any]) -> Model:
-    """
-    Load a model directly from S3 using TensorFlow's built-in S3 support
-    """
-    import boto3
-    from botocore.exceptions import ClientError
-    
-    logger.info(f"Loading model from S3: {model_path} for dataset {dataset_str}")
+    logger.info(f"Loading model {model_path} for dataset {dataset_str}")
 
     if dataset_str != DatasetsEnum.IMAGENET.value and dataset_str != DatasetsEnum.CIFAR100.value:
         raise ValueError(f"Invalid dataset: {dataset_str}")
 
-    bucket_name = os.getenv("S3_USERS_BUCKET_NAME")
-    s3_url = f"s3://{bucket_name}/{model_path}"
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f'Model {model_path} does not exist')
     
-    try:
-        model = tf.keras.models.load_model(s3_url)
-        logger.info(f"Model {model_path} has been loaded directly from S3")
+    model = tf.keras.models.load_model(model_path)
+    
+    print(f"Model {model_path} has been loaded")
+    return Model(
+        model, 
+        dataset_config["top_k"], 
+        dataset_config["min_confidence"], 
+        model_path, 
+        dataset_config["dataset"]
+    )
+
+
+# def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any]) -> Model:
+#     """
+#     Load a model directly from S3 using TensorFlow's built-in S3 support
+#     """
+#     import boto3
+#     from botocore.exceptions import ClientError
+    
+#     logger.info(f"Loading model from S3: {model_path} for dataset {dataset_str}")
+
+#     if dataset_str != DatasetsEnum.IMAGENET.value and dataset_str != DatasetsEnum.CIFAR100.value:
+#         raise ValueError(f"Invalid dataset: {dataset_str}")
+
+#     bucket_name = os.getenv("S3_USERS_BUCKET_NAME")
+#     s3_url = f"s3://{bucket_name}/{model_path}"
+    
+#     try:
+#         model = tf.keras.models.load_model(s3_url)
+#         logger.info(f"Model {model_path} has been loaded directly from S3")
         
-        return Model(
-            model, 
-            dataset_config["top_k"], 
-            dataset_config["min_confidence"], 
-            model_path,
-            dataset_config["dataset"]
-        )
-    except Exception as e:
-        logger.error(f"Error loading model directly from S3: {e}")
-        raise FileNotFoundError(f'Could not load model from {s3_url}: {e}')
+#         return Model(
+#             model, 
+#             dataset_config["top_k"], 
+#             dataset_config["min_confidence"], 
+#             model_path,
+#             dataset_config["dataset"]
+#         )
+#     except Exception as e:
+#         logger.error(f"Error loading model directly from S3: {e}")
+#         raise FileNotFoundError(f'Could not load model from {s3_url}: {e}')
+
+# def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any]) -> Model:
+#     """
+#     Load a model from S3 by reading into memory first
+#     """
+#     logger.info(f"Loading model from S3: {model_path} for dataset {dataset_str}")
+
+#     if dataset_str != DatasetsEnum.IMAGENET.value and dataset_str != DatasetsEnum.CIFAR100.value:
+#         raise ValueError(f"Invalid dataset: {dataset_str}")
+
+#     bucket_name = os.getenv("S3_USERS_BUCKET_NAME")
+    
+#     try:
+#         # Read model file content into memory using boto3
+#         s3_client = boto3.client('s3')
+        
+#         logger.info(f"Reading model from S3: {bucket_name}/{model_path}")
+#         response = s3_client.get_object(Bucket=bucket_name, Key=model_path)
+#         model_content = response['Body'].read()
+        
+#         # Create an in-memory file-like object
+#         model_buffer = io.BytesIO(model_content)
+        
+#         # Load model from memory buffer
+#         model = tf.keras.models.load_model(model_buffer)
+        
+#         logger.info(f"Model {model_path} loaded successfully from S3 memory buffer")
+        
+#         return Model(
+#             model, 
+#             dataset_config["top_k"], 
+#             dataset_config["min_confidence"], 
+#             model_path,
+#             dataset_config["dataset"]
+#         )
+#     except ClientError as e:
+#         logger.error(f"AWS S3 error: {e}")
+#         raise FileNotFoundError(f'S3 error accessing {bucket_name}/{model_path}: {e}')
+#     except Exception as e:
+#         logger.error(f"Error loading model from S3: {e}")
+#         raise FileNotFoundError(f'Could not load model from S3: {e}')
 
 
 
@@ -236,6 +289,7 @@ def query_predictions(model_id, graph_type, image, user):
 
 def get_user_models_info(user, model_id):
     models_json_path = user.get_models_json_path()
+
     if os.path.exists(models_json_path):
         with open(models_json_path, "r") as json_file:
             models_data = json.load(json_file)

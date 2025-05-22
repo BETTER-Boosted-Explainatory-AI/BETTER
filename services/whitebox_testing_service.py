@@ -25,7 +25,6 @@ def _get_edges_dataframe_path(user_id, model_id, graph_type):
 def get_white_box_analysis(current_user, current_model_id, graph_type, source_labels, target_labels):
     user_id = current_user.get_user_id()
     model_info = get_user_models_info(current_user, current_model_id)
-
     if model_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -71,3 +70,4 @@ def get_white_box_analysis(current_user, current_model_id, graph_type, source_la
             # Optionally continue to next image or handle the error
     
     return imgs_list
+

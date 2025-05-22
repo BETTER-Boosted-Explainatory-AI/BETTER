@@ -55,6 +55,10 @@ class S3DatasetLoader:
         """List ImageNet training classes and images"""
         return self.imagenet_loader.get_imagenet_classes()
     
+    def load_imagenet_test(self) -> List[str]:
+        """Shortcut: all test images for ImageNet."""
+        return self.imagenet_loader.list_test_images()
+    
     def load_cifar100_numpy(self, folder_type):
         """Load CIFAR-100 dataset as numpy arrays"""
         return self.cifar_loader.load_cifar100_as_numpy(folder_type)
@@ -64,12 +68,10 @@ class S3DatasetLoader:
         return self.cifar_loader.load_cifar100_meta()
     
     def load_dataset_split(self, dataset_name, split_type):
-        """List files in a dataset split (train/test)"""
         if split_type not in ['test', 'train']:
             raise ValueError(f"Invalid split type: {split_type}")
         
         try:
-            # First try to get files directly from the split folder
             files = self.load_folder(dataset_name, split_type)
             if files:
                 return files
@@ -121,7 +123,6 @@ class S3DatasetLoader:
             raise
     
     def load_numpy_data(self, dataset_name, folder_type):
-        """Load NumPy data from dataset folders"""
         if dataset_name == DatasetsEnum.CIFAR100.value:
             return self.cifar_loader.load_cifar100_numpy_files(folder_type)
         elif dataset_name == DatasetsEnum.IMAGENET.value:
