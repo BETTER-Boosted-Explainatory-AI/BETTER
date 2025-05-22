@@ -3,7 +3,7 @@ from services.adversarial_attacks_service import create_logistic_regression_dete
 from services.users_service import require_authenticated_user
 from utilss.classes.user import User
 from typing import List, Optional
-from request_models.adversarial_model import DetectorResponse, AnalysisResult, DetectionResult, PredictionResult
+from request_models.adversarial_model import DetectorResponse, AnalysisResult, DetectionResult
 import logging
 from utilss import debug_utils
 
@@ -86,15 +86,10 @@ async def detect_query(
         detection_result = detect_adversarial_image(current_model_id, graph_type, image_content, current_user)
         if detection_result is None:
             raise HTTPException(status_code=404, detail="Detection result not found")
-        
-        predictions_result_d = [
-            PredictionResult(label=k_label, probability=float(k_prob))
-            for k_label, k_prob in detection_result["predictions"]
-        ]
 
         final_result = DetectionResult(
             image=detection_result["image"],
-            predictions=predictions_result_d,
+            predictions=detection_result["predictions"],
             result=detection_result["result"],
         )
 
@@ -141,25 +136,13 @@ async def analyze_adversarial(
         if analysis_result is None:
             raise HTTPException(status_code=404, detail="Detection result not found")
 
-        # Convert original predictions to DetectionResult objects
-        original_predictions_result = [
-            PredictionResult(label=k_label, probability=float(k_prob))
-            for k_label, k_prob in analysis_result["original_predictions"]
-        ]
-
-        # Convert adversarial predictions to DetectionResult objects
-        adversarial_predictions_result = [
-            PredictionResult(label=k_label, probability=float(k_prob))
-            for k_label, k_prob in analysis_result["adversarial_predictions"]
-        ]
-
         # Create the AnalysisResult object
         result = AnalysisResult(
             original_image=analysis_result["original_image"],
-            original_predicition=original_predictions_result,
+            original_predicition=analysis_result["original_predictions"],
             original_verbal_explaination=analysis_result["original_verbal_explaination"],
             adversarial_image=analysis_result["adversarial_image"],
-            adversarial_prediction=adversarial_predictions_result,
+            adversarial_prediction=analysis_result["adversarial_predictions"],
             adversarial_verbal_explaination=analysis_result["adversarial_verbal_explaination"],
         )
 

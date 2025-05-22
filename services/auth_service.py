@@ -30,7 +30,7 @@ def cognito_sign_up(user_create_request):
     secret_hash = get_secret_hash(user_create_request.email, cognito_client_id, cognito_client_secret)
 
     return incognito_client.sign_up(
-                ClientId=os.getenv("COGNITO_CLIENT_ID"),
+                ClientId=cognito_client_id,
                 Username=user_create_request.email,
                 Password=user_create_request.password,
                 SecretHash=secret_hash
