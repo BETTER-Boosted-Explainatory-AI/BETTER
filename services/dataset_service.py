@@ -136,16 +136,6 @@ def load_cifar100_meta() -> Dict:
 
 
 def _load_dataset_split(dataset_str: str, split_type: str) -> str:
-    """
-    Load test or train dataset as is
-    
-    Args:
-        dataset_str (str): Dataset name
-        split_type (str): Type of split (test or train)
-        
-    Returns:
-        str: Path to local directory with downloaded data
-    """
     bucket_name = os.environ.get('S3_BUCKET_NAME')
     if not bucket_name:
         raise ValueError("S3_BUCKET_NAME environment variable must be set")

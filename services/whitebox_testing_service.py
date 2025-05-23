@@ -9,11 +9,12 @@ from .models_service import _get_model_path, _get_model_filename, get_user_model
 from .dataset_service import _get_dataset_config, _load_dataset
 from utilss.photos_utils import encode_image_to_base64
 
-
 def _get_edges_dataframe_path(user_id, model_id, graph_type):
     model_path = _get_model_path(user_id, model_id)
     edges_filename = f'edges_df.csv'
     edges_df_path = os.path.join(model_path, graph_type, edges_filename)
+
+
     if not os.path.exists(edges_df_path):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

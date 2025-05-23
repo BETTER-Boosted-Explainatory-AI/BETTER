@@ -106,7 +106,6 @@ def find_common_hypernyms(words, abstraction_level=0):
         synsets = wn.synsets(word, pos=wn.NOUN)
         if synsets:
             synsets_list.append(synsets[0])
-
     if len(synsets_list) >= 2:
         all_hypernyms = []
         for i in range(len(synsets_list) - 1):

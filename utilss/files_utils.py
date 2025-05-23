@@ -106,43 +106,45 @@ def check_models_metadata(models_data, model_id, graph_type):
             return model_id
     return str(uuid.uuid4())
         
-def load_numpy_from_directory(model ,source):
-    """
-    Load images from a given directory. Assumes images are stored as .npy files.
-    """
-    images = []
-    if isinstance(source, str):  # Case 1: Directory path
-        print(f"Loading images from directory: {source}")
-        for filename in os.listdir(source):
-            if filename.endswith(".npy"):
-                file_path = os.path.join(source, filename)
-                image = np.load(file_path)
-                preprocess_image = preprocess_numpy_image(model, image)
-                images.append(preprocess_image)
+# def load_numpy_from_directory(model ,source):
+#     """
+#     Load images from a given directory. Assumes images are stored as .npy files.
+#     """
+#     images = []
+#     if isinstance(source, str):  # Case 1: Directory path
+#         print(f"Loading images from directory: {source}")
+#         for filename in os.listdir(source):
+#             if filename.endswith(".npy"):
+#                 file_path = os.path.join(source, filename)
+#                 image = np.load(file_path)
+#                 preprocess_image = preprocess_numpy_image(model, image)
+#                 images.append(preprocess_image)
 
-    elif isinstance(source, list):  # Case 2: List of UploadFile objects
-        print(f"Loading images from user-provided files: {len(source)} files")
-        for upload_file in source:
-            if upload_file.filename.endswith(".npy"):
-                # Read the file content
-                file_content = upload_file.file.read()
-                # Convert the content to a NumPy array
-                image = np.load(io.BytesIO(file_content))
-                preprocess_image = preprocess_numpy_image(model, image)
-                images.append(preprocess_image)
+#     elif isinstance(source, list):  # Case 2: List of UploadFile objects
+#         print(f"Loading images from user-provided files: {len(source)} files")
+#         for upload_file in source:
+#             if upload_file.filename.endswith(".npy"):
+#                 # Read the file content
+#                 file_content = upload_file.file.read()
+#                 # Convert the content to a NumPy array
+#                 image = np.load(io.BytesIO(file_content))
+#                 preprocess_image = preprocess_numpy_image(model, image)
+#                 images.append(preprocess_image)
 
-    else:
-        raise ValueError("Source must be a directory path (str) or a list of UploadFile objects.")
+#     else:
+#         raise ValueError("Source must be a directory path (str) or a list of UploadFile objects.")
 
-    return images
+#     return images
 
-def load_raw_image(file_path):
-    """
-    Load a raw adversarial example that was saved as a numpy array
-    """
-    # Load the numpy array and convert back to tensor
-    img_example = np.load(file_path)
-    return tf.convert_to_tensor(img_example, dtype=tf.float32)
+
+## not used, original local files implementation ##
+# def load_raw_image(file_path):
+#     """
+#     Load a raw adversarial example that was saved as a numpy array
+#     """
+#     # Load the numpy array and convert back to tensor
+#     img_example = np.load(file_path)
+#     return tf.convert_to_tensor(img_example, dtype=tf.float32)
 
 
 def update_current_model(user, model_id, graph_type, model_filename, dataset, min_confidence, top_k):
