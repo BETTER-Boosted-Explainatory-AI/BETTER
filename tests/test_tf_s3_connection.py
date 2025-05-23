@@ -1,21 +1,60 @@
-# import os
-# import sys
-# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# import tensorflow_io as tfio
-# import tensorflow as tf
-# from services.models_service import _load_model
-# from utilss.enums.datasets_enum import DatasetsEnum
+#!/usr/bin/env python
+# test_load_model.py
 
-# dataset_cfg = {
-#     "top_k": 4,
-#     "min_confidence": 0.8,
-#     "dataset": DatasetsEnum.CIFAR100.value,
-# }
+from dotenv import load_dotenv
+load_dotenv()   # loads AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION…
 
-# model_key = (
-#     "92457494-3061-700c-8e14-f1ab249392d7/"
-#     "33b8e5d1-c7d2-4c35-8a29-5764e8dd86fd/"
-#     "cifar100_resnet.keras"
-# )                       
+import os
+import boto3
+import tensorflow as tf
 
-# m = _load_model(DatasetsEnum.CIFAR100.value, model_key, dataset_cfg)
+# 1. S3 URI of your .keras file
+s3_uri = (
+    "s3://better-xai-users/"
+    "92457494-3061-700c-8e14-f1ab249392d7/"
+    "33b8e5d1-c7d2-4c35-8a29-5764e8dd86fd/"
+    "cifar100_resnet.keras"
+)
+
+# 2. Quick boto3 head_object check
+bucket = "better-xai-users"
+key = (
+    "92457494-3061-700c-8e14-f1ab249392d7/"
+    "33b8e5d1-c7d2-4c35-8a29-5764e8dd86fd/"
+    "cifar100_resnet.keras"
+)
+s3 = boto3.client("s3")
+try:
+    s3.head_object(Bucket=bucket, Key=key)
+    print("✅ S3 object exists")
+except Exception as e:
+    print("❌ S3 head_object failed:", e)
+    exit(1)
+
+# 3. Check TensorFlow’s file API sees it
+if tf.io.gfile.exists(s3_uri):
+    print("✅ tf.io.gfile.exists sees the file")
+else:
+    print("❌ tf.io.gfile.exists DOES NOT see the file — check your AWS creds / region")
+    exit(1)
+
+# # 4. Load the model and print its architecture
+# try:
+#     model = tf.keras.models.load_model(s3_uri)
+#     print("\n✅ Model loaded! Summary:\n")
+#     model.summary()
+# except Exception as e:
+#     print("❌ Failed to load model with tf.keras.models.load_model:", e)
+#     exit(1)
+
+# # 5. (Optional) Use your own helper to load it
+# from services.models_service import _load_model, _get_dataset_config
+# dataset_str = "cifar100"
+# cfg = _get_dataset_config(dataset_str)
+# try:
+#     wrapped_model = _load_model(dataset_str, key, cfg)
+#     print("\n✅ _load_model helper succeeded. Wrapped model summary:\n")
+#     wrapped_model.model.summary()
+# except Exception as e:
+#     print("❌ _load_model helper failed:", e)
+#     exit(1)
