@@ -44,7 +44,7 @@ class User:
 
         with open(self.current_model_json, "w") as file:
             json.dump({}, file, indent=4)
-
+        
 
     def load_models(self):
         if os.path.exists(self.models_json_path):

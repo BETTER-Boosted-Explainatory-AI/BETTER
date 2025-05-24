@@ -8,19 +8,21 @@ import numpy as np
 import tensorflow as tf
 from utilss.photos_utils import preprocess_numpy_image
 from utilss.classes.user import User
+from fastapi import HTTPException
+from datetime import datetime
+
+
 
 def upload_model(
     current_user: User,
     model_id: str,
     model_file: UploadFile,
-    dataset: str,
     graph_type: str,
-    min_confidence: float,
-    top_k: int,
 ) -> str:
-   
+
     filename = os.path.basename(model_file.filename)
-    models_json_path = os.path.join(current_user.get_user_folder(), "models.json")
+    models_json_path = os.path.join(
+        current_user.get_user_folder(), "models.json")
     if os.path.exists(models_json_path):
         with open(models_json_path, "r") as json_file:
             models_data = json.load(json_file)
@@ -31,22 +33,11 @@ def upload_model(
         model_id_md = check_models_metadata(models_data, model_id, graph_type)
     except ValueError as e:
         print(str(e))
-        raise 
+        raise
 
     model_subfolder = os.path.join(current_user.get_user_folder(), model_id_md)
     os.makedirs(model_subfolder, exist_ok=True)
-    
-    save_model_metadata(
-        models_data,
-        models_json_path,
-        model_id_md,
-        model_file.filename,
-        dataset,
-        graph_type,
-        min_confidence,
-        top_k,
-    )
-    
+
     model_path = f'{model_subfolder}/{filename}'
     print(f"Saving model to {model_path}")
     with open(model_path, "wb") as f:
@@ -54,8 +45,44 @@ def upload_model(
 
     return model_path, model_id_md
 
+
+def _update_model_metadata(current_user, model_id, model_filename, dataset, graph_type, min_confidence, top_k, job_id, job_status="submitted"):
+    models_json_path = os.path.join(
+        current_user.get_user_folder(), "models.json")
+    if os.path.exists(models_json_path):
+        with open(models_json_path, "r") as json_file:
+            models_data = json.load(json_file)
+    else:
+        models_data = []
+          
+    if model_filename is None:
+        for model in models_data:
+            if model.get("model_id") == model_id:
+                model_filename = model.get("file_name")
+                break
+
+    job_metadata = {
+        "job_id": job_id,
+        "job_graph_type": graph_type,
+        "job_status": job_status,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    return save_model_metadata(
+        models_data,
+        models_json_path,
+        model_id,
+        model_filename,
+        dataset,
+        graph_type,
+        min_confidence,
+        top_k,
+        job_metadata
+    )
+
+
 def save_model_metadata(
-    models_data, models_json_path, model_id, model_filename, dataset, graph_type, min_confidence, top_k,
+    models_data, models_json_path, model_id, model_filename, dataset, graph_type, min_confidence, top_k, job_metadata
 ) -> None:
     # Prepare model metadata
     model_metadata = {
@@ -64,7 +91,9 @@ def save_model_metadata(
         "dataset": dataset,
         "graph_type": [graph_type],
         "min_confidence": min_confidence,
-        "top_k": top_k
+        "top_k": top_k,
+        "batch_jobs": [job_metadata] if job_metadata else []
+
     }
 
     # Check if the model_id already exists
@@ -81,9 +110,15 @@ def save_model_metadata(
                     f"Adding '{graph_type}' to graph_type for file '{model_filename}'."
                 )
             else:
-                print(
-                    f"Graph type '{graph_type}' already exists for file '{model_filename}'. Skipping."
+                raise ValueError(
+                    f"Graph type '{graph_type}' for model ID '{model_id}' already exists."
                 )
+
+            if "batch_jobs" not in model or not isinstance(model["batch_jobs"], list):
+                model["batch_jobs"] = []
+
+            if job_metadata:
+                model["batch_jobs"].append(job_metadata)
             break
     else:
         # If no matching model_id is found, append new metadata
@@ -95,9 +130,11 @@ def save_model_metadata(
     with open(models_json_path, "w") as json_file:
         json.dump(models_data, json_file, indent=4)
 
+    return True
+
 
 def check_models_metadata(models_data, model_id, graph_type):
-    for model in models_data:  
+    for model in models_data:
         if model.get("model_id") == model_id:
             if graph_type in model.get("graph_type", []):
                 raise ValueError(
@@ -105,8 +142,19 @@ def check_models_metadata(models_data, model_id, graph_type):
                 )
             return model_id
     return str(uuid.uuid4())
-        
-def load_numpy_from_directory(model ,source):
+
+
+def user_has_job_running(current_user):
+    current_user.load_models()
+    for model in current_user.models:
+        batch_jobs = model.get("batch_jobs", [])
+        for job in batch_jobs:
+            if job.get("job_status") not in ("succeeded", "failed"):
+                return True
+    return False
+
+
+def load_numpy_from_directory(model, source):
     """
     Load images from a given directory. Assumes images are stored as .npy files.
     """
@@ -132,9 +180,11 @@ def load_numpy_from_directory(model ,source):
                 images.append(preprocess_image)
 
     else:
-        raise ValueError("Source must be a directory path (str) or a list of UploadFile objects.")
+        raise ValueError(
+            "Source must be a directory path (str) or a list of UploadFile objects.")
 
     return images
+
 
 def load_raw_image(file_path):
     """

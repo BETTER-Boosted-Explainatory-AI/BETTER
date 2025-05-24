@@ -1,7 +1,8 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.applications.resnet50 import preprocess_input
-from globalvars import cifar100_labels
+from data.datasets.cifar100_info import CIFAR100_INFO
+
 
 class Cifar100BatchPredictor:
     def __init__(self, model, batch_size=32):
@@ -23,7 +24,7 @@ class Cifar100BatchPredictor:
         for pred in batch_preds:
             print(f"Prediction: {pred}")
             top_indices = pred.argsort()[-top:][::-1]
-            batch_results.append([(i, cifar100_labels[i], pred[i]) for i in top_indices])
+            batch_results.append([(i, CIFAR100_INFO["labels"][i], pred[i]) for i in top_indices])
         
         return batch_results    # Returns a list of results for each image in the batch
     
