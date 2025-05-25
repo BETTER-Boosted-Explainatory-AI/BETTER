@@ -6,7 +6,10 @@ from services.dataset_service import get_dataset_labels
 from utilss.s3_connector.s3_dataset_utils import load_dataset_numpy
 from utilss.files_utils import preprocess_numpy_image
 import tensorflow as tf
-import os
+import os, boto3, io, tempfile
+from dotenv import load_dotenv
+load_dotenv() 
+from utilss.s3_utils import get_users_s3_client 
 
 class AdversarialDataset:
     # def __init__(self, Z_file, clean_images, adversarial_images, model_filename, dataset):
@@ -44,13 +47,40 @@ class AdversarialDataset:
         self.Z_matrix = Z_file
         self.dataset = dataset
         
-        # Load the model
+        # Initialize S3 client
+        s3_client = get_users_s3_client()
+        s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
+        if not s3_bucket:
+            raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
+        
+        # Load the model from S3
         try:
-            if not os.path.exists(model_filename):
-                raise FileNotFoundError(f"Model file '{model_filename}' not found.")
+            # Check if model_filename is a full S3 URI or just a path
+            if model_filename.startswith('s3://'):
+                parts = model_filename.replace('s3://', '').split('/', 1)
+                bucket = parts[0]
+                key = parts[1]
+            else:
+                # Assume it's a relative path in the default bucket
+                bucket = s3_bucket
+                key = model_filename
             
-            self.model = tf.keras.models.load_model(model_filename)
-            print(f"Model loaded successfully from '{model_filename}'.")
+            print(f"Loading model from S3: {bucket}/{key}")
+            
+            # Check if the file exists in S3
+            try:
+                s3_client.head_object(Bucket=bucket, Key=key)
+                print(f"Model file exists in S3: {bucket}/{key}")
+            except Exception as e:
+                raise FileNotFoundError(f"Model file '{bucket}/{key}' not found in S3: {str(e)}")
+            
+            # Load model directly from memory
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_model_path = os.path.join(temp_dir, 'model.keras')
+                s3_client.download_file(bucket, key, temp_model_path)
+                self.model = tf.keras.models.load_model(temp_model_path)
+                print(f"Model loaded successfully from S3: '{bucket}/{key}'.")
+                
         except Exception as e:
             raise ValueError(f"Error loading model from '{model_filename}': {e}")
         
@@ -92,7 +122,9 @@ class AdversarialDataset:
         if self.labels is None:
             raise ValueError(f"Info file for the dataset {dataset} not found.")      
 
+        # Create ScoreCalculator with S3 support
         self.score_calculator = ScoreCalculator(self.Z_matrix, self.labels)
+
 
     def _process_s3_data_with_model(self, s3_data):
         """

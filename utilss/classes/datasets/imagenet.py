@@ -10,16 +10,20 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from utilss.s3_connector.s3_dataset_loader import S3DatasetLoader
 from utilss.s3_connector.s3_imagenet_loader import S3ImagenetLoader
 
+import logging
+logger = logging.getLogger(__name__)
 
 class ImageNet(Dataset):
     def __init__(self):
         from services.dataset_service import _get_dataset_config
-        super().__init__(_get_dataset_config("imagenet")["dataset"], _get_dataset_config("imagenet")["threshold"], _get_dataset_config("imagenet")["infinity"], _get_dataset_config("imagenet")["labels"])
+        config = _get_dataset_config("imagenet")
+
+        super().__init__(config["dataset"], config["threshold"], config["infinity"], config["directory_labels"])
         self.x_train = None
         self.y_train = None
         self.x_test = None
         self.y_test = None
-        self.directory_labels = None
+        self.directory_labels = config["directory_labels"]
         
     # def load_mini_imagenet(self, dataset_path, img_size=(224, 224)):
     #     """
@@ -281,3 +285,138 @@ class ImageNet(Dataset):
     
     def get_label_readable_name(self, label):
         return self.directory_to_labels_conversion(label)
+    
+        
+    def load_from_s3(self, s3_client, bucket, prefix):
+        """
+        Load ImageNet dataset from S3 directly using the provided S3 client.
+        """
+        logger.info(f"Loading ImageNet from S3: {bucket}/{prefix}")
+        
+        # Ensure we have the directory_labels loaded
+        from services.dataset_service import _get_dataset_config
+        config = _get_dataset_config("imagenet")
+        
+        # Load required attributes if not already loaded
+        if not hasattr(self, 'directory_labels') or not self.directory_labels:
+            self.directory_labels = config["directory_labels"]
+        
+        # Ensure prefix ends with / for proper directory listing
+        if not prefix.endswith('/'):
+            prefix = prefix + '/'
+        
+        logger.info(f"Using prefix: {prefix}")
+        
+        # List all class folders (n01440764/, n01443537/, etc.)
+        response = s3_client.list_objects_v2(
+            Bucket=bucket,
+            Prefix=prefix,
+            Delimiter='/'
+        )
+        
+        class_folders = []
+        if 'CommonPrefixes' in response:
+            class_folders = [p['Prefix'] for p in response['CommonPrefixes']]
+        
+        if not class_folders:
+            logger.error(f"No class folders found at {prefix} in bucket {bucket}")
+            raise ValueError(f"No class folders found at {prefix} in bucket {bucket}")
+        
+        logger.info(f"Found {len(class_folders)} class folders")
+        
+        # Initialize data lists
+        x_train = []
+        y_train = []
+        
+        # Process each class folder (increased limits for real use)
+        max_classes = 20  # ✅ INCREASED: Process more classes
+        max_images_per_class = 50  # ✅ INCREASED: More images per class
+        
+        processed_classes = 0
+        for folder in class_folders:
+            if processed_classes >= max_classes:
+                break
+                
+            # Extract folder name (e.g., 'n01440764' from 'imagenet/train/n01440764/')
+            folder_name = folder.rstrip('/').split('/')[-1]
+            
+            # Skip non-class folders like 'LOC_synset_mapping.txt' directory
+            if not folder_name.startswith('n') or len(folder_name) < 5:
+                continue
+                
+            # Only process folders that exist in our directory_labels
+            if folder_name not in self.directory_labels:
+                logger.debug(f"Skipping folder {folder_name} - not in directory_labels")
+                continue
+            
+            logger.info(f"Processing class folder: {folder_name}")
+            
+            # List images in this class folder
+            try:
+                images_response = s3_client.list_objects_v2(
+                    Bucket=bucket,
+                    Prefix=folder,
+                    MaxKeys=max_images_per_class
+                )
+                
+                if 'Contents' not in images_response:
+                    logger.warning(f"No images found in {folder}")
+                    continue
+                
+                images_processed = 0
+                # Process each image
+                for item in images_response['Contents']:
+                    if images_processed >= max_images_per_class:
+                        break
+                        
+                    if not item['Key'].lower().endswith(('.jpeg', '.jpg', '.png')):
+                        continue
+                    
+                    # Download and process image
+                    try:
+                        img_response = s3_client.get_object(Bucket=bucket, Key=item['Key'])
+                        img_data = img_response['Body'].read()
+                        
+                        from PIL import Image
+                        import io
+                        img = Image.open(io.BytesIO(img_data))
+                        if img.mode != 'RGB':
+                            img = img.convert('RGB')
+                        img = img.resize((224, 224)) 
+                        img_array = np.array(img) 
+                        
+                        # Ensure correct shape
+                        if len(img_array.shape) == 3 and img_array.shape[2] == 3:
+                            x_train.append(img_array)
+                            y_train.append(folder_name)  # Use folder name (e.g., 'n01440764')
+                            images_processed += 1
+                            
+                    except Exception as e:
+                        logger.warning(f"Error processing image {item['Key']}: {str(e)}")
+                        continue
+                
+                if images_processed > 0:
+                    logger.info(f"Loaded {images_processed} images from class {folder_name}")
+                    processed_classes += 1
+                    
+            except Exception as e:
+                logger.warning(f"Error listing images in {folder}: {str(e)}")
+                continue
+        
+        # Convert lists to numpy arrays
+        if not x_train:
+            logger.error("No images were processed successfully")
+            raise ValueError("Failed to load any images from S3")
+        
+        x_train = np.array(x_train)
+        y_train = np.array(y_train)
+        
+        # Store in instance variables
+        self.x_train = x_train
+        self.y_train = y_train
+        
+        logger.info(f"Successfully loaded ImageNet: {x_train.shape} images, {len(y_train)} labels")
+        logger.info(f"Processed {processed_classes} classes")
+        logger.info(f"Sample labels: {y_train[:5]}")
+        
+        return x_train, y_train

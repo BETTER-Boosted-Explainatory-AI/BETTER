@@ -17,6 +17,8 @@ class GraphBuilder:
         return pred_prob
     
     def update_graph(self, graph, source_label, target_label, probability, image_id, dataset_class):
+        
+
         if source_label == target_label:
             return None
  

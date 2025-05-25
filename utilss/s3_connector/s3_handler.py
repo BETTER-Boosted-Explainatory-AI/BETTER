@@ -12,8 +12,8 @@ class S3Handler:
     
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, bucket_name=None):
         """Initialize S3 handler with AWS credentials."""
-        self.aws_access_key_id = aws_access_key_id or os.environ.get('AWS_ACCESS_KEY_ID')
-        self.aws_secret_access_key = aws_secret_access_key or os.environ.get('AWS_SECRET_ACCESS_KEY')
+        self.aws_access_key_id = aws_access_key_id or os.environ.get('AWS_DATASETS_ACCESS_KEY_ID')
+        self.aws_secret_access_key = aws_secret_access_key or os.environ.get('AWS_DATASETS_SECRET_ACCESS_KEY')
         self.bucket_name = bucket_name or os.environ.get('S3_BUCKET_NAME')
         
         if not self.aws_access_key_id or not self.aws_secret_access_key:

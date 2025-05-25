@@ -17,16 +17,6 @@ class S3DatasetLoader:
         self.cifar_loader = S3CifarLoader(s3_handler=self.s3_handler)
         self.imagenet_loader = S3ImagenetLoader(s3_handler=self.s3_handler)
     
-    def load_from_s3(self, dataset_name):
-        """List files for the dataset in S3"""
-        if dataset_name == DatasetsEnum.CIFAR100.value:
-            folder_prefix = "cifar100/"
-        elif dataset_name == DatasetsEnum.IMAGENET.value:
-            folder_prefix = "imagenet/"
-        else:
-            raise ValueError(f"Unsupported dataset for S3 loading: {dataset_name}")
-        
-        return self.s3_handler.list_objects(folder_prefix)
     
     def load_folder(self, dataset_name, folder_type):
         """List files in a specific dataset folder"""
@@ -76,6 +66,7 @@ class S3DatasetLoader:
             if files:
                 return files
             
+            print("IN DATASET LOADER")
             # If no files found, try looking in subdirectories
             all_dataset_files = self.load_from_s3(dataset_name)
             split_prefix = f"{dataset_name}/{split_type}/"

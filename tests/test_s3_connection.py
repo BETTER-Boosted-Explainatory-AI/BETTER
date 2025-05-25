@@ -65,8 +65,8 @@ def check_environment():
     print_subheader("Checking Environment Variables")
     
     required_vars = [
-        'AWS_ACCESS_KEY_ID', 
-        'AWS_SECRET_ACCESS_KEY', 
+        'AWS_DATASETS_ACCESS_KEY_ID', 
+        'AWS_DATASETS_SECRET_ACCESS_KEY', 
         'S3_BUCKET_NAME'
     ]
     
