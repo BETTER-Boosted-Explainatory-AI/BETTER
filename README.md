@@ -19,6 +19,8 @@ d----- users
 |       rw---- users.json
 |       d----- uid
 |               rw---- models.json
+|               rw---- current_model.json
+|               rw---- models_status.json
 |               d----- model_id
 |                       d----- similarity
 |                               rw---- dendrogram.json
