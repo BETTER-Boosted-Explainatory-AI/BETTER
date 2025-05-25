@@ -4,7 +4,7 @@ from data.datasets.imagenet_info import IMAGENET_INFO
 from utilss.classes.datasets.dataset_factory import DatasetFactory
 from utilss.enums.datasets_enum import DatasetsEnum
 import shutil
-from utilss.s3_datasets_connector.s3_dataset_loader import S3DatasetLoader
+# from utilss.s3_datasets_connector.s3_dataset_loader import S3DatasetLoader
 
 
 def _get_dataset_config(dataset_str: str) -> Dict[str, Any]:
