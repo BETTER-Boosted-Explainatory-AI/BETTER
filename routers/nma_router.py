@@ -52,7 +52,7 @@ def _handle_nma_submission(
             current_user, model_id, model_file, graph_type)
         model_id = model_id_md
     # job_id = submit_nma_batch_job(user_id, model_id, dataset, graph_type, min_confidence, top_k)    
-    job_id = submit_nma_batch_job(current_user.user_id)
+    job_id = submit_nma_batch_job(current_user.user_id, model_id, graph_type)
     print(f"Submitted NMA job with ID: {job_id}")
     metadata_result = _update_model_metadata(
         current_user, model_id, model_filename, dataset, graph_type, min_confidence, top_k, job_id)
