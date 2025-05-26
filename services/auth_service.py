@@ -5,6 +5,7 @@ import os
 import boto3
 import requests
 from jose import jwt, JWTError
+from fastapi import Request
 
 cognito_client_secret = os.getenv("COGNITO_CLIENT_SECRET")
 cognito_client_id = os.getenv("COGNITO_CLIENT_ID")
@@ -65,6 +66,24 @@ def confirm_user_signup(email: str, confirmation_code: str):
         Username=email,
         ConfirmationCode=confirmation_code,
         SecretHash=secret_hash
+    )
+    return response
+
+
+def refresh_session(request: Request):
+    """
+    Refresh the user's session using the refresh token.
+    """
+    # secret_hash = get_secret_hash(email, cognito_client_id, cognito_client_secret)
+    refresh_token = request.cookies.get("refresh_token")
+
+    response = incognito_client.initiate_auth(
+        ClientId=cognito_client_id,
+        AuthFlow='REFRESH_TOKEN_AUTH',
+        AuthParameters={
+            'REFRESH_TOKEN': refresh_token,
+            # 'SECRET_HASH': secret_hash
+        }
     )
     return response
 
