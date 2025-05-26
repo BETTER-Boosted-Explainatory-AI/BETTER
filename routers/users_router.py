@@ -80,7 +80,7 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
             secure=False,      # Only for local testing, set to True in production!
             # secure=True,        # Only sent over HTTPS
             samesite="lax",     # Adjust as needed
-            max_age=30        # 1 hour, adjust as needed
+            max_age=900        # 1 hour, adjust as needed
         )
 
         response.set_cookie(
@@ -95,6 +95,16 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
 
         user = get_current_session_user(id_token)
         user_dict = {"id":user.user_id, "email": user.email}
+
+        response.set_cookie(
+            key="user_id",
+            value=user.user_id,
+            httponly=True,      # Prevents JS access
+            secure=False,      # Only for local testing, set to True in production!
+            # secure=True,        # Only sent over HTTPS
+            samesite="lax",     # Adjust as needed
+            max_age=7*24*3600      # 7 days, adjust as needed
+        )
 
         return {"message": "Login successful", "user": user_dict}
     except ClientError as e:
@@ -135,7 +145,11 @@ def refresh_user_session(request : Request, response : Response):
     Refresh the user's session by generating a new session token.
     """
     try:
-        refresh_result = refresh_session(request)
+        user_id = request.cookies.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="user_id cookie not found")
+
+        refresh_result = refresh_session(request, user_id)
         if not refresh_result:
             raise HTTPException(status_code=401, detail="Failed to refresh session")
         auth_header = refresh_result.get("AuthenticationResult")
@@ -149,7 +163,7 @@ def refresh_user_session(request : Request, response : Response):
             httponly=True,
             secure=False,  # Set to True in production!
             samesite="lax",
-            max_age=3600
+            max_age=900
         )
 
         if refresh_token:
@@ -159,10 +173,10 @@ def refresh_user_session(request : Request, response : Response):
                 httponly=True,
                 secure=False,  # Set to True in production!
                 samesite="lax",
-                max_age=3600
+                max_age=7*24*3600  # 7 days
             )
         
-        return {"message": "Session refreshed successfully", "session_token": id_token}
+        return {"message": "Session refreshed successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
@@ -180,4 +194,7 @@ def logout_user(response: Response):
     Log out the user by clearing the session cookie.
     """
     response.delete_cookie(key="session_token")
+    response.delete_cookie(key="user_id")
+    response.delete_cookie(key="refresh_token")
+
     return {"message": "Logout successful"}

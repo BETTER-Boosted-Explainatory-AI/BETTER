@@ -14,6 +14,9 @@ cognito_user_pool_id = os.getenv("COGNITO_USER_POOL_ID")
 incognito_client = boto3.client('cognito-idp', region_name=aws_region)
 
 def get_secret_hash(username: str, client_id: str, client_secret: str) -> str:
+    print(f"COGNITO_CLIENT_ID: {cognito_client_id}")
+    print(f"COGNITO_CLIENT_SECRET: {cognito_client_secret[:4]}***")
+    print(f"Username: {username}")
     message = username + client_id
     dig = hmac.new(
         client_secret.encode('utf-8'),
@@ -70,11 +73,12 @@ def confirm_user_signup(email: str, confirmation_code: str):
     return response
 
 
-def refresh_session(request: Request):
+def refresh_session(request: Request, id: str):
     """
     Refresh the user's session using the refresh token.
     """
-    # secret_hash = get_secret_hash(email, cognito_client_id, cognito_client_secret)
+
+    secret_hash = get_secret_hash(id, cognito_client_id, cognito_client_secret)
     refresh_token = request.cookies.get("refresh_token")
 
     response = incognito_client.initiate_auth(
@@ -82,7 +86,9 @@ def refresh_session(request: Request):
         AuthFlow='REFRESH_TOKEN_AUTH',
         AuthParameters={
             'REFRESH_TOKEN': refresh_token,
-            # 'SECRET_HASH': secret_hash
+            'SECRET_HASH': secret_hash,
+            'USERNAME': id,
+            'CLIENT_ID': cognito_client_id
         }
     )
     return response
