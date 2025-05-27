@@ -4,10 +4,6 @@ from typing import List, Tuple
 class DetectorResponse(BaseModel):
     result: str
 
-# class PredictionResult(BaseModel):
-#     label: str
-#     probability: float
-
 class AnalysisResult(BaseModel):
     original_image: str  # Base64-encoded string of the original image
     original_predicition: List[Tuple[str, float]] 
