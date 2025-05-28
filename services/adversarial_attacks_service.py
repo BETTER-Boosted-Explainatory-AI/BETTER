@@ -45,6 +45,23 @@ def create_logistic_regression_detector(model_id, graph_type, clean_images, adve
 
     return adversarial_detector
 
+def does_detector_exist_(model_id, graph_type, user):
+    model_info = get_user_models_info(user, model_id)
+
+    if model_info is None:
+        raise ValueError(f"Model ID {model_id} not found in models.json")
+    else:
+        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
+        model_graph_folder = model_files["model_graph_folder"]
+        adversarial_detector = AdversarialDetector(model_graph_folder)
+        if adversarial_detector.does_detector_exist():
+            logger.info("Adversarial detector already exists.")
+            return True
+        else:
+            logger.info("Adversarial detector does not exist.")
+            return False
+
+
 def detect_adversarial_image(model_id, graph_type, image, user):
     """
     Detect if an image is adversarial using the trained logistic regression detector.
@@ -96,10 +113,22 @@ def detect_adversarial_image(model_id, graph_type, image, user):
     # Use the detector to classify the image
     feature = [[score]]  # Wrap the score in a 2D array
     label = detector.predict(feature)[0]  # Predict the label (0 = clean, 1 = adversarial)
+    detection_result = 'Adversarial' if label == 1 else 'Clean'
 
     logger.info(f"Adversarial score: {score}, Label: {label}")
+
+    pil_image = Image.open(io.BytesIO(image)).convert("RGB")
+    image_array = np.array(pil_image)
+    image_base64 = encode_image_to_base64(image_array)
+
+    image_preprocessed = preprocess_loaded_image(model, image)
+    image_predictions = get_top_k_predictions(model, image_preprocessed, labels)
     
-    return ('Adversarial' if label == 1 else 'Clean')
+    return {
+        "image": image_base64,
+        "predictions": image_predictions,
+        "result": detection_result,
+        }
 
 def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, **kwargs):
 
@@ -131,11 +160,23 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, *
         adversarial_image = adversarial_attack.attack(model, preprocessed_image)
 
         pil_image = Image.open(io.BytesIO(image)).convert("RGB")
+        original_size = pil_image.size
         image_array = np.array(pil_image)
         original_image_base64 = encode_image_to_base64(image_array)
         if attack_type != "deepfool":
             adversarial_image = deprocess_resnet_image(adversarial_image)
-        adversarial_image_base64 = encode_image_to_base64(adversarial_image)
+        else:
+            # DeepFool output is [0,1] float, scale to [0,255]
+            adversarial_image = np.clip(adversarial_image * 255.0, 0, 255).astype(np.uint8)
+        # Convert adversarial_image (numpy array) to PIL Image
+        adv_pil = Image.fromarray(adversarial_image.astype(np.uint8))
+
+        # Resize back to original size
+        adv_resized = adv_pil.resize(original_size, Image.Resampling.BILINEAR)
+
+        # If you need it as a numpy array again:
+        adv_resized_np = np.array(adv_resized)
+        adversarial_image_base64 = encode_image_to_base64(adv_resized_np)
 
         original_image_preprocessed = preprocess_loaded_image(model, image)
         adversarial_image_preprocessed = preprocess_image(model, adversarial_image)

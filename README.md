@@ -19,6 +19,8 @@ d----- users
 |       rw---- users.json
 |       d----- uid
 |               rw---- models.json
+|               rw---- current_model.json
+|               rw---- models_status.json
 |               d----- model_id
 |                       d----- similarity
 |                               rw---- dendrogram.json
@@ -44,7 +46,6 @@ d----- users
 
 ```bash
 {
-    "current_user": "uuid",
     "model_file": "file.keras",
     "dataset": "imagenet",
     "graph_type": "similarity",
@@ -66,7 +67,6 @@ d----- users
 
 ```bash
 {
-    "user_id": "uuid",
     "model_id": "uuid",
     "graph_type":  "count",
     "selected_labels": ["Persian_cat", "tabby", "Madagascar_cat", "Egyptian_cat", "pug", "boxer", "Norwich_terrier", "kuvasz", "minivan"]
@@ -80,7 +80,6 @@ d----- users
 
 ```bash
 {
-    "user_id": "uuid",
     "model_id": "uuid",
     "graph_type":  "count",
     "selected_labels": ["Persian_cat", "tabby", "Madagascar_cat", "Egyptian_cat", "pug", "boxer", "Norwich_terrier", "kuvasz", "minivan"],
@@ -96,7 +95,6 @@ d----- users
 
 ```bash
 {
-    "user_id": "uuid",
     "model_id": "uuid",
     "graph_type":  "count",
     "source_labels": ["Persian_cat", "tabby", "Madagascar_cat", "Egyptian_cat"],
@@ -115,4 +113,53 @@ curl -X POST "http://127.0.0.1:8000/query" \
 -F "dataset=cifar100" \
 -F "image=@path/to/your/image.jpg" \
 -F "dendrogram_filename=edges_dissimilarity_cifar100"
+```
+
+### Adversarial
+## Adversarial modal generation
+- **Endpoint**: `http://127.0.0.1:8000/adversarial/generate`
+- **Methods**: `POST`
+
+> **Note:** The `clean_images` and `adversarial_images_images` fields are optional. You can include zero, one, or multiple files for each, for better results advised to provide at least 40-60 examples each.
+
+**With images:**
+```bash
+curl -X POST "http://127.0.0.1:8000/adversarial/generate" \
+-F "current_model_id=uuid" \
+-F "graph_type=similarity" \
+-F "clean_images=@img1.npy" \
+-F "clean_images=@img2.npy" \
+-F "adversarial_images_images=@adv1.npy" \
+-F "adversarial_images_images=@adv2.npy"
+```
+
+**Without images:**
+```bash
+curl -X POST "http://127.0.0.1:8000/adversarial/generate" \
+-F "current_model_id=uuid" \
+-F "graph_type=similarity"
+```
+
+## Adversarial image detection
+- **Endpoint**: `http://127.0.0.1:8000/adversarial/detect`
+- **Methods**: `POST`
+
+> **Need to have generated modal for this**
+
+```bash
+curl -X POST "http://127.0.0.1:8000/adversarial/detect" \
+-F "current_model_id=uuid" \
+-F "graph_type=similarity" \
+-F "image=@path/to/your/image.jpg" 
+```
+
+## Modal Analysis
+- **Endpoint**: `http://127.0.0.1:8000/adversarial/analyze`
+- **Methods**: `POST`
+```bash
+curl -X POST "http://127.0.0.1:8000/adversarial/detect" \
+-F "current_model_id=uuid" \
+-F "graph_type=similarity" \
+-F "image=@path/to/your/image.jpg" 
+-F "attack_type=pgd"
 ```

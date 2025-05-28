@@ -183,12 +183,14 @@ def get_user_models_info(user, model_id):
 def get_model_info(models_data, model_id):
     for model in models_data:
         if str(model["model_id"]) == str(model_id):
-            return {
-                "model_id": model["model_id"],
-                "file_name": model["file_name"],
-                "dataset": model["dataset"],
-                "graph_type": model["graph_type"],
-            }
+            return model
+            # return {
+            #     "model_id": model["model_id"],
+            #     "file_name": model["file_name"],
+            #     "dataset": model["dataset"],
+            #     "graph_type": model["graph_type"],
+            #     "batch_jobs": model.get("batch_jobs", []),
+            # }
             
     # If no match is found, return None
     logger.debug(f"Model ID {model_id} not found in models data.")
