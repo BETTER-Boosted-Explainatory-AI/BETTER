@@ -15,6 +15,18 @@ def _get_dataset_config(dataset_str: str) -> Dict[str, Any]:
     
     return s3_loader.get_dataset_info(dataset_str)
 
+def _load_dataset(dataset_str: str):
+    """
+    Return a Dataset object populated directly from S3.
+    """
+    dataset_config = _get_dataset_config(dataset_str)
+
+    dataset_name = dataset_config["dataset"]        # "cifar100" | "imagenet" | …
+    dataset = DatasetFactory.create_dataset(dataset_name)
+    dataset.load(dataset_name)       
+
+    return dataset
+
 # def _load_dataset(dataset_str: str):
 #     """
 #     Return a Dataset object populated directly from S3.

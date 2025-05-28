@@ -24,6 +24,8 @@ class ImageNet(Dataset):
         self.x_test = None
         self.y_test = None
         self.directory_labels = config["directory_labels"]
+        self.s3_loader = S3ImagenetLoader()
+        
         
     # def load_mini_imagenet(self, dataset_path, img_size=(224, 224)):
     #     """
@@ -102,19 +104,24 @@ class ImageNet(Dataset):
             Array of labels as folder names (e.g., 'n01440764')
         """
         # Initialize S3 loader if not already done
-        if self.s3_loader is None:
-            self.s3_loader = S3ImagenetLoader()
-        
+
         # Extract split type from dataset_path (e.g., 'imagenet/train' -> 'train')
         # Handle both local-style paths and S3-style paths
-        if dataset_path.startswith('data/datasets/'):
-            # Local-style path: 'data/datasets/imagenet/train'
-            parts = dataset_path.split('/')
-            split = parts[-1]  # 'train' or 'test'
-        else:
-            # S3-style path: 'imagenet/train'
-            split = dataset_path.split('/')[-1]
+        # if dataset_path.startswith('data/datasets/'):
+        #     # Local-style path: 'data/datasets/imagenet/train'
+        #     parts = dataset_path.split('/')
+        #     split = parts[-1]  # 'train' or 'test'
+        # else:
+        #     # S3-style path: 'imagenet/train'
+        #     split = dataset_path.split('/')[-1]
         
+        norm_path = dataset_path.replace("\\", "/")
+        if norm_path.startswith('data/datasets/'):
+            split = os.path.basename(dataset_path)  # This will give 'train' or 'test'
+        else:
+            split = os.path.basename(dataset_path)
+        print(f"Loading mini ImageNet for split: {split} from {dataset_path}")
+
         # Get all class names from S3
         if split == 'train':
             class_names = self.s3_loader.get_imagenet_classes()
@@ -174,7 +181,6 @@ class ImageNet(Dataset):
                         
             except Exception as e:
                 print(f"Error loading class {class_name}: {e}")
-                
             return class_images, class_labels
         
         # Load images with some parallelism for better performance
@@ -232,6 +238,8 @@ class ImageNet(Dataset):
         # self.x_test, self.y_test = self.load_mini_imagenet(test_path)
         
         self.directory_labels = _get_dataset_config("imagenet")["directory_labels"]
+        print(f"Loaded {len(self.x_train)} training images")
+
         print("loaded imagenet dataset")
 
 
@@ -258,6 +266,9 @@ class ImageNet(Dataset):
 
     def get_train_image_by_id(self, image_id):
         # Check if the image_id is within the range of training data
+        # if self.x_train is None or self.y_train is None:
+        #     self.load("imagenet")
+            
         if image_id < len(self.x_train):
             image = self.x_train[image_id]
             label = self.y_train[image_id]
