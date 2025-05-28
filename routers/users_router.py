@@ -77,8 +77,8 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
             key="session_token",
             value=id_token,
             httponly=True,      # Prevents JS access
-            secure=False,      # Only for local testing, set to True in production!
-            # secure=True,        # Only sent over HTTPS
+            # secure=False,      # Only for local testing, set to True in production!
+            secure=True,        # Only sent over HTTPS
             samesite="lax",     # Adjust as needed
             max_age=900        # 1 hour, adjust as needed
         )
@@ -87,8 +87,8 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
             key="refresh_token",
             value=refresh_token,
             httponly=True,      # Prevents JS access
-            secure=False,      # Only for local testing, set to True in production!
-            # secure=True,        # Only sent over HTTPS
+            # secure=False,      # Only for local testing, set to True in production!
+            secure=True,        # Only sent over HTTPS
             samesite="lax",     # Adjust as needed
             max_age=7*24*3600      # 7 days, adjust as needed
         )
@@ -100,8 +100,8 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
             key="user_id",
             value=user.user_id,
             httponly=True,      # Prevents JS access
-            secure=False,      # Only for local testing, set to True in production!
-            # secure=True,        # Only sent over HTTPS
+            # secure=False,      # Only for local testing, set to True in production!
+            secure=True,        # Only sent over HTTPS
             samesite="lax",     # Adjust as needed
             max_age=7*24*3600      # 7 days, adjust as needed
         )
@@ -161,7 +161,7 @@ def refresh_user_session(request : Request, response : Response):
             key="session_token",
             value=id_token,
             httponly=True,
-            secure=False,  # Set to True in production!
+            secure=True,  # Set to True in production!
             samesite="lax",
             max_age=900
         )
@@ -171,7 +171,7 @@ def refresh_user_session(request : Request, response : Response):
                 key="refresh_token",
                 value=refresh_token,
                 httponly=True,
-                secure=False,  # Set to True in production!
+                secure=True,  # Set to True in production!
                 samesite="lax",
                 max_age=7*24*3600  # 7 days
             )
