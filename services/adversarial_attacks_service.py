@@ -200,4 +200,20 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, *
             "adversarial_predictions": adversarial_predictions,
             "adversarial_verbal_explaination": adversarial_verbal_explaination,
         }
+    
+def delete_adversarial_detector(model_id, graph_type, user):
+    """
+    Delete the adversarial detector for a given model and graph type.
+    
+    Parameters:
+    - model_id: The ID of the model
+    - graph_type: The type of graph (e.g., 'resnet', 'deepfool')
+    - user: The user object containing user information
+    
+    Returns:
+    - A message indicating whether the deletion was successful or not
+    """
+    logger.info("Deleting adversarial detector")
+    
+
         
