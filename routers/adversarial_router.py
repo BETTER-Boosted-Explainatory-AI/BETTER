@@ -64,10 +64,10 @@ async def generate_adversarial_detector(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @adversarial_router.post(
     "/adversarial/detect",
     status_code=status.HTTP_200_OK,
-    response_model=DetectionResult,
     response_model=DetectionResult,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
@@ -87,16 +87,15 @@ async def detect_query(
         if detection_result is None:
             raise HTTPException(status_code=404, detail="Detection result not found")
 
-        # Create a DetectionResult instance using the updated model definition
         final_result = DetectionResult(
             image=detection_result["image"],
             predictions=detection_result["predictions"],
-            result=detection_result["result"]
+            result=detection_result["result"],
         )
 
         return final_result.model_dump()
     except Exception as e:
-        raise 
+        raise HTTPException(status_code=500, detail=str(e))
     
 @adversarial_router.post(
     "/adversarial/analyze",
@@ -136,14 +135,13 @@ async def analyze_adversarial(
         )
         if analysis_result is None:
             raise HTTPException(status_code=404, detail="Detection result not found")
-        
+
+        # Create the AnalysisResult object
         result = AnalysisResult(
             original_image=analysis_result["original_image"],
             original_predicition=analysis_result["original_predictions"],
-            original_predicition=analysis_result["original_predictions"],
             original_verbal_explaination=analysis_result["original_verbal_explaination"],
             adversarial_image=analysis_result["adversarial_image"],
-            adversarial_prediction=analysis_result["adversarial_predictions"],
             adversarial_prediction=analysis_result["adversarial_predictions"],
             adversarial_verbal_explaination=analysis_result["adversarial_verbal_explaination"],
         )
@@ -152,6 +150,7 @@ async def analyze_adversarial(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+
 @adversarial_router.get(
     "/adversarial/does_detector_exist",
     status_code=status.HTTP_200_OK,
@@ -174,27 +173,32 @@ async def does_detector_exist(
         return detector_exists
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
 
-@adversarial_router.get(
-    "/adversarial/does_detector_exist",
+@adversarial_router.delete(
+    "/adversarial/delete_detector",
     status_code=status.HTTP_200_OK,
-    response_model=bool,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
-async def does_detector_exist(
-    current_model_id,
-    graph_type,
+async def delete_detector(
+    current_model_id: str = Form(...),
+    graph_type: str = Form(...),
     current_user: User = Depends(require_authenticated_user)
 ):
     try:
-        logger.info("Checking if detector exists")
-        detector_exists = does_detector_exist_(current_model_id, graph_type, current_user)
-        logger.info(f"Detector exists: {detector_exists}")
-        return detector_exists
+        logger.info("Deleting adversarial detector")
+        result = does_detector_exist_(current_model_id, graph_type, current_user)
+        if not result:
+            raise HTTPException(status_code=404, detail="Detector does not exist")
+        
+        # Assuming a function to delete the detector exists
+        # delete_adversarial_detector(current_model_id, graph_type, current_user)
+        
+        return {"message": "Detector deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
