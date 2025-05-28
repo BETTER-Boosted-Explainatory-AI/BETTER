@@ -15,4 +15,4 @@
 **/*.graphml
 **/*.csv
 **/*.json
-/env
+/data
