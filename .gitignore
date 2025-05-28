@@ -13,3 +13,4 @@
 **/*.graphml
 **/*.csv
 **/*.json
+/data
