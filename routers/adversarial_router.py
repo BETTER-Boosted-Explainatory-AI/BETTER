@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Form, UploadFile, Depends
 from services.adversarial_attacks_service import create_logistic_regression_detector, detect_adversarial_image, analysis_adversarial_image, does_detector_exist_
-from services.adversarial_attacks_service import create_logistic_regression_detector, detect_adversarial_image, analysis_adversarial_image, does_detector_exist_
 from services.users_service import require_authenticated_user
 from utilss.classes.user import User
 from typing import List, Optional
@@ -96,14 +95,6 @@ async def detect_query(
         )
 
         return final_result.model_dump()
-
-        final_result = DetectionResult(
-            image=detection_result["image"],
-            predictions=detection_result["predictions"],
-            result=detection_result["result"],
-        )
-
-        return final_result.model_dump()
     except Exception as e:
         raise 
     
@@ -145,28 +136,6 @@ async def analyze_adversarial(
         )
         if analysis_result is None:
             raise HTTPException(status_code=404, detail="Detection result not found")
-
-        # # Convert original predictions to DetectionResult objects
-        # original_predictions_result = [
-        #     DetectionResult(label=k_label, probability=float(k_prob))
-        #     for k_label, k_prob in analysis_result["original_predictions"]
-        # ]
-
-        # # Convert adversarial predictions to DetectionResult objects
-        # adversarial_predictions_result = [
-        #     DetectionResult(label=k_label, probability=float(k_prob))
-        #     for k_label, k_prob in analysis_result["adversarial_predictions"]
-        # ]
-
-        # Create the AnalysisResult object
-        # result = AnalysisResult(
-        #     original_image=analysis_result["original_image"],
-        #     original_predicition=original_predictions_result,
-        #     original_verbal_explaination=analysis_result["original_verbal_explaination"],
-        #     adversarial_image=analysis_result["adversarial_image"],
-        #     adversarial_prediction=adversarial_predictions_result,
-        #     adversarial_verbal_explaination=analysis_result["adversarial_verbal_explaination"],
-        # )
         
         result = AnalysisResult(
             original_image=analysis_result["original_image"],
