@@ -6,8 +6,8 @@ import os
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from .datasets.TBD_imagenet_batch_predictor import ImageNetBatchPredictor
-from .datasets.TBD_cifar100_batch_predictor import Cifar100BatchPredictor
+# from .datasets.TBD_imagenet_batch_predictor import ImageNetBatchPredictor
+# from .datasets.TBD_cifar100_batch_predictor import Cifar100BatchPredictor
 import time
 import logging
 import boto3

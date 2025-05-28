@@ -5,7 +5,6 @@ from .dataset import Dataset
 import matplotlib.pyplot as plt
 # from data.datasets.cifar100_info import CIFAR100_INFO
 # from services.dataset_service import _get_dataset_config
-from .dataset import Dataset 
 import pickle, logging
 from utilss.s3_connector.s3_dataset_utils import unpickle_from_s3
 

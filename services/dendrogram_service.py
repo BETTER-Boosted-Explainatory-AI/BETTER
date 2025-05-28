@@ -3,8 +3,6 @@ from fastapi import HTTPException, status
 from .models_service import _check_model_path
 from utilss.classes.dendrogram import Dendrogram
 import json
-# from data.datasets.cifar100_info import CIFAR100_INFO
-# from data.datasets.imagenet_info import IMAGENET_INFO
 from services.dataset_service import _get_dataset_config
 from .models_service import get_user_models_info
 import boto3

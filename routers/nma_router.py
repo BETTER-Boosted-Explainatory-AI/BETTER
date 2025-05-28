@@ -134,7 +134,7 @@ async def create_nma_by_id(
 ) -> NMAResult:
     try:
         return _handle_nma_submission(
-            current_user, dataset, graph_type, min_confidence, top_k, model_file=model_file
+            current_user, dataset, graph_type, min_confidence, top_k, model_id
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
