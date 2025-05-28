@@ -60,7 +60,7 @@ class NMA:
         self.datasets_s3_client =  get_datasets_s3_client()
         
         self.users_s3_bucket =  os.getenv("S3_USERS_BUCKET_NAME")
-        self.datasets_s3_bucket =  os.getenv("S3_BUCKET_NAME")
+        self.datasets_s3_bucket =  os.getenv("S3_DATASETS_BUCKET_NAME")
         
         if self.users_s3_bucket is None:
             logger.warning("S3_USERS_BUCKET_NAME not set, will not save to users bucket")

@@ -100,12 +100,11 @@ def upload_model(
         models_json_path,
         model_id_md,
         model_file.filename,
-        # dataset,
+        "unknown",  # For dataset or whatever default makes sense
         graph_type,
         min_confidence,
         top_k,
-        s3_client,
-        s3_bucket
+        None  # No job_metadata for initial upload
     )
     
     model_path = f'{model_subfolder}/{filename}'
@@ -168,12 +167,17 @@ def upload_model(
 #         json.dump(models_data, json_file, indent=4)
 
 def _update_model_metadata(current_user, model_id, model_filename, dataset, graph_type, min_confidence, top_k, job_id, job_status="submitted"):
-    models_json_path = os.path.join(
-        current_user.get_user_folder(), "models.json")
-    if os.path.exists(models_json_path):
-        with open(models_json_path, "r") as json_file:
-            models_data = json.load(json_file)
-    else:
+    from utilss.s3_utils import get_users_s3_client
+    s3_client = get_users_s3_client()
+    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
+    
+    user_folder = current_user.get_user_folder()
+    models_json_path = f"{user_folder}/models.json"
+    
+    try:
+        response = s3_client.get_object(Bucket=s3_bucket, Key=models_json_path)
+        models_data = json.loads(response['Body'].read().decode('utf-8'))
+    except s3_client.exceptions.NoSuchKey:
         models_data = []
           
     if model_filename is None:
@@ -212,20 +216,15 @@ def save_model_metadata(
     graph_type, 
     min_confidence, 
     top_k, 
-    s3_client=None, 
-    s3_bucket=None,
     job_metadata=None
-) -> None:
+) -> bool:  
+    
+    from utilss.s3_utils import get_users_s3_client
+    s3_client = get_users_s3_client()
         
-    if s3_client is None:
-        # Use the users S3 client instead of creating a new one
-        from utilss.s3_utils import get_users_s3_client
-        s3_client = get_users_s3_client()
-        
-    if s3_bucket is None:
-        s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
-        if not s3_bucket:
-            raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
+    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
+    if not s3_bucket:
+        raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
     
     # Prepare model metadata
     model_metadata = {
@@ -266,9 +265,14 @@ def save_model_metadata(
         if "batch_jobs" not in model or not isinstance(model["batch_jobs"], list):
             model["batch_jobs"] = []
             
-        if job_metadata:
-            model["batch_jobs"].append(job_metadata)
-        break
+            # Handle batch jobs
+            if "batch_jobs" not in model or not isinstance(model["batch_jobs"], list):
+                model["batch_jobs"] = []
+                
+            if job_metadata:
+                model["batch_jobs"].append(job_metadata)
+                
+            break
     
     else:
         # If no matching model_id is found, append new metadata
@@ -284,7 +288,8 @@ def save_model_metadata(
         Key=models_json_path,
         Body=models_json
     )
-
+    
+    return True
 
     return True
 

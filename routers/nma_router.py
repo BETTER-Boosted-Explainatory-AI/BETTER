@@ -40,6 +40,8 @@ def _handle_nma_submission(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Model file or model_id is required"
         )
+        
+        
     # has_running_job = user_has_job_running(current_user)
     # if has_running_job:
     #     raise HTTPException(
@@ -52,9 +54,10 @@ def _handle_nma_submission(
         model_path, model_id_md = upload_model(
             current_user, model_id, model_file, graph_type)
         model_id = model_id_md
-    # job_id = submit_nma_batch_job(user_id, model_id, dataset, graph_type, min_confidence, top_k)    
-    job_id = submit_nma_batch_job(current_user.user_id, model_filename, graph_type)
+    job_id = submit_nma_batch_job(current_user.user_id, model_id, dataset, graph_type, min_confidence, top_k)        
+    
     print(f"Submitting NMA job with parameters: {current_user.user_id}, {model_filename},{graph_type}")
+    
     print(f"Submitted NMA job with ID: {job_id}")
     metadata_result = _update_model_metadata(
         current_user, model_id, model_filename, dataset, graph_type, min_confidence, top_k, job_id)

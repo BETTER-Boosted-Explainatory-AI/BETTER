@@ -32,9 +32,9 @@ class Cifar100(Dataset):
         self.log = logging.getLogger(__name__)
 
     def load(self, name):                         
-        bucket = os.getenv("S3_BUCKET_NAME")
+        bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
         if not bucket:
-            raise RuntimeError("S3_BUCKET_NAME env-var must be set")
+            raise RuntimeError("S3_DATASETS_BUCKET_NAME env-var must be set")
 
         # ① stream both pickles
         train = unpickle_from_s3(bucket, "cifar100/train")
