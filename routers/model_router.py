@@ -37,6 +37,19 @@ async def get_model_info(
                 model_copy["graph_type"] = list(set(succeeded_types))
                 filtered_models.append(model_copy)
         return filtered_models
+    if status_filter == "succeeded":
+        filtered_models = []
+        for model in models_info:
+            succeeded_types = [
+                job["job_graph_type"]
+                for job in model.get("batch_jobs", [])
+                if job.get("job_status") == "succeeded"
+            ]
+            if succeeded_types:
+                model_copy = model.copy()
+                model_copy["graph_type"] = list(set(succeeded_types))
+                filtered_models.append(model_copy)
+        return filtered_models
     return models_info
 
 @model_router.get(

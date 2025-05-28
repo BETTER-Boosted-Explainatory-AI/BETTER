@@ -2,7 +2,7 @@ from utilss.classes.adversarial_dataset import AdversarialDataset
 from utilss.classes.adversarial_detector import AdversarialDetector
 from utilss.classes.score_calculator import ScoreCalculator
 from utilss.photos_utils import preprocess_image, encode_image_to_base64, deprocess_resnet_image, preprocess_deepfool_image, preprocess_loaded_image
-from services.dataset_service import _get_dataset_labels
+from services.dataset_service import get_dataset_labels
 from utilss.classes.adversarial_attacks.adversarial_attack_factory import get_attack
 from services.models_service import get_top_k_predictions, query_model, get_user_models_info, get_model_files
 import tensorflow as tf
@@ -12,21 +12,22 @@ from PIL import Image
 import os
 import logging
 from utilss import debug_utils
-
-# Set up logging
+import boto3
+from utilss.s3_utils import get_users_s3_client
 logger = logging.getLogger(__name__)
 
-def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_filename, dataset) -> AdversarialDataset:
-    """Create an adversarial dataset based on the provided configuration."""
-    logger.info("Creating adversarial dataset")
 
+
+def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_filename, dataset) -> AdversarialDataset:
+    logger.info("Creating adversarial dataset")
     adversarial_dataset = AdversarialDataset(Z_file, clean_images, adversarial_images, model_filename, dataset)
     X_train, y_train, X_test, y_test = adversarial_dataset.create_logistic_regression_dataset()
     return {"X_train": X_train, "y_train": y_train, "X_test": X_test, "y_test": y_test}
 
+
+
 def create_logistic_regression_detector(model_id, graph_type, clean_images, adversarial_images, user):
     model_info = get_user_models_info(user, model_id)
-
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
@@ -79,6 +80,12 @@ def detect_adversarial_image(model_id, graph_type, image, user):
     logger.info("Detecting adversarial image")
     logger.debug(f"Model ID: {model_id}, Graph Type: {graph_type}")
 
+    # Initialize S3 client
+    s3_client = get_users_s3_client()
+    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
+    if not s3_bucket:
+        raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
+
     model_info = get_user_models_info(user, model_id)
 
     if model_info is None:
@@ -90,16 +97,34 @@ def detect_adversarial_image(model_id, graph_type, image, user):
 
         dataset = model_info["dataset"]
         Z_full = model_files["Z_file"]
-        labels = _get_dataset_labels(dataset)
+        labels = get_dataset_labels(dataset)
 
-        if os.path.exists(model_file):
-            model = tf.keras.models.load_model(model_file)
-            logger.info(f"Model loaded successfully from '{model_file}'.")
-        else:
-            raise ValueError(f"Model file {model_file} does not exist")
+        # Check if model file exists in S3
+        try:
+            # Extract key from model_file path (assuming it's already an S3 path or relative path)
+            if model_file.startswith('s3://'):
+                parts = model_file.replace('s3://', '').split('/', 1)
+                bucket = parts[0]
+                key = parts[1]
+            else:
+                bucket = s3_bucket
+                key = model_file
+                
+            # Check if the file exists
+            s3_client.head_object(Bucket=bucket, Key=key)
+            
+            # Use temporary directory to load model
+            import tempfile
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_model_path = os.path.join(temp_dir, 'model.keras')
+                s3_client.download_file(bucket, key, temp_model_path)
+                model = tf.keras.models.load_model(temp_model_path)
+                logger.info(f"Model loaded successfully from S3 '{bucket}/{key}'.")
+                
+        except Exception as e:
+            raise ValueError(f"Failed to load model file from S3: {str(e)}")
         
     image_preprocessed = preprocess_loaded_image(model, image)
-
 
     detector = AdversarialDetector(model_graph_folder)
     score_calculator = ScoreCalculator(Z_full, labels)
@@ -130,10 +155,15 @@ def detect_adversarial_image(model_id, graph_type, image, user):
         "result": detection_result,
         }
 
-def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, **kwargs):
-
+def analysis_adversarial_image(model_id, graph_type, attack_type, image, user, **kwargs):
     logger.info("Analyzing adversarial image")
     logger.debug(f"Model ID: {model_id}, Graph Type: {graph_type}, Attack Type: {attack_type}")
+
+    # Initialize S3 client
+    s3_client = get_users_s3_client()
+    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
+    if not s3_bucket:
+        raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
 
     model_info = get_user_models_info(user, model_id)
 
@@ -142,14 +172,34 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, *
     else:
         model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
         model_file = model_files["model_file"]
-        if os.path.exists(model_file):
-            model = tf.keras.models.load_model(model_file)
-            logger.info(f"Model loaded successfully from '{model_file}'.")
-        else:
-            raise ValueError(f"Model file {model_file} does not exist")
+        
+        # Check if model file exists in S3
+        try:
+            # Extract key from model_file path
+            if model_file.startswith('s3://'):
+                parts = model_file.replace('s3://', '').split('/', 1)
+                bucket = parts[0]
+                key = parts[1]
+            else:
+                bucket = s3_bucket
+                key = model_file
+                
+            # Check if the file exists
+            s3_client.head_object(Bucket=bucket, Key=key)
+            
+            # Use temporary directory to load model
+            import tempfile
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_model_path = os.path.join(temp_dir, 'model.keras')
+                s3_client.download_file(bucket, key, temp_model_path)
+                model = tf.keras.models.load_model(temp_model_path)
+                logger.info(f"Model loaded successfully from S3 '{bucket}/{key}'.")
+                
+        except Exception as e:
+            raise ValueError(f"Failed to load model file from S3: {str(e)}")
         
         dataset = model_info["dataset"]
-        labels = _get_dataset_labels(dataset)
+        labels = get_dataset_labels(dataset)
 
         if attack_type == "deepfool":
             preprocessed_image = preprocess_deepfool_image(model, image)
@@ -185,11 +235,9 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, *
         original_predictions = get_top_k_predictions(model, original_image_preprocessed, labels)
         original_verbal_explaination = query_model(original_predictions[0][0], model_id, graph_type, user)
 
-
         # Get top K predictions for the adversarial image
         adversarial_predictions = get_top_k_predictions(model, adversarial_image_preprocessed, labels)
         adversarial_verbal_explaination = query_model(adversarial_predictions[0][0], model_id, graph_type, user)
-
 
         # Return both images as Base64 strings
         return {
@@ -200,4 +248,3 @@ def analysis_adversarial_image(model_id, graph_type, attack_type ,image, user, *
             "adversarial_predictions": adversarial_predictions,
             "adversarial_verbal_explaination": adversarial_verbal_explaination,
         }
-        

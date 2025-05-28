@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Tuple
 
+
 class DetectorResponse(BaseModel):
     result: str
 
@@ -12,9 +13,8 @@ class AnalysisResult(BaseModel):
     adversarial_prediction: List[Tuple[str, float]] 
     adversarial_verbal_explaination: List[str]
 
+
 class DetectionResult(BaseModel):
     image: str
     predictions: List[Tuple[str, float]] 
     result: str
-
-
