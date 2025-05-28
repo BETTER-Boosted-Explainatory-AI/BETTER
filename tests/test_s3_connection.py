@@ -67,7 +67,7 @@ def check_environment():
     required_vars = [
         'AWS_DATASETS_ACCESS_KEY_ID', 
         'AWS_DATASETS_SECRET_ACCESS_KEY', 
-        'S3_BUCKET_NAME'
+        'S3_DATASETS_BUCKET_NAME'
     ]
     
     all_set = True
@@ -439,9 +439,9 @@ def test_unpickle_from_s3():
     """Test unpickle_from_s3 function."""
     print_subheader("Testing unpickle_from_s3()")
     try:
-        bucket = os.environ.get('S3_BUCKET_NAME')
+        bucket = os.environ.get('S3_DATASETS_BUCKET_NAME')
         if not bucket:
-            print_error("S3_BUCKET_NAME not set")
+            print_error("S3_DATASETS_BUCKET_NAME not set")
             return
             
         # Test with CIFAR100 train pickle

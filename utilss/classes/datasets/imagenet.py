@@ -216,9 +216,9 @@ class ImageNet(Dataset):
         from services.dataset_service import _get_dataset_config
         
         # Check if S3 bucket is configured
-        bucket = os.getenv("S3_BUCKET_NAME")
+        bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
         if not bucket:
-            raise RuntimeError("S3_BUCKET_NAME environment variable must be set")
+            raise RuntimeError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
         # Construct paths that mimic the local structure but for S3
         # Original: data/datasets/imagenet/train

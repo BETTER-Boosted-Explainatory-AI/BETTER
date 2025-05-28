@@ -7,9 +7,9 @@ from utilss.s3_connector.s3_dataset_loader import S3DatasetLoader
 
 def _get_dataset_config(dataset_str: str) -> Dict[str, Any]:
     """Get dataset configuration based on dataset string from S3."""
-    bucket_name = os.environ.get('S3_BUCKET_NAME')
+    bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
     if not bucket_name:
-        raise ValueError("S3_BUCKET_NAME environment variable must be set")
+        raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
@@ -30,9 +30,9 @@ def _load_dataset(dataset_str: str):
 
 # def _load_dataset(dataset_str: str):
 #     """Load the dataset from S3."""
-#     bucket_name = os.environ.get('S3_BUCKET_NAME')
+#     bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
 #     if not bucket_name:
-#         raise ValueError("S3_BUCKET_NAME environment variable must be set")
+#         raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
 #     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
@@ -62,9 +62,9 @@ def _load_dataset_folder(dataset_str: str, folder_type: str):
     """
     Load a specific folder (clean/adversarial/train) from a dataset
     """
-    bucket_name = os.environ.get('S3_BUCKET_NAME')
+    bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
     if not bucket_name:
-        raise ValueError("S3_BUCKET_NAME environment variable must be set")
+        raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
@@ -75,9 +75,9 @@ def load_single_image(image_key: str) -> bytes:
     """
     Load a single image from S3
     """
-    bucket_name = os.environ.get('S3_BUCKET_NAME')
+    bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
     if not bucket_name:
-        raise ValueError("S3_BUCKET_NAME environment variable must be set")
+        raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
@@ -91,9 +91,9 @@ def load_imagenet_train() -> str:
     Returns:
         str: Path to the local directory with downloaded data
     """
-    bucket_name = os.environ.get('S3_BUCKET_NAME')
+    bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
     if not bucket_name:
-        raise ValueError("S3_BUCKET_NAME environment variable must be set")
+        raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
@@ -110,9 +110,9 @@ def load_cifar100_numpy(folder_type: str) -> Tuple[np.ndarray, np.ndarray]:
     Returns:
         tuple: (images, labels) as NumPy arrays
     """
-    bucket_name = os.environ.get('S3_BUCKET_NAME')
+    bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
     if not bucket_name:
-        raise ValueError("S3_BUCKET_NAME environment variable must be set")
+        raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
@@ -126,9 +126,9 @@ def load_cifar100_meta() -> Dict:
     Returns:
         dict: Meta data for CIFAR-100
     """
-    bucket_name = os.environ.get('S3_BUCKET_NAME')
+    bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
     if not bucket_name:
-        raise ValueError("S3_BUCKET_NAME environment variable must be set")
+        raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
@@ -136,9 +136,9 @@ def load_cifar100_meta() -> Dict:
 
 
 def _load_dataset_split(dataset_str: str, split_type: str) -> str:
-    bucket_name = os.environ.get('S3_BUCKET_NAME')
+    bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
     if not bucket_name:
-        raise ValueError("S3_BUCKET_NAME environment variable must be set")
+        raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
