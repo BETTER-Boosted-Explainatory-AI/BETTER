@@ -4,9 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from dotenv import load_dotenv
 import os
-from pathlib import Path
+# from pathlib import Path
 
-load_dotenv(Path(__file__).with_name(".env"))
+# load_dotenv(Path(__file__).with_name(".env"))
 
 
 from utilss.exception_handlers import http_exception_handler, generic_exception_handler, validation_exception_handler
