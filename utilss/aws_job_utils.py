@@ -4,7 +4,7 @@ import uuid
 import os
 from datetime import datetime
 
-# TODO: change it all to get these parameters: (user, model_id, dataset, graph_type, min_confidence, top_k)
+# TODO: change it all to get these parameters: (user_id, model_id, dataset, graph_type, min_confidence, top_k)
 
 def submit_nma_batch_job(user_id, model_id, dataset, graph_type, min_confidence, top_k):
     batch = boto3.client('batch', region_name=os.getenv("AWS_REGION"),
