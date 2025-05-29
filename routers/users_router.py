@@ -79,7 +79,7 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
             httponly=True,      # Prevents JS access
             # secure=False,      # Only for local testing, set to True in production!
             secure=True,        # Only sent over HTTPS
-            samesite="lax",     # Adjust as needed
+            samesite="none",     # Adjust as needed
             max_age=900        # 1 hour, adjust as needed
         )
 
@@ -89,7 +89,7 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
             httponly=True,      # Prevents JS access
             # secure=False,      # Only for local testing, set to True in production!
             secure=True,        # Only sent over HTTPS
-            samesite="lax",     # Adjust as needed
+            samesite="none",     # Adjust as needed
             max_age=7*24*3600      # 7 days, adjust as needed
         )
 
@@ -102,7 +102,7 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
             httponly=True,      # Prevents JS access
             # secure=False,      # Only for local testing, set to True in production!
             secure=True,        # Only sent over HTTPS
-            samesite="lax",     # Adjust as needed
+            samesite="none",     # Adjust as needed
             max_age=7*24*3600      # 7 days, adjust as needed
         )
 
@@ -162,7 +162,7 @@ def refresh_user_session(request : Request, response : Response):
             value=id_token,
             httponly=True,
             secure=True,  # Set to True in production!
-            samesite="lax",
+            samesite="none",
             max_age=900
         )
 
@@ -172,7 +172,7 @@ def refresh_user_session(request : Request, response : Response):
                 value=refresh_token,
                 httponly=True,
                 secure=True,  # Set to True in production!
-                samesite="lax",
+                samesite="none",
                 max_age=7*24*3600  # 7 days
             )
         
