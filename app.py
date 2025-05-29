@@ -26,7 +26,8 @@ load_dotenv()
 
 app = FastAPI()
 
-origins = ["http://localhost:5173"]
+# origins = ["http://localhost:5173"]
+origins = ["https://d277wodse8ekd4.cloudfront.net/"]
 
 app.add_middleware(
     CORSMiddleware,
