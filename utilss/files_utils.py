@@ -57,7 +57,6 @@ from datetime import datetime
 
 #     return model_path, model_id_md
 
-
 ### S3 implementation ### 
 def upload_model(
     current_user: User,
@@ -65,6 +64,8 @@ def upload_model(
     model_file: UploadFile,
     # dataset: str,
     graph_type: str,
+    min_confidence,
+    top_k,
 ) -> str:
     
     s3_client = get_users_s3_client()
