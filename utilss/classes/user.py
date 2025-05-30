@@ -6,20 +6,6 @@ import io
 from utilss.s3_utils import get_users_s3_client 
 
 class User:
-    
-### original implemetation ###
-    # def __init__(self, user_id: uuid ,email: str, models: list = None):
-    #     self.user_id = user_id if user_id is not None else str(uuid.uuid4())
-    #     self.email = email
-    #     self.models = models if models is not None else []
-    #     self.current_model = None
-    #     self.USERS_PATH = os.getenv("USERS_PATH")
-    #     self.users_json_path = os.path.join(self.USERS_PATH, "users.json")
-    #     self.user_folder_path = os.path.join(self.USERS_PATH, self.user_id)
-    #     self.models_json_path = os.path.join(self.user_folder_path, "models.json")
-    #     self.current_model_json = os.path.join(self.user_folder_path, "current_model.json")
-
-### S3 implementation ### 
     def __init__(self, user_id: uuid, email: str, models: list = None):
         self.user_id = user_id if user_id is not None else str(uuid.uuid4())
         self.email = email
@@ -37,43 +23,6 @@ class User:
         self.models_json_path = f"{self.user_id}/models.json"
         self.current_model_json = f"{self.user_id}/current_model.json"
 
-        
-        
-        
-### original implemetation ###       
-    # def create_user(self):
-    #     # Ensure the base directory exists
-    #     os.makedirs(self.USERS_PATH, exist_ok=True)
-
-    #     # Add user information to users.json
-    #     user_data = {
-    #         "id": self.user_id,
-    #         "email": self.email,
-    #         # "password": self.password  ## only for testing, will be hashed by aws incognito in the future
-    #     }
-
-    #     if os.path.exists(self.users_json_path):
-    #         with open(self.users_json_path, "r") as file:
-    #             users = json.load(file)
-    #     else:
-    #         users = []
-
-    #     users.append(user_data)
-
-    #     with open(self.users_json_path, "w") as file:
-    #         json.dump(users, file, indent=4)
-
-    #     # Create user folder and models.json
-    #     os.makedirs(self.user_folder_path, exist_ok=True)
-
-    #     with open(self.models_json_path, "w") as file:
-    #         json.dump([], file, indent=4)
-
-    #     with open(self.current_model_json, "w") as file:
-    #         json.dump({}, file, indent=4)
-
-
-### S3 implementation ### 
     def create_user(self):
         # Add user information to users.json
         user_data = {
@@ -112,26 +61,12 @@ class User:
             Body=json.dumps({}, indent=4)
         )
 
-
-### original implemetation ###
-
-    # def load_models(self):
-    #     if os.path.exists(self.models_json_path):
-    #         with open(self.models_json_path, "r") as file:
-    #             self.models = json.load(file)
-    #     else:
-    #         print(f"No models found for user {self.user_id}")
-
-
-### S3 implementation ### 
     def load_models(self):
         try:
             response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=self.models_json_path)
             self.models = json.loads(response['Body'].read().decode('utf-8'))
         except self.s3_client.exceptions.NoSuchKey:
             print(f"No models found for user {self.user_id}")
-
-
 
     def get_user_id(self):
         return self.user_id
@@ -141,13 +76,7 @@ class User:
     
     def get_models_json_path(self):
         return self.models_json_path
-    
-### original implemetation ###    
-    # def add_model(self, model_info: dict):
-    #     self.models.append(model_info)
-    
-    
-### S3 implementation ### 
+
     def add_model(self, model_info: dict):
         self.models.append(model_info)
         
@@ -161,15 +90,6 @@ class User:
         with open(self.models_json_path, "w") as file:
             json.dump([self.models], file, indent=4)
             
-            
-### original implemetation ###    
-    # def set_current_model(self, model_info: dict):
-    #     self.current_model = model_info
-    #     with open(self.current_model_json, "w") as file:
-    #         json.dump(self.current_model, file, indent=4)
-    #     return self.current_model
-    
-### S3 implementation ### 
     def set_current_model(self, model_info: dict):
         self.current_model = model_info
         
@@ -182,17 +102,6 @@ class User:
         
         return self.current_model
     
-    
-### original implemetation ###    
-
-    # def load_current_model(self):
-    #     if os.path.exists(self.current_model_json):
-    #         with open(self.current_model_json, "r") as file:
-    #             self.current_model = json.load(file)
-    #     else:
-    #         print(f"No current model found for user {self.user_id}")
-
-### S3 implementation ### 
     def load_current_model(self):
         try:
             response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=self.current_model_json)
@@ -209,20 +118,6 @@ class User:
     def get_user_folder(self):
         return self.user_folder_path
   
-  
-### original implemetation ###  
-    # def find_user_in_db(self):
-
-    #     if os.path.exists(self.users_json_path):
-    #         with open(self.users_json_path, "r") as file:
-    #             users = json.load(file)
-    #             for user in users:
-    #                 if user["id"] == self.user_id:
-    #                     return User(user_id=user["id"], email=user["email"])
-    #     return None
-    
-    
-### S3 implementation ### 
     def find_user_in_db(self):
         try:
             response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=self.users_json_path)

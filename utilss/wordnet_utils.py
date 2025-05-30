@@ -1,59 +1,6 @@
 from nltk.corpus import wordnet as wn
 import os
-import boto3
-import re
 from utilss.s3_utils import get_datasets_s3_client
- 
-# def convert_folder_names_to_readable_labels(dataset_path):
-#     if not os.path.exists(dataset_path):
-#         raise ValueError(f"Dataset path does not exist: {dataset_path}")
-    
-#     # Get all class names (subdirectories)
-#     class_names = sorted([
-#         d for d in os.listdir(dataset_path)
-#         if os.path.isdir(os.path.join(dataset_path, d)) and d.startswith('n') and d[1:].isdigit()
-#     ])
-    
-#     if not class_names:
-#         raise ValueError(f"No subdirectories found in {dataset_path}")
-    
-#     # Define special case mapping for disambiguation
-#     special_case_mapping = {
-#         "n02012849": "crane_bird",       # Crane bird
-#         "n03126707": "crane_machine",    # Crane machine
-#         "n03710637": "maillot",          # Maillot (swimsuit)
-#         "n03710721": "tank_suit"         # Tank suit (different type of swimsuit)
-#     }
-    
-#     # Create mapping from folder names to readable labels
-#     folder_to_label = {}
-#     for folder_name in class_names:
-#         if folder_name in special_case_mapping:
-#             # Use special case mapping for known ambiguous folders
-#             readable_label = special_case_mapping[folder_name]
-#         elif folder_name.startswith('n'):
-#             # Use WordNet utility for standard cases
-#             readable_label = WordnetUtils.convert_folder_name_to_label(folder_name)
-#         else:
-#             readable_label = folder_name
-            
-#         folder_to_label[folder_name] = readable_label
-    
-#     # Convert original folder names to readable labels while preserving order
-#     readable_labels = [folder_to_label[folder_name] for folder_name in class_names]
-    
-#     print(f"Sample conversions:")
-#     for i in range(min(5, len(class_names))):
-#         print(f"{class_names[i]} → {readable_labels[i]}")
-    
-#     # Print specific indices for debugging
-#     if len(readable_labels) > 638:
-#         print(f"Label at index 638: {readable_labels[638]}")
-#     if len(readable_labels) > 639:
-#         print(f"Label at index 639: {readable_labels[639]}")
-        
-#     return readable_labels, folder_to_label
-
 
 def convert_folder_names_to_readable_labels(dataset_path):
     """

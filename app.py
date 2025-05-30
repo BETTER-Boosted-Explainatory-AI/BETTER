@@ -5,10 +5,6 @@ import uvicorn
 from mangum import Mangum
 from dotenv import load_dotenv
 import os
-# from pathlib import Path
-
-# load_dotenv(Path(__file__).with_name(".env"))
-
 
 from utilss.exception_handlers import http_exception_handler, generic_exception_handler, validation_exception_handler
 
@@ -27,8 +23,8 @@ load_dotenv()
 
 app = FastAPI()
 
-# origins = ["http://localhost:5173"]
-origins = ["https://d277wodse8ekd4.cloudfront.net/"]
+origins = ["http://localhost:5173"]
+# origins = ["http://d277wodse8ekd4.cloudfront.net/"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -67,11 +63,11 @@ app.include_router(users_router)
 handler = Mangum(app)
 
 # Direct SSL handling when running on EC2
-if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=443,
-        ssl_keyfile="C:\\certs\\key.pem",
-        ssl_certfile="C:\\certs\\cert.pem"
-    )
+# if __name__ == "__main__":
+#     uvicorn.run(
+#         "main:app",
+#         host="0.0.0.0",
+#         port=443,
+#         ssl_keyfile="C:\certs\key.pem",
+#         ssl_certfile="C:\certs\cert.pem"
+#     )

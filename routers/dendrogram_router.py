@@ -7,7 +7,7 @@ from utilss.classes.user import User
 dendrogram_router = APIRouter()
 
 @dendrogram_router.post(
-    "/dendrograms", 
+    "/api/dendrograms", 
     response_model=DendrogramResult,
     status_code=status.HTTP_200_OK,
     responses={
@@ -28,7 +28,7 @@ async def get_sub_dendrogram(sub_dendrogram_data: DendrogramRequest, current_use
     return DendrogramResult(**sub_dendrogram, selected_labels=selected_labels)
 
 @dendrogram_router.put(
-    "/dendrograms/naming_clusters", 
+    "/api/dendrograms/naming_clusters", 
     response_model=DendrogramResult,
     status_code=status.HTTP_200_OK,
     responses={

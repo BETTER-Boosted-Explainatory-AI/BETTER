@@ -1,12 +1,10 @@
 import os
 import joblib
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve
 import numpy as np
 import logging
 from botocore.exceptions import ClientError
-import boto3
-import boto3
 import io
 from utilss.s3_utils import get_users_s3_client 
 
@@ -102,14 +100,6 @@ class AdversarialDetector:
         optimal_threshold = thresholds[optimal_idx]
         
         self.threshold = optimal_threshold
-
-    
-    ### original implemetation ###
-        # # Saving the lr-model
-        # print("Training completed.")
-        # joblib.dump((detector, optimal_threshold), f'{self.model_folder}/logistic_regression_model.pkl')
-        # print(f"Detector model saved as f'{self.model_folder}/logistic_regression_model.pkl'")
-        # return detector
         
     ### S3 implementation ### 
         print("Training completed. Saving to S3...")

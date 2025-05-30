@@ -2,10 +2,7 @@ from scipy.cluster.hierarchy import to_tree
 from utilss.wordnet_utils import process_hierarchy
 import json
 import os
-import numpy as np
 import pickle
-import boto3
-import io
 from botocore.exceptions import ClientError
 import logging
 from utilss.s3_utils import get_users_s3_client
@@ -16,8 +13,6 @@ logger = logging.getLogger(__name__)
 S3_BUCKET = os.getenv("S3_USERS_BUCKET_NAME")
 if not S3_BUCKET:
     raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
-
-
 
 class Dendrogram:
     def __init__(self, dendrogram_filename, Z=None):
@@ -135,52 +130,6 @@ class Dendrogram:
         filtered_tree_json = json.dumps(filtered_tree, indent=2)
         return filtered_tree_json
     
-    
-    ### original implemetation ###
-    # def save_dendrogram(self, linkage_matrix=None):
-    #     """
-    #     Create dendrogram data and save it as JSON
-        
-    #     Parameters:
-    #     - labels: List of labels for the dendrogram leaves
-    #     - max_weight: Maximum weight/distance value
-    #     - UnionFind: UnionFind data structure with merge history
-    #     - output_path: Path to save the JSON file
-        
-    #     Returns:
-    #     - Path to the saved JSON file
-    #     """
-    #     # Create a dictionary with the dendrogram data
-        
-    #     # DENDROGRAMS_PATH = os.getenv("DENDROGRAMS_PATH")
-    #     # dendrogram_path = f'{DENDROGRAMS_PATH}/{self.dendrogram_filename}.json'
-        
-    #     # Load existing data if the file exists
-    #     directory = os.path.dirname(self.dendrogram_filename)
-        
-    #     # Create directories if they don't exist
-    #     if directory:
-    #         os.makedirs(directory, exist_ok=True)
-        
-    #     # Define file paths
-    #     pickle_path = f'{self.dendrogram_filename}.pkl'
-    #     json_path = f'{self.dendrogram_filename}.json'
-        
-    #     # Save linkage matrix as pickle if provided
-    #     if linkage_matrix is not None:
-    #         with open(pickle_path, 'wb') as f:
-    #             pickle.dump(linkage_matrix, f)
-    #         print(f"Linkage matrix saved to {pickle_path}")
-        
-    #     # Save tree format as JSON
-    #     if self.Z_tree_format is not None:
-    #         with open(json_path, 'w') as f:
-    #             json.dump(self.Z_tree_format, f, indent=2)
-    #         print(f"Tree format saved to {json_path}")
-        
-    #     return pickle_path, json_path
-        
-    ### S3 implementation ###   
     def save_dendrogram(self, linkage_matrix=None):
         """
         Create dendrogram data and save it to S3
@@ -207,44 +156,7 @@ class Dendrogram:
         except Exception as e:
             logger.error(f"Error saving dendrogram to S3: {e}")
             raise
-        
-        
-    ### original implemetation ###
-    # def load_dendrogram(self):
-    #     """
-    #     Load dendrogram data from a JSON file
-        
-    #     Parameters:
-    #     - json_path: Path to the JSON file containing dendrogram data
-        
-    #     Returns:
-    #     - self with loaded data
-    #     """
-    #     pickle_path = f'{self.dendrogram_filename}.pkl'
-    #     json_path = f'{self.dendrogram_filename}.json'
-        
-    #     # Load linkage matrix from pickle
-    #     if os.path.exists(pickle_path):
-    #         with open(pickle_path, 'rb') as f:
-    #             self.Z = pickle.load(f)
-    #         print(f"Linkage matrix loaded from {pickle_path}")
-    #     else:
-    #         print(f"Pickle file not found: {pickle_path}")
-    #         self.Z = None
-        
-    #     # Load tree format from JSON
-    #     if os.path.exists(json_path):
-    #         with open(json_path, 'r') as f:
-    #             self.Z_tree_format = json.load(f)
-    #         print(f"Tree format loaded from {json_path}")
-    #     else:
-    #         print(f"JSON file not found: {json_path}")
-    #         self.Z_tree_format = None
-        
-    #     return self
-    
-    
-    ### S3 implementation ###   
+         
     def load_dendrogram(self):
         try:
             # Load linkage matrix from pickle
@@ -268,8 +180,6 @@ class Dendrogram:
         except Exception as e:
             logger.error(f"Error loading dendrogram from S3: {e}")
             raise
-    
-    
     
     def find_name_hierarchy(self, node, target_name):
         """
