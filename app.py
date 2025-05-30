@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 from mangum import Mangum
 from dotenv import load_dotenv
 import os
@@ -24,7 +23,6 @@ load_dotenv()
 app = FastAPI()
 
 origins = ["http://localhost:5173"]
-# origins = ["http://d277wodse8ekd4.cloudfront.net/"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -61,13 +59,3 @@ app.include_router(users_router)
 
 
 handler = Mangum(app)
-
-# Direct SSL handling when running on EC2
-# if __name__ == "__main__":
-#     uvicorn.run(
-#         "main:app",
-#         host="0.0.0.0",
-#         port=443,
-#         ssl_keyfile="C:\certs\key.pem",
-#         ssl_certfile="C:\certs\cert.pem"
-#     )
