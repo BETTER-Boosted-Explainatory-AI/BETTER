@@ -6,7 +6,7 @@ from services.dataset_service import get_dataset_labels
 datasets_router = APIRouter()
 
 @datasets_router.get(
-    "/datasets/{dataset_name}/labels", 
+    "/api/datasets/{dataset_name}/labels", 
     response_model=DatasetLabelsResult,
     status_code=status.HTTP_200_OK,
     responses={

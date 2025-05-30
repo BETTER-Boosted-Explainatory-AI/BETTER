@@ -10,7 +10,7 @@ users_router = APIRouter()
 
 ## Login and register through our UI
 @users_router.post(
-    "/register",
+    "/api/register",
     status_code=status.HTTP_201_CREATED,
     responses={
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
@@ -31,7 +31,7 @@ def register_user(user_create_request: UserCreateRequest) -> dict:
         raise HTTPException(status_code=500, detail=str(e))
     
 @users_router.post(
-    "/confirm",
+    "/api/confirm",
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
@@ -54,7 +54,7 @@ def confirm_user(user_confirm_request: ConfirmUserRequest) -> dict:
         raise HTTPException(status_code=500, detail=str(e))
     
 @users_router.post(
-    "/login",
+    "/api/login",
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
@@ -120,7 +120,7 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
     
 
 @users_router.get(
-    "/me",
+    "/api/me",
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
@@ -133,7 +133,7 @@ def get_active_user_info(current_user: User = Depends(require_authenticated_user
 
 
 @users_router.post(
-    "/refresh",
+    "/api/refresh",
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
@@ -182,7 +182,7 @@ def refresh_user_session(request : Request, response : Response):
     
     
 @users_router.post(
-    "/logout",
+    "/api/logout",
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {"description": "Logout successful"},

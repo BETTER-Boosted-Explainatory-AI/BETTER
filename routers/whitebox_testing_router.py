@@ -8,7 +8,7 @@ whitebox_testing_router = APIRouter()
 
 
 @whitebox_testing_router.post(
-    "/whitebox_testing",
+    "/api/whitebox_testing",
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},

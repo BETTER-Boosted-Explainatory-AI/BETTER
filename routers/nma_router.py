@@ -72,7 +72,7 @@ def _handle_nma_submission(
 
 
 # @nma_router.post(
-#     "/nma",
+#     "/api/nma",
 #     response_model=NMAResult,
 #     status_code=status.HTTP_202_ACCEPTED,
 #     responses={
@@ -118,7 +118,7 @@ async def create_nma(
         raise HTTPException(status_code=500, detail=str(e))
 
 @nma_router.post(
-    "/nma/{model_id}",
+    "/api/nma/{model_id}",
     response_model=NMAResult,
     status_code=status.HTTP_202_ACCEPTED,
     responses={
@@ -143,7 +143,7 @@ async def create_nma_by_id(
         raise HTTPException(status_code=500, detail=str(e))
 
 @nma_router.post(
-    "/nma/{model_id}",
+    "/api/nma/{model_id}",
     response_model=NMAResult,
     status_code=status.HTTP_202_ACCEPTED,
     responses={

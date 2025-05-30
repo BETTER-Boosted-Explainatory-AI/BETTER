@@ -11,7 +11,7 @@ import numpy as np
 query_router = APIRouter()
 
 @query_router.post(
-    "/query",
+    "/api/query",
     status_code=status.HTTP_201_CREATED,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
