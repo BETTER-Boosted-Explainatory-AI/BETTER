@@ -12,7 +12,6 @@ from PIL import Image
 import os
 import logging
 from utilss import debug_utils
-import boto3
 from utilss.s3_utils import get_users_s3_client
 logger = logging.getLogger(__name__)
 

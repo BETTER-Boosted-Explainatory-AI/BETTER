@@ -27,7 +27,7 @@ async def verbal_explaination_query(
     current_user: User = Depends(require_authenticated_user)
 ):
     try:
-        if image.size is 0:
+        if image.size == 0:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Image file is required."

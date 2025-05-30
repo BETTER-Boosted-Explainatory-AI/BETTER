@@ -71,37 +71,16 @@ def _handle_nma_submission(
 
 
 
-# @nma_router.post(
-#     "/api/nma",
-#     response_model=NMAResult,
-#     status_code=status.HTTP_202_ACCEPTED,
-#     responses={
-#         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
-#         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
-#         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"},
-#     },
-# )
-
-# async def create_nma(
-#     current_user: User = Depends(require_authenticated_user),
-#     model_file: UploadFile = File(...),
-#     dataset: str = Form(...),
-#     graph_type: str = Form(...),
-#     model_id: str = Form(None),
-#     min_confidence: float = Form(0.5),
-#     top_k: int = Form(5),
-# ) -> Dict[str, str]:
-#     try:
-#         model_path, model_id_md = upload_model(current_user, model_id, model_file, dataset, graph_type, min_confidence, top_k)
-#         init_z = _create_nma(model_path, graph_type, dataset, current_user, min_confidence, top_k, model_id_md)
-        
-#         if init_z is None:
-#             raise HTTPException(status_code=404, detail="Hierarchical Clustering was not created")
-        
-#         return NMAResult(data=init_z.tolist())
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
+@nma_router.post(
+    "/api/nma",
+    response_model=NMAResult,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"},
+    },
+)
 async def create_nma(
     current_user: User = Depends(require_authenticated_user),
     model_file: UploadFile = File(...),
@@ -138,31 +117,6 @@ async def create_nma_by_id(
     try:
         return _handle_nma_submission(
             current_user, dataset, graph_type, min_confidence, top_k, model_id
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@nma_router.post(
-    "/api/nma/{model_id}",
-    response_model=NMAResult,
-    status_code=status.HTTP_202_ACCEPTED,
-    responses={
-        status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
-        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
-        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"},
-    },
-)
-async def create_nma_by_id(
-    model_id: str,
-    current_user: User = Depends(require_authenticated_user),
-    dataset: str = Form(...),
-    graph_type: str = Form(...),
-    min_confidence: float = Form(0.5),
-    top_k: int = Form(5),
-) -> NMAResult:
-    try:
-        return _handle_nma_submission(
-            current_user, dataset, graph_type, min_confidence, top_k, model_id=model_id
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,6 +1,5 @@
 
 import os
-import boto3
 from fastapi import UploadFile
 import json
 import uuid
@@ -10,9 +9,7 @@ import tensorflow as tf
 from utilss.photos_utils import preprocess_numpy_image
 from utilss.classes.user import User
 from utilss.s3_utils import get_users_s3_client
-from fastapi import HTTPException
 from datetime import datetime
-import shutil
 
 ### original implemetation ###
 # def upload_model(
@@ -289,8 +286,6 @@ def save_model_metadata(
         Body=models_json
     )
     
-    return True
-
     return True
 
 

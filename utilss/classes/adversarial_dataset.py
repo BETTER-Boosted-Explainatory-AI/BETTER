@@ -12,37 +12,6 @@ load_dotenv()
 from utilss.s3_utils import get_users_s3_client 
 
 class AdversarialDataset:
-    # def __init__(self, Z_file, clean_images, adversarial_images, model_filename, dataset):
-    #     self.Z_matrix = Z_file
-    #     self.dataset = dataset
-    #     # Load the model
-    #     try:
-    #         if not os.path.exists(model_filename):
-    #             raise FileNotFoundError(f"Model file '{model_filename}' not found.")
-            
-    #         self.model = tf.keras.models.load_model(model_filename)
-    #         print(f"Model loaded successfully from '{model_filename}'.")
-    #     except Exception as e:
-    #         raise ValueError(f"Error loading model from '{model_filename}': {e}")
-        
-    #     DATASET_PATH = os.getenv("DATASETS_PATH")
-    #     if DATASET_PATH is None:
-    #         raise ValueError("DATASET_PATH environment variable is not set.")
-
-
-    #     if clean_images is None and adversarial_images is None:
-    #         self.clear_images = load_numpy_from_directory(self.model, f"{DATASET_PATH}{dataset}/clean")
-    #         self.adversarial_images = load_numpy_from_directory(self.model, f"{DATASET_PATH}{dataset}/adversarial")
-    #     else:
-    #         self.clear_images = load_numpy_from_directory(self.model,clean_images)
-    #         self.adversarial_images = load_numpy_from_directory(self.model,adversarial_images)
-
-    #     self.labels = get_dataset_labels(dataset)
-    #     if self.labels is None:
-    #         raise ValueError(f"info file for the dataset {dataset} not found'.")      
-
-    #     self.score_calculator = ScoreCalculator(self.Z_matrix, self.labels)
-    
     def __init__(self, Z_file, clean_images, adversarial_images, model_filename, dataset):
         self.Z_matrix = Z_file
         self.dataset = dataset

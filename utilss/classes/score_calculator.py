@@ -4,19 +4,7 @@ import boto3
 import os
 from utilss.s3_utils import get_users_s3_client 
 
-class ScoreCalculator:
-    
-### original implemetation ###
-    # def __init__(self, Z_filename, class_names):
-    #     try:
-    #         with open(Z_filename, 'rb') as file:
-    #             self.Z_full = pickle.load(file)
-    #     except (FileNotFoundError, pickle.UnpicklingError) as e:
-    #         print(f"Error loading Z file: {e}")
-    #         self.Z_full = None
-    #     self.class_names = class_names
-    
-### S3 implementation ###    
+class ScoreCalculator: 
     def __init__(self, Z_filename, class_names):
         # Initialize S3 client
         self.s3_client = get_users_s3_client()
