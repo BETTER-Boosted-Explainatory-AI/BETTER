@@ -1,43 +1,131 @@
 from sklearn.model_selection import train_test_split
 import numpy as np
 from utilss.classes.score_calculator import ScoreCalculator
-from utilss.files_utils import load_numpy_from_directory
-from services.dataset_service import _get_dataset_labels
+# from utilss.files_utils import load_numpy_from_directory
+from services.dataset_service import get_dataset_labels
+from utilss.s3_connector.s3_dataset_utils import load_dataset_numpy
+from utilss.files_utils import preprocess_numpy_image
 import tensorflow as tf
-import os
+import os, boto3, io, tempfile
+from dotenv import load_dotenv
+load_dotenv() 
+from utilss.s3_utils import get_users_s3_client 
 
 class AdversarialDataset:
     def __init__(self, Z_file, clean_images, adversarial_images, model_filename, dataset):
         self.Z_matrix = Z_file
         self.dataset = dataset
-        # Load the model
+        
+        # Initialize S3 client
+        s3_client = get_users_s3_client()
+        s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
+        if not s3_bucket:
+            raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
+        
+        # Load the model from S3
         try:
-            if not os.path.exists(model_filename):
-                raise FileNotFoundError(f"Model file '{model_filename}' not found.")
+            # Check if model_filename is a full S3 URI or just a path
+            if model_filename.startswith('s3://'):
+                parts = model_filename.replace('s3://', '').split('/', 1)
+                bucket = parts[0]
+                key = parts[1]
+            else:
+                # Assume it's a relative path in the default bucket
+                bucket = s3_bucket
+                key = model_filename
             
-            self.model = tf.keras.models.load_model(model_filename)
-            print(f"Model loaded successfully from '{model_filename}'.")
+            print(f"Loading model from S3: {bucket}/{key}")
+            
+            # Check if the file exists in S3
+            try:
+                s3_client.head_object(Bucket=bucket, Key=key)
+                print(f"Model file exists in S3: {bucket}/{key}")
+            except Exception as e:
+                raise FileNotFoundError(f"Model file '{bucket}/{key}' not found in S3: {str(e)}")
+            
+            # Load model directly from memory
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_model_path = os.path.join(temp_dir, 'model.keras')
+                s3_client.download_file(bucket, key, temp_model_path)
+                self.model = tf.keras.models.load_model(temp_model_path)
+                print(f"Model loaded successfully from S3: '{bucket}/{key}'.")
+                
         except Exception as e:
             raise ValueError(f"Error loading model from '{model_filename}': {e}")
         
-        DATASET_PATH = os.getenv("DATASETS_PATH")
-        if DATASET_PATH is None:
-            raise ValueError("DATASET_PATH environment variable is not set.")
-
-
+        # Load images from S3 with model-aware preprocessing
         if clean_images is None and adversarial_images is None:
-            self.clear_images = load_numpy_from_directory(self.model, f"{DATASET_PATH}{dataset}/clean")
-            self.adversarial_images = load_numpy_from_directory(self.model, f"{DATASET_PATH}{dataset}/adversarial")
+            # Load from default S3 locations
+            print(f"Loading clean images for {dataset} from S3...")
+            clean_data = load_dataset_numpy(dataset, 'clean')
+            
+            print(f"Loading adversarial images for {dataset} from S3...")
+            adversarial_data = load_dataset_numpy(dataset, 'adversarial')
+            
+            # Convert S3 dictionary format and apply model-aware preprocessing
+            self.clear_images = self._process_s3_data_with_model(clean_data)
+            self.adversarial_images = self._process_s3_data_with_model(adversarial_data)
+            
         else:
-            self.clear_images = load_numpy_from_directory(self.model,clean_images)
-            self.adversarial_images = load_numpy_from_directory(self.model,adversarial_images)
+            # Handle custom paths - extract folder type from path
+            if clean_images:
+                if 'clean' in clean_images.lower():
+                    clean_data = load_dataset_numpy(dataset, 'clean')
+                    self.clear_images = self._process_s3_data_with_model(clean_data)
+                else:
+                    # Handle other custom logic if needed
+                    raise ValueError(f"Unsupported clean images path: {clean_images}")
+            
+            if adversarial_images:
+                if 'adversarial' in adversarial_images.lower():
+                    adversarial_data = load_dataset_numpy(dataset, 'adversarial')
+                    self.adversarial_images = self._process_s3_data_with_model(adversarial_data)
+                else:
+                    # Handle other custom logic if needed
+                    raise ValueError(f"Unsupported adversarial images path: {adversarial_images}")
 
-        self.labels = _get_dataset_labels(dataset)
+        print(f"Loaded {len(self.clear_images)} clean images")
+        print(f"Loaded {len(self.adversarial_images)} adversarial images")
+
+        self.labels = get_dataset_labels(dataset)
         if self.labels is None:
-            raise ValueError(f"info file for the dataset {dataset} not found'.")      
+            raise ValueError(f"Info file for the dataset {dataset} not found.")      
 
+        # Create ScoreCalculator with S3 support
         self.score_calculator = ScoreCalculator(self.Z_matrix, self.labels)
 
+
+    def _process_s3_data_with_model(self, s3_data):
+        """
+        Convert S3 dictionary of individual image files to list of images
+        with the same preprocessing as the original load_numpy_from_directory.
+        """
+        if isinstance(s3_data, dict):
+            if not s3_data:
+                return []
+            
+            # Sort by filename to maintain consistent order
+            sorted_items = sorted(s3_data.items(), key=lambda x: x[0])
+            
+            processed_images = []
+            for filename, image_array in sorted_items:
+                try:
+                    # Apply the same preprocessing as the original function
+                    preprocess_image = preprocess_numpy_image(self.model, image_array)
+                    processed_images.append(preprocess_image)
+                except Exception as e:
+                    print(f"Error preprocessing image {filename}: {e}")
+                    continue
+            
+            return processed_images
+        
+        elif isinstance(s3_data, list):
+            return s3_data
+        else:
+            print(f"Warning: Unexpected data type from S3: {type(s3_data)}")
+            return []
+        
+        
     def create_logistic_regression_dataset(self):
         scores = []
         labels = []

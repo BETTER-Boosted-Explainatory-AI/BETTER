@@ -14,9 +14,6 @@ cognito_user_pool_id = os.getenv("COGNITO_USER_POOL_ID")
 incognito_client = boto3.client('cognito-idp', region_name=aws_region)
 
 def get_secret_hash(username: str, client_id: str, client_secret: str) -> str:
-    print(f"COGNITO_CLIENT_ID: {cognito_client_id}")
-    print(f"COGNITO_CLIENT_SECRET: {cognito_client_secret[:4]}***")
-    print(f"Username: {username}")
     message = username + client_id
     dig = hmac.new(
         client_secret.encode('utf-8'),

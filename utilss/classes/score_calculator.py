@@ -1,14 +1,39 @@
 import numpy as np
 import pickle
+import boto3
+import os
+from utilss.s3_utils import get_users_s3_client 
 
-class ScoreCalculator:
+class ScoreCalculator: 
     def __init__(self, Z_filename, class_names):
+        # Initialize S3 client
+        self.s3_client = get_users_s3_client()
+        
         try:
-            with open(Z_filename, 'rb') as file:
-                self.Z_full = pickle.load(file)
-        except (FileNotFoundError, pickle.UnpicklingError) as e:
-            print(f"Error loading Z file: {e}")
+            # Parse the S3 path
+            if Z_filename.startswith('s3://'):
+                # Extract bucket and key from S3 URI
+                parts = Z_filename.replace('s3://', '').split('/', 1)
+                bucket = parts[0]
+                key = parts[1]
+            else:
+                # Use environment variable for bucket and provided path as key
+                bucket = os.getenv("S3_USERS_BUCKET_NAME")
+                if not bucket:
+                    raise ValueError("S3_USERS_BUCKET_NAME environment variable is required when not using full s3:// path")
+                key = Z_filename
+            
+            # Stream data directly from S3
+            response = self.s3_client.get_object(Bucket=bucket, Key=key)
+            stream = response['Body']
+            
+            # Load pickle data directly from the stream
+            self.Z_full = pickle.load(stream)
+            
+        except Exception as e:
+            print(f"Error loading Z file from S3: {e}")
             self.Z_full = None
+            
         self.class_names = class_names
 
 

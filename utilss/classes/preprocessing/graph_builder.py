@@ -5,9 +5,6 @@ class GraphBuilder:
     
     def get_infinity(self):
         return self.infinity
-
-    def get_threshold(self):
-        return self.threshold
     
     def create_edge_weight(self, pred_prob):
         if self.graph_type == "dissimilarity":
@@ -17,6 +14,8 @@ class GraphBuilder:
         return pred_prob
     
     def update_graph(self, graph, source_label, target_label, probability, image_id, dataset_class):
+        
+
         if source_label == target_label:
             return None
  

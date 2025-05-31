@@ -1,6 +1,5 @@
 import pandas as pd
 from utilss.enums.datasets_enum import DatasetsEnum
-from data.datasets.imagenet_info import IMAGENET_INFO
 
 class WhiteBoxTesting:
     def __init__(self, model_name):

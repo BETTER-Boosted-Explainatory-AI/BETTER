@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 adversarial_router = APIRouter()
 
 @adversarial_router.post(
-    "/adversarial/generate",
+    "/api/adversarial/generate",
     status_code=status.HTTP_201_CREATED,
     response_model=DetectorResponse,
     responses={
@@ -66,7 +66,7 @@ async def generate_adversarial_detector(
 
 
 @adversarial_router.post(
-    "/adversarial/detect",
+    "/api/adversarial/detect",
     status_code=status.HTTP_200_OK,
     response_model=DetectionResult,
     responses={
@@ -98,7 +98,7 @@ async def detect_query(
         raise HTTPException(status_code=500, detail=str(e))
     
 @adversarial_router.post(
-    "/adversarial/analyze",
+    "/api/adversarial/analyze",
     status_code=status.HTTP_200_OK,
     response_model=AnalysisResult,
     responses={
@@ -152,7 +152,7 @@ async def analyze_adversarial(
     
 
 @adversarial_router.get(
-    "/adversarial/does_detector_exist",
+    "/api/adversarial/does_detector_exist",
     status_code=status.HTTP_200_OK,
     response_model=bool,
     responses={
@@ -176,7 +176,7 @@ async def does_detector_exist(
     
 
 @adversarial_router.delete(
-    "/adversarial/delete_detector",
+    "/api/adversarial/delete_detector",
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},

@@ -3,7 +3,7 @@ import os, boto3, pathlib
 
 load_dotenv()                                           # skips silently if no .env
 
-bucket = os.getenv("S3_BUCKET_NAME", "better-datasets")
+bucket = os.getenv("S3_DATASETS_BUCKET_NAME", "better-datasets")
 dataset_key = "cifar100/"                               # folder prefix in S3
 local_root  = pathlib.Path("data/cifar100")             # where to save files
 aws_region = os.getenv("AWS_REGION")
