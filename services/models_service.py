@@ -383,3 +383,21 @@ def get_model_files(user_folder: str, model_info: dict, graph_type: str):
         "dataframe": dataframe_filename, 
         "model_graph_folder": model_graph_folder
     }
+
+def get_detectors_list():
+    model_subfolder = f"{user_folder}/{model_info['model_id']}"
+    model_file = f"{model_subfolder}/{model_info['file_name']}"
+    
+    if not s3_file_exists(S3_BUCKET, model_file):
+        model_file = None
+        raise ValueError(f"Model file s3://{S3_BUCKET}/{model_file} does not exist")
+    
+    model_graph_folder = f"{model_subfolder}/{graph_type}"
+    
+    # Check if the graph folder "exists" by listing objects with this prefix
+    s3_client = get_users_s3_client() 
+    response = s3_client.list_objects_v2(
+        Bucket=S3_BUCKET,
+        Prefix=model_graph_folder,
+        MaxKeys=1
+    )
