@@ -10,8 +10,9 @@ from utilss.photos_utils import preprocess_numpy_image
 from utilss.classes.user import User
 from utilss.s3_utils import get_users_s3_client
 from datetime import datetime
-from logging import getLogger
-logger = getLogger(__name__)
+import logging
+logger = logging.getLogger(__name__)
+
 
 ### original implemetation ###
 # def upload_model(
