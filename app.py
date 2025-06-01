@@ -1,12 +1,12 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
-from dotenv import load_dotenv
 import os
-
 from utilss.exception_handlers import http_exception_handler, generic_exception_handler, validation_exception_handler
-
 from routers.nma_router import nma_router
 from routers.whitebox_testing_router import whitebox_testing_router
 from routers.query_router import query_router
@@ -15,8 +15,9 @@ from routers.adversarial_router import adversarial_router
 from routers.users_router import users_router
 from routers.dendrogram_router import dendrogram_router
 from routers.model_router import model_router
+import sys
+sys.path.append('/app')
 
-load_dotenv()
 
 app = FastAPI()
 

@@ -6,6 +6,8 @@ import boto3
 import requests
 from jose import jwt, JWTError
 from fastapi import Request
+from dotenv import load_dotenv
+load_dotenv() 
 
 cognito_client_secret = os.getenv("COGNITO_CLIENT_SECRET")
 cognito_client_id = os.getenv("COGNITO_CLIENT_ID")
