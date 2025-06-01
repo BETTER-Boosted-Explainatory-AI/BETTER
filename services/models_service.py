@@ -107,17 +107,42 @@ def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
         logger.error(f"Error checking S3 prefix {s3_prefix}: {e}")
         return None
     
+# def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
+#     """Get S3 model filename"""
+#     model_path = _get_model_path(user_id, model_id)
+#     if model_path is None:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+#             detail="Could not find model directory"
+#         )
+    
+#     # Find .keras file in S3 prefix
+#     s3_client =  get_users_s3_client() 
+    
+#     try:
+#         response = s3_client.list_objects_v2(
+#             Bucket=S3_BUCKET,
+#             Prefix=model_path
+#         )
+        
+#         if 'Contents' in response:
+#             for obj in response['Contents']:
+#                 if obj['Key'].endswith('.keras'):
+#                     return obj['Key']   
+        
+#         return None
+#     except ClientError as e:
+#         logger.error(f"Error listing S3 objects: {e}")
+#         return None
+        
+        
 def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
     """Get S3 model filename"""
     model_path = _get_model_path(user_id, model_id)
     if model_path is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="Could not find model directory"
-        )
+        raise ValueError("Could not find model directory")
     
-    # Find .keras file in S3 prefix
-    s3_client =  get_users_s3_client() 
+    s3_client = get_users_s3_client() 
     
     try:
         response = s3_client.list_objects_v2(
@@ -134,7 +159,6 @@ def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optiona
     except ClientError as e:
         logger.error(f"Error listing S3 objects: {e}")
         return None
-        
 
 def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any]) -> Model:
     """Load model from S3 with minimal memory usage"""
