@@ -114,6 +114,7 @@ async def analyze_adversarial(
     graph_type: str = Form(...),
     image: UploadFile = Form(...),
     attack_type: str = Form(...),
+    detector_filename: str = Form(...),
     epsilon: Optional[float] = Form(None),
     alpha: Optional[float] = Form(None),
     overshoot: Optional[float] = Form(None),
@@ -133,7 +134,8 @@ async def analyze_adversarial(
         alpha=alpha,
         num_steps=num_steps,
         overshoot=overshoot,
-        num_classes=classes_number
+        num_classes=classes_number,
+        detector_filename=detector_filename
         )
         if analysis_result is None:
             raise HTTPException(status_code=404, detail="Detection result not found")
@@ -143,9 +145,13 @@ async def analyze_adversarial(
             original_image=analysis_result["original_image"],
             original_predicition=analysis_result["original_predictions"],
             original_verbal_explaination=analysis_result["original_verbal_explaination"],
+            original_probability=analysis_result["original_probability"],
+            original_detection_result=analysis_result["original_detection_result"],
             adversarial_image=analysis_result["adversarial_image"],
             adversarial_prediction=analysis_result["adversarial_predictions"],
             adversarial_verbal_explaination=analysis_result["adversarial_verbal_explaination"],
+            adversarial_probability=analysis_result["adversarial_probability"],
+            adversarial_detection_result=analysis_result["adversarial_detection_result"]
         )
 
         return result.model_dump()

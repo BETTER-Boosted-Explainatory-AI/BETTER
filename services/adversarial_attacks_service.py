@@ -156,7 +156,7 @@ def detect_adversarial_image(model_id, graph_type, image, user, detector_filenam
         "probability": proba
         }
 
-def analysis_adversarial_image(model_id, graph_type, attack_type, image, user, **kwargs):
+def analysis_adversarial_image(model_id, graph_type, attack_type, image, user, detector_filename, **kwargs):
     logger.info("Analyzing adversarial image")
     logger.debug(f"Model ID: {model_id}, Graph Type: {graph_type}, Attack Type: {attack_type}")
 
@@ -172,7 +172,9 @@ def analysis_adversarial_image(model_id, graph_type, attack_type, image, user, *
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
         model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
+        model_graph_folder = model_files["model_graph_folder"]
         model_file = model_files["model_file"]
+        Z_full = model_files["Z_file"]
         
         # Check if model file exists in S3
         try:
@@ -201,6 +203,8 @@ def analysis_adversarial_image(model_id, graph_type, attack_type, image, user, *
         
         dataset = model_info["dataset"]
         labels = get_dataset_labels(dataset)
+        detector = AdversarialDetector(model_graph_folder, detector_filename)
+        score_calculator = ScoreCalculator(Z_full, labels)
 
         if attack_type == "deepfool":
             preprocessed_image = preprocess_deepfool_image(model, image)
@@ -235,19 +239,37 @@ def analysis_adversarial_image(model_id, graph_type, attack_type, image, user, *
         # Get top K predictions for the original image
         original_predictions = get_top_k_predictions(model, original_image_preprocessed, labels)
         original_verbal_explaination = query_model(original_predictions[0][0], model_id, graph_type, user)
+        orignal_pred = model.predict(original_image_preprocessed, verbose=0)
+        original_score = score_calculator.calculate_adversarial_score(orignal_pred[0])
+        original_feature = [[original_score]]  # Wrap the score in a 2D array
+        original_label = detector.predict(original_feature)[0]  # Predict the label (0 = clean, 1 = adversarial)
+        original_proba = detector.predict_proba(original_feature)[0][1]  # Probability of being adversarial
+        original_detection_result = 'Adversarial' if original_label == 1 else 'Clean'
 
         # Get top K predictions for the adversarial image
         adversarial_predictions = get_top_k_predictions(model, adversarial_image_preprocessed, labels)
         adversarial_verbal_explaination = query_model(adversarial_predictions[0][0], model_id, graph_type, user)
+        adversarial_pred = model.predict(adversarial_image_preprocessed, verbose=0)
+        adversarial_score = score_calculator.calculate_adversarial_score(adversarial_pred[0])
+        adversarial_feature = [[adversarial_score]]  # Wrap the score in a 2D array
+        adversarial_label = detector.predict(adversarial_feature)[0]
+        adversarial_proba = detector.predict_proba(adversarial_feature)[0][1]
+        adversarial_detection_result = 'Adversarial' if adversarial_label == 1 else 'Clean'
+        logger.info(f"Original Image - Score: {original_score}, Label: {original_label}, Probability: {original_proba}")
+        logger.info(f"Adversarial Image - Score: {adversarial_score}, Label: {adversarial_label}, Probability: {adversarial_proba}")
 
         # Return both images as Base64 strings
         return {
             "original_image": original_image_base64,
             "original_predictions": original_predictions,
             "original_verbal_explaination": original_verbal_explaination,
+            "original_probability": original_proba,
+            "original_detection_result": original_detection_result,
             "adversarial_image": adversarial_image_base64,
             "adversarial_predictions": adversarial_predictions,
             "adversarial_verbal_explaination": adversarial_verbal_explaination,
+            "adversarial_probability": adversarial_proba,
+            "adversarial_detection_result": adversarial_detection_result
         }
     
 
