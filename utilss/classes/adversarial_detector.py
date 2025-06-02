@@ -7,6 +7,7 @@ import logging
 from botocore.exceptions import ClientError
 import io
 from utilss.s3_utils import get_users_s3_client 
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,6 @@ class AdversarialDetector:
         self.threshold = threshold
     
         self.s3_detector_key = f'{model_folder}/logistic_regression_model.pkl'
-        self.threshold = threshold
         self.detector = None
         
         if s3_file_exists(S3_BUCKET, self.s3_detector_key):
@@ -104,7 +104,7 @@ class AdversarialDetector:
     ### S3 implementation ### 
         print("Training completed. Saving to S3...")
         self._save_detector_to_s3(detector, optimal_threshold)
-        print(f"Detector model saved to 's3://{S3_BUCKET}/{self.s3_detector_key}'")
+        # print(f"Detector model saved to 's3://{S3_BUCKET}/{self.s3_detector_key}'")
 
         return detector
     
@@ -135,15 +135,17 @@ class AdversarialDetector:
             buffer = io.BytesIO()
             joblib.dump((detector, threshold), buffer)
             buffer.seek(0)  # Reset buffer position to the beginning
+
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+            s3_detector_key_new = f'{self.model_folder}/logistic_regression_model_{timestamp}.pkl'
             
             # Upload the buffer content to S3
             s3_client.upload_fileobj(
                 buffer, 
                 S3_BUCKET, 
-                self.s3_detector_key
+                s3_detector_key_new
             )
-            
-            logger.info(f"Detector model saved to 's3://{S3_BUCKET}/{self.s3_detector_key}'")
+            logger.info(f"Detector model saved to 's3://{S3_BUCKET}/{s3_detector_key_new}'")
         except Exception as e:
             logger.error(f"Error saving detector to S3: {e}")
             raise

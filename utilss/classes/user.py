@@ -20,7 +20,7 @@ class User:
         
         self.users_json_path = "users.json"  # At bucket root
         self.user_folder_path = f"{self.user_id}"  # Just the user ID
-        self.models_json_path = f"{self.user_id}/models.json"
+        self.models_json_path = f"{self.user_id}.json"
         self.current_model_json = f"{self.user_id}/current_model.json"
 
     def create_user(self):

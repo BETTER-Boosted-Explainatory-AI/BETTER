@@ -247,3 +247,41 @@ def analysis_adversarial_image(model_id, graph_type, attack_type, image, user, *
             "adversarial_predictions": adversarial_predictions,
             "adversarial_verbal_explaination": adversarial_verbal_explaination,
         }
+    
+
+def get_detector_list(user, model_id, graph_type):
+    """
+    Get the list of adversarial detectors for the user of the specific model graph type.
+    
+    Parameters:
+    - user: The user object
+    
+    Returns:
+    - List of detectors names
+    """
+    logger.info("Getting detector list")
+    model_info = get_user_models_info(user, model_id)
+    if model_info is None:
+        raise ValueError(f"Model ID {model_id} not found in models.json")
+    
+    S3_BUCKET = os.getenv("S3_USERS_BUCKET_NAME")
+    if not S3_BUCKET:
+        raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
+    
+    user_folder = user.get_user_folder()
+    model_subfolder = f"{user_folder}/{model_info['model_id']}"
+
+    model_graph_folder = f"{model_subfolder}/{graph_type}"
+    detector_prefix = f"{model_graph_folder}/logistic_regression_model"
+    
+    s3_client = get_users_s3_client()
+    paginator = s3_client.get_paginator('list_objects_v2')
+    page_iterator = paginator.paginate(Bucket=S3_BUCKET, Prefix=detector_prefix)
+
+    detector_keys = []
+    for page in page_iterator:
+        for obj in page.get('Contents', []):
+            detector_keys.append(os.path.basename(obj['Key']))
+
+    return detector_keys
+    
