@@ -16,6 +16,7 @@ class DetectionResult(BaseModel):
     image: str
     predictions: List[Tuple[str, float]] 
     result: str
+    probability: float
 
 class DetectorListRequest(BaseModel):
     current_model_id: str

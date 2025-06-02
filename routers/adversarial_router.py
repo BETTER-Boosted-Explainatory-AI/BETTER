@@ -92,6 +92,7 @@ async def detect_query(
             image=detection_result["image"],
             predictions=detection_result["predictions"],
             result=detection_result["result"],
+            probability=detection_result["probability"]
         )
 
         return final_result.model_dump()

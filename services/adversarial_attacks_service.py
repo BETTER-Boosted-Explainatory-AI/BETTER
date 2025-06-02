@@ -137,6 +137,7 @@ def detect_adversarial_image(model_id, graph_type, image, user, detector_filenam
     # Use the detector to classify the image
     feature = [[score]]  # Wrap the score in a 2D array
     label = detector.predict(feature)[0]  # Predict the label (0 = clean, 1 = adversarial)
+    proba = detector.predict_proba(feature)[0][1]  # Probability of being adversarial
     detection_result = 'Adversarial' if label == 1 else 'Clean'
 
     logger.info(f"Adversarial score: {score}, Label: {label}")
@@ -152,6 +153,7 @@ def detect_adversarial_image(model_id, graph_type, image, user, detector_filenam
         "image": image_base64,
         "predictions": image_predictions,
         "result": detection_result,
+        "probability": proba
         }
 
 def analysis_adversarial_image(model_id, graph_type, attack_type, image, user, **kwargs):
