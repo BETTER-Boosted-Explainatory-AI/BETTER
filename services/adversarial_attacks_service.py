@@ -62,7 +62,7 @@ def does_detector_exist_(model_id, graph_type, user):
             return False
 
 
-def detect_adversarial_image(model_id, graph_type, image, user):
+def detect_adversarial_image(model_id, graph_type, image, user, detector_filename):
     """
     Detect if an image is adversarial using the trained logistic regression detector.
     
@@ -125,7 +125,7 @@ def detect_adversarial_image(model_id, graph_type, image, user):
         
     image_preprocessed = preprocess_loaded_image(model, image)
 
-    detector = AdversarialDetector(model_graph_folder)
+    detector = AdversarialDetector(model_graph_folder, detector_filename)
     score_calculator = ScoreCalculator(Z_full, labels)
     
     # Get predictions from the original model
