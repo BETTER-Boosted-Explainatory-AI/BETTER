@@ -79,11 +79,12 @@ async def detect_query(
     current_model_id: str = Form(...),
     graph_type: str = Form(...),
     image: UploadFile = Form(...),
+    detector_filename: str = Form(...),
     current_user: User = Depends(require_authenticated_user)
 ):
     try:
         image_content = await image.read()
-        detection_result = detect_adversarial_image(current_model_id, graph_type, image_content, current_user)
+        detection_result = detect_adversarial_image(current_model_id, graph_type, image_content, current_user, detector_filename)
         if detection_result is None:
             raise HTTPException(status_code=404, detail="Detection result not found")
 
@@ -91,6 +92,7 @@ async def detect_query(
             image=detection_result["image"],
             predictions=detection_result["predictions"],
             result=detection_result["result"],
+            probability=detection_result["probability"]
         )
 
         return final_result.model_dump()
