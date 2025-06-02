@@ -178,7 +178,7 @@ def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any
     else:
         # S3 key without s3:// prefix
         model = load_model_from_s3(S3_BUCKET, model_path)
-        effective_path = f"{S3_BUCKET}/{model_path}"
+        effective_path = f"s3://{S3_BUCKET}/{model_path}"
     
     print(f"Model {effective_path} has been loaded")
     
@@ -267,7 +267,7 @@ def construct_model(model_path: str, dataset_config: Dict[str, Any]) -> Model:
         resnet_model, 
         dataset_config["top_k"], 
         dataset_config["min_confidence"],
-        f"{bucket_name}/{s3_key}", 
+        f"s3://{bucket_name}/{s3_key}", 
         dataset_config["dataset"]
     )
     
