@@ -253,13 +253,9 @@
 
 from nltk.corpus import wordnet as wn
 import os
-from utilss.s3_utils import get_datasets_s3_client
-from itertools import combinations, product
-from collections import Counter
+from NMA.utilss.s3_utils import get_datasets_s3_client
+from collections import defaultdict, Counter
 import logging
-
-logger = logging.getLogger(__name__)
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -399,7 +395,6 @@ def get_all_leaf_names(node):
         names.extend(get_all_leaf_names(child))
     return names
 
-
 def process_hierarchy(hierarchy_data, debug=False):
     """Process the entire hierarchy, renaming clusters while preserving structure."""
     if debug:
@@ -407,6 +402,12 @@ def process_hierarchy(hierarchy_data, debug=False):
     return _rename_clusters(hierarchy_data, debug=debug)
 
 
+from nltk.corpus import wordnet as wn
+from itertools import combinations, product
+from collections import Counter
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------
@@ -518,9 +519,8 @@ def _find_best_common_hypernym(
     if not filtered:
         filtered = candidates
 
-    # 5. Take the top candidate: underscore→space, Capitalize
     best_synset, best_freq = filtered[0]
-    best_label = best_synset.name().split(".")[0].replace("_", " ").capitalize()
+    best_label = (best_synset.name().split(".")[0].replace(" ", "_")).lower()
     if debug:
         logger.info(f"Selected hypernym: '{best_label}'  (freq={best_freq}, depth={best_synset.min_depth()})")
     return best_label
@@ -574,14 +574,14 @@ def find_common_hypernyms(
         # If path has at least 2 nodes, candidate = one level above the leaf sense
         if len(longest_path) >= 2:
             candidate = longest_path[-2]
-            name = candidate.name().split(".")[0].replace("_", " ").capitalize()
+            name = (candidate.name().split(".")[0].replace(" ", "_")).lower()
             if name.lower() not in {word, "entity"}:
                 if debug:
                     logger.info(f"Single-leaf hypernym = '{name}'")
                 return name
         return None
 
-    # 2+ leaves: use pairwise LCH approach
+    # 2+ leaves: use pairwise LCA approach
     return _find_best_common_hypernym(clean_leaves, max_senses_per_word=5, debug=debug)
 
 def _rename_clusters(node, depth=0, used_names=None, all_leaf_names=None, debug=False):
@@ -611,17 +611,17 @@ def _rename_clusters(node, depth=0, used_names=None, all_leaf_names=None, debug=
                 logger.info("  → no leaves under this cluster, keep name")
             return node
 
-        # Call the new LCH-based finder (no more abstraction loops)
+        # Call the new LCA-based finder (no more abstraction loops)
         candidate = find_common_hypernyms(leaf_names, debug=debug)
 
         if candidate:
             # Ensure it doesn’t conflict with actual leaf names or prev used names
-            base = candidate.capitalize()
+            base = candidate
             unique = base
             idx = 1
             while unique.lower() in all_leaf_names or unique.lower() in {n.lower() for n in used_names}:
                 idx += 1
-                unique = f"{base} {idx}"
+                unique = f"{base}_{idx}"
             node["name"] = unique
             used_names.add(unique)
             if debug:
