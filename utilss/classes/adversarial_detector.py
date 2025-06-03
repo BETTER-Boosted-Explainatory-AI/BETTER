@@ -17,18 +17,12 @@ if not S3_BUCKET:
     raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
 
 class AdversarialDetector:
-    def __init__(self, model_folder, threshold=0.5):
+    def __init__(self, model_folder, detector_filename, threshold=0.5):
         
         self.model_folder = model_folder
-        detector_filename =  f'{model_folder}/logistic_regression_model.pkl'
-        if os.path.exists(detector_filename):
-            self.detector, self.threshold = joblib.load(detector_filename)
-            print(f"Detector model loaded from '{detector_filename}'.")
-        else:
-            self.detector = None
         self.threshold = threshold
     
-        self.s3_detector_key = f'{model_folder}/logistic_regression_model.pkl'
+        self.s3_detector_key = f'{model_folder}/{detector_filename}'
         self.detector = None
         
         if s3_file_exists(S3_BUCKET, self.s3_detector_key):

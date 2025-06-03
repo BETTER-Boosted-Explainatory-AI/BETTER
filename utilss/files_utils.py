@@ -78,7 +78,7 @@ def upload_model(
    
     filename = os.path.basename(model_file.filename)
     user_folder = current_user.get_user_folder()
-    models_json_path = f"{user_folder}.json"
+    models_json_path = f"{user_folder}/models.json"
     
     # Get models data from S3
     try:
@@ -173,7 +173,7 @@ def _update_model_metadata(current_user, model_id, model_filename, dataset, grap
     s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
     
     user_folder = current_user.get_user_folder()
-    models_json_path = f"{user_folder}.json"
+    models_json_path = f"{user_folder}/models.json"
     
     try:
         response = s3_client.get_object(Bucket=s3_bucket, Key=models_json_path)
@@ -400,7 +400,7 @@ def user_has_job_running(current_user):
         raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
     
     user_folder = current_user.get_user_folder()
-    models_json_path = f"{user_folder}.json"
+    models_json_path = f"{user_folder}/models.json"
     
     try:
         response = s3_client.get_object(Bucket=s3_bucket, Key=models_json_path)
@@ -455,7 +455,7 @@ def update_current_model(user_id, model_id, graph_type, model_filename, dataset,
         raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
     
     # Define models.json key
-    models_json_key = f"{user_id}.json"
+    models_json_key = f"{user_id}/models.json"
     
     try:
         # Try to get existing models.json

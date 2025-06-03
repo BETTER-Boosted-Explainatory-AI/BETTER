@@ -151,7 +151,7 @@ class Dendrogram:
                 upload_json_to_s3(self.Z_tree_format, S3_BUCKET, self.s3_json_key)
                 print(f"Tree format saved to s3://{S3_BUCKET}/{self.s3_json_key}")
             
-            return f"{S3_BUCKET}/{self.s3_pickle_key}", f"{S3_BUCKET}/{self.s3_json_key}"
+            return f"s3://{S3_BUCKET}/{self.s3_pickle_key}", f"s3://{S3_BUCKET}/{self.s3_json_key}"
             
         except Exception as e:
             logger.error(f"Error saving dendrogram to S3: {e}")

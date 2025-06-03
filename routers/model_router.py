@@ -24,19 +24,7 @@ async def get_model_info(
     models_info = get_user_models_info(current_user, None)
     if models_info is None:
         raise HTTPException(status_code=404, detail="Model not found")
-    if status_filter == "succeeded":
-        filtered_models = []
-        for model in models_info:
-            succeeded_types = [
-                job["job_graph_type"]
-                for job in model.get("batch_jobs", [])
-                if job.get("job_status") == "succeeded"
-            ]
-            if succeeded_types:
-                model_copy = model.copy()
-                model_copy["graph_type"] = list(set(succeeded_types))
-                filtered_models.append(model_copy)
-        return filtered_models
+    print(f"Models info: {models_info}")
     if status_filter == "succeeded":
         filtered_models = []
         for model in models_info:

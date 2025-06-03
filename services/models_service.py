@@ -107,42 +107,17 @@ def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
         logger.error(f"Error checking S3 prefix {s3_prefix}: {e}")
         return None
     
-# def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
-#     """Get S3 model filename"""
-#     model_path = _get_model_path(user_id, model_id)
-#     if model_path is None:
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-#             detail="Could not find model directory"
-#         )
-    
-#     # Find .keras file in S3 prefix
-#     s3_client =  get_users_s3_client() 
-    
-#     try:
-#         response = s3_client.list_objects_v2(
-#             Bucket=S3_BUCKET,
-#             Prefix=model_path
-#         )
-        
-#         if 'Contents' in response:
-#             for obj in response['Contents']:
-#                 if obj['Key'].endswith('.keras'):
-#                     return obj['Key']   
-        
-#         return None
-#     except ClientError as e:
-#         logger.error(f"Error listing S3 objects: {e}")
-#         return None
-        
-        
 def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
     """Get S3 model filename"""
     model_path = _get_model_path(user_id, model_id)
     if model_path is None:
-        raise ValueError("Could not find model directory")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Could not find model directory"
+        )
     
-    s3_client = get_users_s3_client() 
+    # Find .keras file in S3 prefix
+    s3_client =  get_users_s3_client() 
     
     try:
         response = s3_client.list_objects_v2(
@@ -159,6 +134,7 @@ def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optiona
     except ClientError as e:
         logger.error(f"Error listing S3 objects: {e}")
         return None
+        
 
 def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any]) -> Model:
     """Load model from S3 with minimal memory usage"""
@@ -178,7 +154,7 @@ def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any
     else:
         # S3 key without s3:// prefix
         model = load_model_from_s3(S3_BUCKET, model_path)
-        effective_path = f"{S3_BUCKET}/{model_path}"
+        effective_path = f"s3://{S3_BUCKET}/{model_path}"
     
     print(f"Model {effective_path} has been loaded")
     
@@ -258,7 +234,7 @@ def construct_model(model_path: str, dataset_config: Dict[str, Any]) -> Model:
     
     # Check if model exists in S3
     if not s3_file_exists(bucket_name, s3_key):
-        raise FileNotFoundError(f'Model {bucket_name}/{s3_key} does not exist')
+        raise FileNotFoundError(f'Model s3://{bucket_name}/{s3_key} does not exist')
     
     # Load model from S3
     resnet_model = load_model_from_s3(bucket_name, s3_key)
@@ -267,7 +243,7 @@ def construct_model(model_path: str, dataset_config: Dict[str, Any]) -> Model:
         resnet_model, 
         dataset_config["top_k"], 
         dataset_config["min_confidence"],
-        f"{bucket_name}/{s3_key}", 
+        f"s3://{bucket_name}/{s3_key}", 
         dataset_config["dataset"]
     )
     
@@ -309,9 +285,9 @@ def query_predictions(model_id, graph_type, image, user):
     if s3_file_exists(S3_BUCKET, model_s3_key):
         # Load model from S3
         current_model = load_model_from_s3(S3_BUCKET, model_s3_key)
-        logger.debug(f"Model loaded successfully from '{S3_BUCKET}/{model_s3_key}'.")
+        logger.debug(f"Model loaded successfully from 's3://{S3_BUCKET}/{model_s3_key}'.")
     else:
-        raise ValueError(f"Model file {S3_BUCKET}/{model_s3_key} does not exist")
+        raise ValueError(f"Model file s3://{S3_BUCKET}/{model_s3_key} does not exist")
     
     preprocessed_image = preprocess_loaded_image(current_model, image)
     predictions = get_top_k_predictions(current_model, preprocessed_image, labels)
@@ -324,14 +300,14 @@ def get_user_models_info(user, model_id):
     """Get model info from models.json in S3"""
     # Assuming user object has a method to get the models.json path in S3
     # If not, we'll need to construct it
-    s3_models_json_key = f"{user.get_user_folder()}.json"
+    s3_models_json_key = f"{user.get_user_folder()}/models.json"
     
     if s3_file_exists(S3_BUCKET, s3_models_json_key):
         models_data = read_json_from_s3(S3_BUCKET, s3_models_json_key)
-        logger.debug(f"Models data loaded from {S3_BUCKET}/{s3_models_json_key}")
+        logger.debug(f"Models data loaded from s3://{S3_BUCKET}/{s3_models_json_key}")
     else:
         models_data = []
-        raise ValueError(f"Models metadata file '{S3_BUCKET}/{s3_models_json_key}' not found.")
+        raise ValueError(f"Models metadata file 's3://{S3_BUCKET}/{s3_models_json_key}' not found.")
     
     if model_id is None:
         return models_data
@@ -358,7 +334,7 @@ def get_model_files(user_folder: str, model_info: dict, graph_type: str):
     
     if not s3_file_exists(S3_BUCKET, model_file):
         model_file = None
-        raise ValueError(f"Model file {S3_BUCKET}/{model_file} does not exist")
+        raise ValueError(f"Model file s3://{S3_BUCKET}/{model_file} does not exist")
     
     model_graph_folder = f"{model_subfolder}/{graph_type}"
     
@@ -408,20 +384,20 @@ def get_model_files(user_folder: str, model_info: dict, graph_type: str):
         "model_graph_folder": model_graph_folder
     }
 
-# def get_detectors_list():
-#     model_subfolder = f"{user_id}/{model_info['model_id']}"
-#     model_file = f"{model_subfolder}/{model_info['file_name']}"
+def get_detectors_list():
+    model_subfolder = f"{user_folder}/{model_info['model_id']}"
+    model_file = f"{model_subfolder}/{model_info['file_name']}"
     
-#     if not s3_file_exists(S3_BUCKET, model_file):
-#         model_file = None
-#         raise ValueError(f"Model file s3://{S3_BUCKET}/{model_file} does not exist")
+    if not s3_file_exists(S3_BUCKET, model_file):
+        model_file = None
+        raise ValueError(f"Model file s3://{S3_BUCKET}/{model_file} does not exist")
     
-#     model_graph_folder = f"{model_subfolder}/{graph_type}"
+    model_graph_folder = f"{model_subfolder}/{graph_type}"
     
-#     # Check if the graph folder "exists" by listing objects with this prefix
-#     s3_client = get_users_s3_client() 
-#     response = s3_client.list_objects_v2(
-#         Bucket=S3_BUCKET,
-#         Prefix=model_graph_folder,
-#         MaxKeys=1
-#     )
+    # Check if the graph folder "exists" by listing objects with this prefix
+    s3_client = get_users_s3_client() 
+    response = s3_client.list_objects_v2(
+        Bucket=S3_BUCKET,
+        Prefix=model_graph_folder,
+        MaxKeys=1
+    )
