@@ -17,7 +17,7 @@ if not S3_BUCKET:
     raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
 
 class AdversarialDetector:
-    def __init__(self, model_folder, detector_filename, threshold=0.5):
+    def __init__(self, model_folder, detector_filename="logistic_regression_model.pkl", threshold=0.5):
         
         self.model_folder = model_folder
         self.threshold = threshold
