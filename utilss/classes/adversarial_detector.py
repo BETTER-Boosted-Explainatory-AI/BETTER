@@ -7,6 +7,7 @@ import logging
 from botocore.exceptions import ClientError
 import io
 from utilss.s3_utils import get_users_s3_client 
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -16,19 +17,12 @@ if not S3_BUCKET:
     raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
 
 class AdversarialDetector:
-    def __init__(self, model_folder, threshold=0.5):
+    def __init__(self, model_folder, detector_filename="logistic_regression_model.pkl", threshold=0.5):
         
         self.model_folder = model_folder
-        detector_filename =  f'{model_folder}/logistic_regression_model.pkl'
-        if os.path.exists(detector_filename):
-            self.detector, self.threshold = joblib.load(detector_filename)
-            print(f"Detector model loaded from '{detector_filename}'.")
-        else:
-            self.detector = None
         self.threshold = threshold
     
-        self.s3_detector_key = f'{model_folder}/logistic_regression_model.pkl'
-        self.threshold = threshold
+        self.s3_detector_key = f'{model_folder}/{detector_filename}'
         self.detector = None
         
         if s3_file_exists(S3_BUCKET, self.s3_detector_key):
@@ -37,14 +31,14 @@ class AdversarialDetector:
             logger.info(f"No existing detector found at s3://{S3_BUCKET}/{self.s3_detector_key}")
 
 
-    def does_detector_exist(self):
-        """
-        Check if the detector model exists.
+    # def does_detector_exist(self):
+    #     """
+    #     Check if the detector model exists.
         
-        Returns:
-        - bool: True if the detector model exists, False otherwise.
-        """
-        return self.detector is not None
+    #     Returns:
+    #     - bool: True if the detector model exists, False otherwise.
+    #     """
+    #     return self.detector is not None
 
     def predict(self, X):
         # Predict probabilities
@@ -104,7 +98,7 @@ class AdversarialDetector:
     ### S3 implementation ### 
         print("Training completed. Saving to S3...")
         self._save_detector_to_s3(detector, optimal_threshold)
-        print(f"Detector model saved to 's3://{S3_BUCKET}/{self.s3_detector_key}'")
+        # print(f"Detector model saved to 's3://{S3_BUCKET}/{self.s3_detector_key}'")
 
         return detector
     
@@ -135,15 +129,17 @@ class AdversarialDetector:
             buffer = io.BytesIO()
             joblib.dump((detector, threshold), buffer)
             buffer.seek(0)  # Reset buffer position to the beginning
+
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+            s3_detector_key_new = f'{self.model_folder}/logistic_regression_model_{timestamp}.pkl'
             
             # Upload the buffer content to S3
             s3_client.upload_fileobj(
                 buffer, 
                 S3_BUCKET, 
-                self.s3_detector_key
+                s3_detector_key_new
             )
-            
-            logger.info(f"Detector model saved to 's3://{S3_BUCKET}/{self.s3_detector_key}'")
+            logger.info(f"Detector model saved to 's3://{S3_BUCKET}/{s3_detector_key_new}'")
         except Exception as e:
             logger.error(f"Error saving detector to S3: {e}")
             raise

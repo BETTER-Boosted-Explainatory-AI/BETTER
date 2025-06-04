@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 from mangum import Mangum
 from dotenv import load_dotenv
 import os
@@ -16,8 +15,6 @@ from routers.adversarial_router import adversarial_router
 from routers.users_router import users_router
 from routers.dendrogram_router import dendrogram_router
 from routers.model_router import model_router
-
-# import numpy as np
 
 load_dotenv()
 
