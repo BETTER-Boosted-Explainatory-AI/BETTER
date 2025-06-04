@@ -31,14 +31,14 @@ class AdversarialDetector:
             logger.info(f"No existing detector found at s3://{S3_BUCKET}/{self.s3_detector_key}")
 
 
-    def does_detector_exist(self):
-        """
-        Check if the detector model exists.
+    # def does_detector_exist(self):
+    #     """
+    #     Check if the detector model exists.
         
-        Returns:
-        - bool: True if the detector model exists, False otherwise.
-        """
-        return self.detector is not None
+    #     Returns:
+    #     - bool: True if the detector model exists, False otherwise.
+    #     """
+    #     return self.detector is not None
 
     def predict(self, X):
         # Predict probabilities

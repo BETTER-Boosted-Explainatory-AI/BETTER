@@ -53,14 +53,16 @@ def _handle_nma_submission(
     if model_file is not None:
         model_path, model_id_md = upload_model(
             current_user, model_id, model_file, graph_type)
-        model_id = model_id_md
-    job_id = submit_nma_batch_job(current_user.user_id, model_id, dataset, graph_type, min_confidence, top_k)        
+        model_id_f = model_id_md
+    else:
+        model_id_f = model_id 
+    job_id = submit_nma_batch_job(current_user.user_id, model_id_f, dataset, graph_type, min_confidence, top_k)        
     
     print(f"Submitting NMA job with parameters: {current_user.user_id}, {model_filename},{graph_type}")
     
     print(f"Submitted NMA job with ID: {job_id}")
     metadata_result = _update_model_metadata(
-        current_user, model_id, model_filename, dataset, graph_type, min_confidence, top_k, job_id)
+        current_user, model_id_f, model_filename, dataset, graph_type, min_confidence, top_k, job_id)
     if not metadata_result:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
