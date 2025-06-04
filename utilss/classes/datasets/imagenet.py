@@ -340,8 +340,8 @@ class ImageNet(Dataset):
         y_train = []
         
         # Process each class folder (increased limits for real use)
-        max_classes = 20  # ✅ INCREASED: Process more classes
-        max_images_per_class = 50  # ✅ INCREASED: More images per class
+        max_classes = 1000  
+        max_images_per_class = 10  
         
         processed_classes = 0
         for folder in class_folders:
