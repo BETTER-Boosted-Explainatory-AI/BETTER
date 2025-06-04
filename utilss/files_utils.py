@@ -65,10 +65,7 @@ def upload_model(
     current_user: User,
     model_id: str,
     model_file: UploadFile,
-    # dataset: str,
     graph_type: str,
-    min_confidence,
-    top_k,
 ) -> str:
     
     s3_client = get_users_s3_client()
@@ -93,29 +90,17 @@ def upload_model(
         print(str(e))
         raise
 
-    # Define S3 paths (no need to create directories in S3)
+    # # Define S3 paths (no need to create directories in S3)
     model_subfolder = f"{user_folder}/{model_id_md}"
     
-    save_model_metadata(
-        models_data,
-        models_json_path,
-        model_id_md,
-        model_file.filename,
-        "unknown",  # For dataset or whatever default makes sense
-        graph_type,
-        min_confidence,
-        top_k,
-        None  # No job_metadata for initial upload
-    )
-    
     model_path = f'{model_subfolder}/{filename}'
-    print(f"Saving model to S3: {s3_bucket}/{model_path}")
+    # print(f"Saving model to S3: {s3_bucket}/{model_path}")
     
     
-    # Read the file content
+    # # Read the file content
     model_content = model_file.file.read()
     
-    # Upload to S3
+    # # Upload to S3
     s3_client.put_object(
         Bucket=s3_bucket,
         Key=model_path,
@@ -242,6 +227,7 @@ def save_model_metadata(
     for model in models_data:
         if model["model_id"] == model_id:
             # If graph_type is not already a list, convert it to a list
+            print(f"Checking model_id: {model['model_id']} against {model_id}")
             if not isinstance(model["graph_type"], list):
                 model["graph_type"] = [model["graph_type"]]
 

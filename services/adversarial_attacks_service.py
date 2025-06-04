@@ -36,12 +36,8 @@ def create_logistic_regression_detector(model_id, graph_type, clean_images, adve
         Z_file = model_files["Z_file"]
         
     adversarial_detector = AdversarialDetector(model_graph_folder)
-    if adversarial_detector.does_detector_exist():
-        logger.info("Adversarial detector already exists.")
-        return adversarial_detector
-    else:
-        adversarial_dataset = _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_file, model_info["dataset"])
-        adversarial_detector.train_adversarial_detector(adversarial_dataset)
+    adversarial_dataset = _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_file, model_info["dataset"])
+    adversarial_detector.train_adversarial_detector(adversarial_dataset)
 
     return adversarial_detector
 
