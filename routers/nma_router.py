@@ -6,9 +6,6 @@ from utilss.files_utils import upload_model, _update_model_metadata, user_has_jo
 from services.users_service import require_authenticated_user
 from utilss.classes.user import User
 from utilss.enums.graph_types import GraphTypes
-from services.nma_service import (
-    _create_nma,
-)
 from utilss.enums.graph_types import GraphTypes
 from utilss.aws_job_utils import submit_nma_batch_job
 
