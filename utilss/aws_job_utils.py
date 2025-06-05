@@ -4,12 +4,18 @@ import uuid
 import os
 from datetime import datetime
 
+import dotenv
+import os
+
+# Override any existing OS vars
+dotenv.load_dotenv(override=True)
+
 # TODO: change it all to get these parameters: (user_id, model_id, dataset, graph_type, min_confidence, top_k)
 
 def submit_nma_batch_job(user_id, model_id, dataset, graph_type, min_confidence, top_k):
     batch = boto3.client('batch', region_name=os.getenv("AWS_REGION"),
-                        aws_access_key_id = os.getenv("AWS_JOBS_ACCESS_KEY_ID"),
-                        aws_secret_access_key = os.getenv("AWS_JOBS_SECRET_ACCESS_KEY")) 
+                        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID"),
+                        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")) 
 
     job_name = f"nma-job-{uuid.uuid4()}"
     job_queue = os.getenv("JOB_QUEUE_NAME")
