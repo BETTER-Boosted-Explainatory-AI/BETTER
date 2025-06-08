@@ -19,7 +19,8 @@ class FGSMAttack(AdversarialAttack):
             alpha=kwargs.get("alpha") if kwargs.get("alpha") is not None else 0.1,
             num_steps=kwargs.get("num_steps") if kwargs.get("num_steps") is not None else 1
             )
-    
+        
+    @tf.function
     def attack(self, model, image):
         """
         Implements Fast Gradient Sign Method (FGSM) attack.
@@ -44,7 +45,8 @@ class FGSMAttack(AdversarialAttack):
         
         # Get current prediction
         current_pred = model(image)
-        original_class_idx = tf.argmax(current_pred[0]).numpy()
+        original_class_idx = tf.argmax(current_pred[0])
+
         
         # Choose a target approximately opposite in the class space
         target_class_idx = (original_class_idx + num_classes // 2) % num_classes
