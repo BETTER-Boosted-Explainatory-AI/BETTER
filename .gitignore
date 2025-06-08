@@ -17,4 +17,3 @@
 **/*.json
 /data
 /env
-.pytest_cache
