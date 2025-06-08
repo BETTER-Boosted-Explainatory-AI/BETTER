@@ -1,15 +1,9 @@
 from scipy.cluster.hierarchy import to_tree
-from NMA.utilss.wordnet_utils import process_hierarchy
 import json
 import os
-import numpy as np
 import pickle
-import boto3
-import io
 from botocore.exceptions import ClientError
 import logging
-from NMA.utilss.s3_utils import get_users_s3_client
-from NMA.utilss.cycle_found import assert_acyclic, CycleFound
 
 logger = logging.getLogger(__name__)
 
