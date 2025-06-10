@@ -4,7 +4,7 @@ from utilss.classes.score_calculator import ScoreCalculator
 from utilss.photos_utils import preprocess_image, encode_image_to_base64, deprocess_resnet_image, preprocess_deepfool_image, preprocess_loaded_image
 from services.dataset_service import get_dataset_labels
 from utilss.classes.adversarial_attacks.adversarial_attack_factory import get_attack
-from services.models_service import get_top_k_predictions, query_model, get_user_models_info, get_model_files
+from services.models_service import get_top_k_predictions, query_model, get_user_models_info, get_model_files, get_model_specific_file
 import tensorflow as tf
 import numpy as np
 import io
@@ -30,10 +30,13 @@ def create_logistic_regression_detector(model_id, graph_type, clean_images, adve
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
-        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
-        model_graph_folder = model_files["model_graph_folder"]
-        model_file = model_files["model_file"]
-        Z_file = model_files["Z_file"]
+        # model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
+        # model_graph_folder = model_files["model_graph_folder"]
+        model_graph_folder = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "graph_folder")
+        # model_file = model_files["model_file"]
+        model_file = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "model_file")
+        # Z_file = model_files["Z_file"]
+        Z_file = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "Z_file")
         
     adversarial_detector = AdversarialDetector(model_graph_folder)
     adversarial_dataset = _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_file, model_info["dataset"])
@@ -47,8 +50,9 @@ def does_detector_exist_(model_id, graph_type, user):
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
-        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
-        model_graph_folder = model_files["model_graph_folder"]
+        # model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
+        # model_graph_folder = model_files["model_graph_folder"]
+        model_graph_folder = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "graph_folder")
         adversarial_detector = AdversarialDetector(model_graph_folder)
         if adversarial_detector.does_detector_exist():
             logger.info("Adversarial detector already exists.")
@@ -86,12 +90,15 @@ def detect_adversarial_image(model_id, graph_type, image, user, detector_filenam
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
-        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
-        model_graph_folder = model_files["model_graph_folder"]
-        model_file = model_files["model_file"]
+        # model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
+        # model_graph_folder = model_files["model_graph_folder"]
+        model_graph_folder = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "graph_folder")
+        # model_file = model_files["model_file"]
+        model_file = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "model_file")
 
         dataset = model_info["dataset"]
-        Z_full = model_files["Z_file"]
+        # Z_full = model_files["Z_file"]
+        Z_full = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "Z_file")
         labels = get_dataset_labels(dataset)
 
         # Check if model file exists in S3
@@ -167,10 +174,13 @@ def analysis_adversarial_image(model_id, graph_type, attack_type, image, user, d
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
-        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
-        model_graph_folder = model_files["model_graph_folder"]
-        model_file = model_files["model_file"]
-        Z_full = model_files["Z_file"]
+        # model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
+        # model_graph_folder = model_files["model_graph_folder"]
+        # model_file = model_files["model_file"]
+        # Z_full = model_files["Z_file"]
+        model_graph_folder = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "graph_folder")
+        model_file = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "model_file")
+        Z_full = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "Z_file")
         
         # Check if model file exists in S3
         try:

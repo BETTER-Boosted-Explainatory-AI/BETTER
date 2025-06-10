@@ -253,8 +253,9 @@ def query_model(top_label, model_id, graph_type, user):
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
-        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
-        model_path = model_files["model_graph_folder"]
+        # model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
+        # model_path = model_files["model_graph_folder"]
+        model_path = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "graph_folder")
         dendrogram_s3_key = f'{model_path}/dendrogram'
     
     # Use the Dendrogram class with S3 support
@@ -275,12 +276,13 @@ def query_predictions(model_id, graph_type, image, user):
     model_info = get_user_models_info(user, model_id)
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
-    else:
-        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
+    # else:
+        # model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
 
     dataset = model_info["dataset"]
     labels = get_dataset_labels(dataset)
-    model_s3_key = model_files["model_file"]
+    # model_s3_key = model_files["model_file"]
+    model_s3_key = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "model_file")
     
     if s3_file_exists(S3_BUCKET, model_s3_key):
         # Load model from S3
@@ -384,20 +386,125 @@ def get_model_files(user_folder: str, model_info: dict, graph_type: str):
         "model_graph_folder": model_graph_folder
     }
 
-def get_detectors_list():
+
+# def get_model_specific_file(user_folder: str, model_info: dict, graph_type: str, file_type: str):
+#     model_subfolder = f"{user_folder}/{model_info['model_id']}"
+#     model_file = f"{model_subfolder}/{model_info['file_name']}"
+    
+#     if not s3_file_exists(S3_BUCKET, model_file):
+#         model_file = None
+#         raise ValueError(f"Model file s3://{S3_BUCKET}/{model_file} does not exist")
+    
+#     model_graph_folder = f"{model_subfolder}/{graph_type}"
+    
+#     # Check if the graph folder "exists" by listing objects with this prefix
+#     s3_client = get_users_s3_client() 
+#     response = s3_client.list_objects_v2(
+#         Bucket=S3_BUCKET,
+#         Prefix=model_graph_folder,
+#         MaxKeys=1
+#     )
+    
+#     if 'Contents' not in response:
+#         model_graph_folder = None
+#         raise ValueError(f"Model graph folder s3://{S3_BUCKET}/{model_graph_folder} does not exist")
+    
+#     if file_type == "model_file":
+#         file_path = f"{model_subfolder}/{model_info['file_name']}"
+    
+#         if not s3_file_exists(S3_BUCKET, file_path):
+#             file_path = None
+#             raise ValueError(f"Model file s3://{S3_BUCKET}/{file_path} does not exist")
+        
+#     elif file_type == "graph_folder":
+#         file_path = model_graph_folder
+        
+#     elif file_type == "Z_file":
+#         file_path = f"{model_graph_folder}/dendrogram.pkl"
+#         Z_file_exists = s3_file_exists(S3_BUCKET, file_path)
+#         if not Z_file_exists:
+#             file_path = None
+#             logger.debug(f"Z file s3://{S3_BUCKET}/{file_path} does not exist")
+
+#     elif file_type == "dendrogram":
+#         file_path = f"{model_graph_folder}/dendrogram.json"
+#         dendrogram_file_exists = s3_file_exists(S3_BUCKET, file_path)
+#         if not dendrogram_file_exists:
+#             file_path = None
+#             logger.debug(f"Dendrogram file s3://{S3_BUCKET}/{file_path} does not exist")
+
+#     elif file_type == "dataframe":
+#         file_path = f"{model_graph_folder}/edges_df.csv"
+#         dataframe_file_exists = s3_file_exists(S3_BUCKET, file_path)
+#         if not dataframe_file_exists:
+#             file_path = None
+#             logger.debug(f"Dataframe file s3://{S3_BUCKET}/{file_path} does not exist")
+
+#     return file_path
+
+def get_model_specific_file(user_folder: str, model_info: dict, graph_type: str, file_type: str):
     model_subfolder = f"{user_folder}/{model_info['model_id']}"
     model_file = f"{model_subfolder}/{model_info['file_name']}"
     
     if not s3_file_exists(S3_BUCKET, model_file):
-        model_file = None
         raise ValueError(f"Model file s3://{S3_BUCKET}/{model_file} does not exist")
     
     model_graph_folder = f"{model_subfolder}/{graph_type}"
-    
-    # Check if the graph folder "exists" by listing objects with this prefix
-    s3_client = get_users_s3_client() 
+    s3_client = get_users_s3_client()
     response = s3_client.list_objects_v2(
         Bucket=S3_BUCKET,
         Prefix=model_graph_folder,
         MaxKeys=1
     )
+    if 'Contents' not in response:
+        raise ValueError(f"Model graph folder s3://{S3_BUCKET}/{model_graph_folder} does not exist")
+
+    match file_type:
+        case "model_file":
+            file_path = f"{model_subfolder}/{model_info['file_name']}"
+            if not s3_file_exists(S3_BUCKET, file_path):
+                raise ValueError(f"Model file s3://{S3_BUCKET}/{file_path} does not exist")
+        case "graph_folder":
+            file_path = model_graph_folder
+        case "Z_file":
+            file_path = f"{model_graph_folder}/dendrogram.pkl"
+            if not s3_file_exists(S3_BUCKET, file_path):
+                logger.debug(f"Z file s3://{S3_BUCKET}/{file_path} does not exist")
+                file_path = None
+        case "dendrogram":
+            file_path = f"{model_graph_folder}/dendrogram.json"
+            if not s3_file_exists(S3_BUCKET, file_path):
+                logger.debug(f"Dendrogram file s3://{S3_BUCKET}/{file_path} does not exist")
+                file_path = None
+        case "dataframe":
+            file_path = f"{model_graph_folder}/edges_df.csv"
+            if not s3_file_exists(S3_BUCKET, file_path):
+                logger.debug(f"Dataframe file s3://{S3_BUCKET}/{file_path} does not exist")
+                file_path = None
+        case _:
+            raise ValueError(f"Unknown file_type: {file_type}")
+
+    return file_path
+    
+
+    
+
+
+
+# def get_detectors_list():
+#     model_subfolder = f"{user_folder}/{model_info['model_id']}"
+#     model_file = f"{model_subfolder}/{model_info['file_name']}"
+    
+#     if not s3_file_exists(S3_BUCKET, model_file):
+#         model_file = None
+#         raise ValueError(f"Model file s3://{S3_BUCKET}/{model_file} does not exist")
+    
+#     model_graph_folder = f"{model_subfolder}/{graph_type}"
+    
+#     # Check if the graph folder "exists" by listing objects with this prefix
+#     s3_client = get_users_s3_client() 
+#     response = s3_client.list_objects_v2(
+#         Bucket=S3_BUCKET,
+#         Prefix=model_graph_folder,
+#         MaxKeys=1
+#     )
