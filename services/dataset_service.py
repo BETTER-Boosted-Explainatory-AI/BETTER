@@ -24,7 +24,7 @@ def _load_dataset(dataset_str: str):
 
     dataset_name = dataset_config["dataset"]        # "cifar100" | "imagenet" | …
     dataset = DatasetFactory.create_dataset(dataset_name)
-    dataset.load(dataset_name)       
+    # dataset.load(dataset_name)       
 
     return dataset
 

@@ -25,6 +25,8 @@ class ImageNet(Dataset):
         self.y_test = None
         self.directory_labels = config["directory_labels"]
         self.s3_loader = S3ImagenetLoader()
+
+        self.train_index = []
         
         
     # def load_mini_imagenet(self, dataset_path, img_size=(224, 224)):
@@ -243,6 +245,38 @@ class ImageNet(Dataset):
         print("loaded imagenet dataset")
 
 
+    def build_index(self, split="train", save_path=None):
+        import json
+        """
+        Build an index of (image_key, label) for the given split and optionally save to JSON.
+        """
+        if split == "train":
+            class_names = self.s3_loader.get_imagenet_classes()
+        else:
+            # Implement for test if needed
+            return []
+
+        index = []
+        image_id = 1
+        for class_name in class_names:
+            image_keys = self.s3_loader.get_class_images(class_name)
+            img_files = [k for k in image_keys if k.lower().endswith(('.png', '.jpg', '.jpeg'))]
+            for image_key in img_files:
+                index.append({"id": image_id, "image_key": image_key, "label": class_name})  # Use dict for JSON compatibility
+                image_id += 1
+
+        self.train_index = index
+        print(f"Indexed {len(index)} images for {split}")
+
+        # Save to JSON if a path is provided
+        if save_path:
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            with open(save_path, "w", encoding="utf-8") as f:
+                json.dump(index, f, ensure_ascii=False, indent=2)
+            print(f"Index saved to {save_path}")
+
+
     # def get_train_image_by_id(self, image_id):
     #     # Implement the logic to get an image by its ID from the ImageNet dataset
         
@@ -264,19 +298,55 @@ class ImageNet(Dataset):
     #     label = data[batch_index][1][image_index]
     #     return image, label
 
-    def get_train_image_by_id(self, image_id):
-        # Check if the image_id is within the range of training data
-        # if self.x_train is None or self.y_train is None:
-        #     self.load("imagenet")
+    # def get_train_image_by_id(self, image_id):
+    #     # Check if the image_id is within the range of training data
+    #     # if self.x_train is None or self.y_train is None:
+    #     #     self.load("imagenet")
             
-        if image_id < len(self.x_train):
-            image = self.x_train[image_id]
-            label = self.y_train[image_id]
-            print(f"Train image ID {image_id}: label {label}") 
-        else:
+    #     if image_id < len(self.x_train):
+    #         image = self.x_train[image_id]
+    #         label = self.y_train[image_id]
+    #         print(f"Train image ID {image_id}: label {label}") 
+    #     else:
+    #         raise ValueError("Invalid image_id")
+
+    #     return image, label
+
+    def get_train_image_by_id(self, image_id, index_path="data/imagenet/train_index_imagenet.json", img_size=(224, 224)):
+        """
+        Fetch a single training image and label by image_id using the S3 image_key.
+        Loads the index from JSON if not already loaded.
+        """
+        import json
+
+        # Load index from JSON if not already loaded
+        # if not self.train_index:
+        with open(index_path, "r", encoding="utf-8") as f:
+            self.train_index = json.load(f)
+
+        # IDs in the index start from 1
+        if image_id < 1 or image_id > len(self.train_index):
             raise ValueError("Invalid image_id")
 
-        return image, label
+        entry = self.train_index[image_id - 1]
+        image_key = entry["image_key"]
+        label = entry["label"]
+
+        # Fetch image data from S3
+        image_data = self.s3_loader.get_image_data(image_key)
+        if not image_data:
+            raise ValueError(f"Could not fetch image data for key: {image_key}")
+
+        # Load and preprocess image
+        img = Image.open(io.BytesIO(image_data))
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        img = img.resize(img_size, Image.Resampling.LANCZOS)
+        img_array = np.array(img, dtype=np.float32)
+
+        print(f"Train image ID {image_id}: label {label}, key {image_key}")
+        return img_array, label
+
     
     def get_test_image_by_id(self, image_id):
         if image_id < len(self.x_test):
