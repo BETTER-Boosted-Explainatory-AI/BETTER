@@ -461,9 +461,7 @@ def get_model_specific_file(user_folder: str, model_info: dict, graph_type: str,
 
     match file_type:
         case "model_file":
-            file_path = f"{model_subfolder}/{model_info['file_name']}"
-            if not s3_file_exists(S3_BUCKET, file_path):
-                raise ValueError(f"Model file s3://{S3_BUCKET}/{file_path} does not exist")
+            file_path = model_file
         case "graph_folder":
             file_path = model_graph_folder
         case "Z_file":
