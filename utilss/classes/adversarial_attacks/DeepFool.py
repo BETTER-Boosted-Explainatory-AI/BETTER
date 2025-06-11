@@ -34,68 +34,37 @@ class DeepFoolAttack(AdversarialAttack):
 
     def preprocess_image_array(self, model, img_array):
         """
-        Preprocess a numpy array image for ResNet
-        
-        Args:
-            img_array: Numpy array of image data (can be in [0,1] or [0,255] range)
-            
-        Returns:
-            Preprocessed image tensor ready for model input
+        Preprocess a numpy array or tensor image for ResNet.
+        Handles both eager and graph mode.
         """
-        # Make sure image is in [0, 255] range
-        if np.max(img_array) <= 1.0:
-            img_array = img_array * 255.0
-            
-        # Apply ResNet preprocessing
+        if tf.is_tensor(img_array):
+            # TensorFlow tensor: use tf ops only
+            max_val = tf.reduce_max(img_array)
+            img_array = tf.cond(
+                max_val <= 1.0,
+                lambda: img_array * 255.0,
+                lambda: img_array
+            )
+            img_array = tf.cast(img_array, tf.float32)
+        else:
+            # NumPy array: use np ops only
+            if np.max(img_array) <= 1.0:
+                img_array = img_array * 255.0
+
         preprocess_input = get_cached_preprocess_function(model)
         preprocessed = preprocess_input(img_array)
         return tf.convert_to_tensor(preprocessed, dtype=tf.float32)
-
+    
+    @tf.function
     def batch_compute_gradients(self, x_tensor, model, current_class, target_classes):
-        """
-        Compute gradients for multiple target classes in a single batch operation
-        
-        Args:
-            x_tensor: Input tensor
-            model: Model to attack
-            current_class: Current predicted class
-            target_classes: List of target classes
-            
-        Returns:
-            List of gradients for each target class
-        """
         gradients = []
-        
-        with tf.GradientTape(persistent=True) as tape:
-            tape.watch(x_tensor)
-            
-            # Preprocess the image using our new function
-            x_preprocessed = self.preprocess_image_array(model, x_tensor)
-            
-            # Get predictions
-            preds = model(x_preprocessed)
-            
-            # Store current class prediction
-            current_pred = preds[0, current_class]
-        
-        # Compute gradient for each target class
+        x_preprocessed = self.preprocess_image_array(model, x_tensor)
+        preds = model(x_preprocessed, training=False)
+        current_pred = preds[0, current_class]
         for k in target_classes:
-            try:
-                # Target loss function: maximize target class and minimize current class
-                loss = preds[0, k] - current_pred
-                
-                gradient = tape.gradient(loss, x_tensor)
-                if gradient is None or tf.reduce_all(tf.equal(gradient, 0)):
-                    gradients.append(None)
-                else:
-                    gradients.append(gradient.numpy())
-            except Exception as e:
-                print(f"Error computing gradient for class {k}: {e}")
-                gradients.append(None)
-        
-        # Free resources
-        del tape
-                
+            loss = preds[0, k] - current_pred
+            gradient = tf.gradients(loss, x_tensor)[0]
+            gradients.append(gradient)
         return gradients
 
     def compute_gradient(self, x_tensor, model, current_class, target_class):
@@ -186,48 +155,25 @@ class DeepFoolAttack(AdversarialAttack):
             perturbed_image, original_label, adversarial_label, original_probs, adversarial_probs
         """
         print("Starting DeepFool attack...")
-
-        # Make a copy of the image to avoid modifying the original
+            
         x_adv = image
-        
-        # Add batch dimension if needed
         if len(x_adv.shape) == 3:
             x_adv_batch = np.expand_dims(x_adv, axis=0)
         else:
             x_adv_batch = x_adv
-        
-        # Preprocess the image for initial prediction - using our new function
         x_adv_preprocessed = self.preprocess_image_array(model, x_adv_batch)
-        
-        # Get initial prediction
-        original_preds = model.predict(x_adv_preprocessed)
+        original_preds = model(x_adv_preprocessed, training=False).numpy()
         original_label = np.argmax(original_preds)
-        # original_probs = decode_predictions(original_preds, top=5)[0]
         current_label = original_label
-        
-        # Convert numpy array to tensor once
         x_tensor = tf.Variable(x_adv_batch, dtype=tf.float32)
-        
-        # Cache for gradients to avoid recomputation - use tuples of ints as keys (not numpy arrays)
         gradient_cache = {}
-        
-        # Loop for max_iter iterations
+
         for i in range(self.num_steps):
-            # start_time = time.time()
-            
-            # Preprocess the current image - using our new function
-            x_preprocessed = self.preprocess_image_array(model, x_tensor.numpy())
-            
-            # Get current prediction
-            current_preds = model.predict(x_preprocessed)[0]
+            x_preprocessed = self.preprocess_image_array(model, x_tensor)
+            current_preds = model(x_preprocessed, training=False).numpy()[0]
             current_label = np.argmax(current_preds)
-            # print(f"Current label: {class_names[current_label]}, Original label: {class_names[original_label]}")
-            
-            # Check if we've already succeeded in finding an adversarial example
             if current_label != original_label:
-                # print(f"Found adversarial example at iteration {i}")
                 break
-            
             # Initialize variables to track minimum perturbation
             min_dist = float('inf')
             best_pert = None
