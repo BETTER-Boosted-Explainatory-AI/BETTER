@@ -1,11 +1,17 @@
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from pathlib import Path
+
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
+
+
+from dotenv import load_dotenv       
+load_dotenv(project_root / ".env")
 
 import pytest
-from utilss.classes.cifar100 import Cifar100
-from utilss.classes.imagenet import ImageNet
-
+from utilss.classes.datasets.cifar100 import Cifar100 
+from utilss.classes.datasets.imagenet import ImageNet
 
 @pytest.fixture
 def cifar100():
@@ -61,3 +67,4 @@ def test_imagenet_get_test_image_by_id(imagenet):
     image, label = imagenet.get_test_image_by_id(image_id)
     assert image is not None, "Image should not be None"
     assert label is not None, "Label should not be None"
+    

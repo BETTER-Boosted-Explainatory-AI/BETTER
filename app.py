@@ -16,8 +16,6 @@ from routers.users_router import users_router
 from routers.dendrogram_router import dendrogram_router
 from routers.model_router import model_router
 
-# import numpy as np
-
 load_dotenv()
 
 app = FastAPI()

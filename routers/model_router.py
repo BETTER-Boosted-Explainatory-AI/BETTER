@@ -8,7 +8,7 @@ from typing import List
 model_router = APIRouter()
 
 @model_router.get(
-    "/models",
+    "/api/models",
     response_model=List[ModelsResult],
     status_code=status.HTTP_200_OK,
     responses={
@@ -24,6 +24,7 @@ async def get_model_info(
     models_info = get_user_models_info(current_user, None)
     if models_info is None:
         raise HTTPException(status_code=404, detail="Model not found")
+    print(f"Models info: {models_info}")
     if status_filter == "succeeded":
         filtered_models = []
         for model in models_info:
@@ -40,7 +41,7 @@ async def get_model_info(
     return models_info
 
 @model_router.get(
-    "/models/current", 
+    "/api/models/current", 
     response_model=ModelRequest, 
     status_code=status.HTTP_200_OK,
     responses={
@@ -58,7 +59,7 @@ async def get_current_model_info(current_user: User = Depends(require_authentica
     return curr_model_info
 
 @model_router.put(
-    "/models/current", 
+    "/api/models/current", 
     response_model=ModelRequest, 
     status_code=status.HTTP_200_OK,
     responses={

@@ -7,7 +7,7 @@ from utilss.classes.user import User
 dendrogram_router = APIRouter()
 
 @dendrogram_router.post(
-    "/dendrograms", 
+    "/api/dendrograms", 
     response_model=DendrogramResult,
     status_code=status.HTTP_200_OK,
     responses={
@@ -49,7 +49,7 @@ async def get_common_ancestor_subtree(sub_dendrogram_data: DendrogramRequest, cu
     return DendrogramResult(**sub_dendrogram, selected_labels=selected_labels)
 
 @dendrogram_router.put(
-    "/dendrograms/naming_clusters", 
+    "/api/dendrograms/naming_clusters", 
     response_model=DendrogramResult,
     status_code=status.HTTP_200_OK,
     responses={

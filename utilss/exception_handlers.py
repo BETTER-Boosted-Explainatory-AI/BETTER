@@ -7,6 +7,12 @@ from utilss import debug_utils
 # Set up logging
 logger = logging.getLogger(__name__)
 
+logging.getLogger("boto3").setLevel(logging.WARNING)
+logging.getLogger("botocore").setLevel(logging.WARNING)
+logging.getLogger("s3transfer").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """
     Custom handler for 422 validation errors.

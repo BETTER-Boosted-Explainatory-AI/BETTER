@@ -141,8 +141,3 @@ class HierarchicalClusteringBuilder:
     def forest_size(self):
         """Return the number of trees in the forest"""
         return len(self.forest)
-
-
-
-
-    

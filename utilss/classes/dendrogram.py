@@ -2,16 +2,26 @@ from scipy.cluster.hierarchy import to_tree
 from utilss.wordnet_utils import process_hierarchy
 import json
 import os
-import numpy as np
 import pickle
+from botocore.exceptions import ClientError
+import logging
+from utilss.s3_utils import get_users_s3_client
+# Set up logging
+logger = logging.getLogger(__name__)
 
+# S3 Configuration
+S3_BUCKET = os.getenv("S3_USERS_BUCKET_NAME")
+if not S3_BUCKET:
+    raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
 
 class Dendrogram:
     def __init__(self, dendrogram_filename, Z=None):
         self.Z = Z
         self.Z_tree_format = None
         self.dendrogram_filename = dendrogram_filename
-
+        self.s3_pickle_key = f"{dendrogram_filename}.pkl"
+        self.s3_json_key   = f"{dendrogram_filename}.json"
+        
     def _build_tree_format(self, node, labels):
         if node.is_leaf():
             return {
@@ -43,7 +53,6 @@ class Dendrogram:
         Returns:
             dict: A minimal tree containing only paths to the specified labels
         """
-        
         # Check if a node or its descendants contain any of the target labels
         def contains_target_label(node):
             # If this is a leaf node (no children)
@@ -120,83 +129,57 @@ class Dendrogram:
         filtered_tree = self.merge_clusters(filtered_tree)
         filtered_tree_json = json.dumps(filtered_tree, indent=2)
         return filtered_tree_json
-
+    
     def save_dendrogram(self, linkage_matrix=None):
         """
-        Create dendrogram data and save it as JSON
+        Create dendrogram data and save it to S3
         
         Parameters:
-        - labels: List of labels for the dendrogram leaves
-        - max_weight: Maximum weight/distance value
-        - UnionFind: UnionFind data structure with merge history
-        - output_path: Path to save the JSON file
+        - linkage_matrix: Optional linkage matrix to save
         
         Returns:
-        - Path to the saved JSON file
+        - Tuple of S3 paths (pickle_path, json_path)
         """
-        # Create a dictionary with the dendrogram data
-        
-        # DENDROGRAMS_PATH = os.getenv("DENDROGRAMS_PATH")
-        # dendrogram_path = f'{DENDROGRAMS_PATH}/{self.dendrogram_filename}.json'
-        
-        # Load existing data if the file exists
-        directory = os.path.dirname(self.dendrogram_filename)
-        
-        # Create directories if they don't exist
-        if directory:
-            os.makedirs(directory, exist_ok=True)
-        
-        # Define file paths
-        pickle_path = f'{self.dendrogram_filename}.pkl'
-        json_path = f'{self.dendrogram_filename}.json'
-        
-        # Save linkage matrix as pickle if provided
-        if linkage_matrix is not None:
-            with open(pickle_path, 'wb') as f:
-                pickle.dump(linkage_matrix, f)
-            print(f"Linkage matrix saved to {pickle_path}")
-        
-        # Save tree format as JSON
-        if self.Z_tree_format is not None:
-            with open(json_path, 'w') as f:
-                json.dump(self.Z_tree_format, f, indent=2)
-            print(f"Tree format saved to {json_path}")
-        
-        return pickle_path, json_path
-        
-    
+        try:
+            # Save linkage matrix as pickle if provided
+            if linkage_matrix is not None:
+                upload_pickle_to_s3(linkage_matrix, S3_BUCKET, self.s3_pickle_key)
+                print(f"Linkage matrix saved to s3://{S3_BUCKET}/{self.s3_pickle_key}")
+            
+            # Save tree format as JSON
+            if self.Z_tree_format is not None:
+                upload_json_to_s3(self.Z_tree_format, S3_BUCKET, self.s3_json_key)
+                print(f"Tree format saved to s3://{S3_BUCKET}/{self.s3_json_key}")
+            
+            return f"s3://{S3_BUCKET}/{self.s3_pickle_key}", f"s3://{S3_BUCKET}/{self.s3_json_key}"
+            
+        except Exception as e:
+            logger.error(f"Error saving dendrogram to S3: {e}")
+            raise
+         
     def load_dendrogram(self):
-        """
-        Load dendrogram data from a JSON file
-        
-        Parameters:
-        - json_path: Path to the JSON file containing dendrogram data
-        
-        Returns:
-        - self with loaded data
-        """
-        pickle_path = f'{self.dendrogram_filename}.pkl'
-        json_path = f'{self.dendrogram_filename}.json'
-        
-        # Load linkage matrix from pickle
-        if os.path.exists(pickle_path):
-            with open(pickle_path, 'rb') as f:
-                self.Z = pickle.load(f)
-            print(f"Linkage matrix loaded from {pickle_path}")
-        else:
-            print(f"Pickle file not found: {pickle_path}")
-            self.Z = None
-        
-        # Load tree format from JSON
-        if os.path.exists(json_path):
-            with open(json_path, 'r') as f:
-                self.Z_tree_format = json.load(f)
-            print(f"Tree format loaded from {json_path}")
-        else:
-            print(f"JSON file not found: {json_path}")
-            self.Z_tree_format = None
-        
-        return self
+        try:
+            # Load linkage matrix from pickle
+            if s3_file_exists(S3_BUCKET, self.s3_pickle_key):
+                self.Z = download_pickle_from_s3(S3_BUCKET, self.s3_pickle_key)
+                print(f"Linkage matrix loaded from s3://{S3_BUCKET}/{self.s3_pickle_key}")
+            else:
+                print(f"Pickle file not found: s3://{S3_BUCKET}/{self.s3_pickle_key}")
+                self.Z = None
+            
+            # Load tree format from JSON
+            if s3_file_exists(S3_BUCKET, self.s3_json_key):
+                self.Z_tree_format = download_json_from_s3(S3_BUCKET, self.s3_json_key)
+                print(f"Tree format loaded from s3://{S3_BUCKET}/{self.s3_json_key}")
+            else:
+                print(f"JSON file not found: s3://{S3_BUCKET}/{self.s3_json_key}")
+                self.Z_tree_format = None
+            
+            return self
+            
+        except Exception as e:
+            logger.error(f"Error loading dendrogram from S3: {e}")
+            raise
     
     def find_name_hierarchy(self, node, target_name):
         """
@@ -231,16 +214,6 @@ class Dendrogram:
         return None
         
     def rename_cluster(self, cluster_id, new_name):
-        """
-        Rename a cluster in the dendrogram hierarchy, only if the new name is unique and the node is not a leaf.
-
-        Args:
-            cluster_id (int): The ID of the cluster to rename
-            new_name (str): The new name for the cluster
-
-        Returns:
-            dict: The updated dendrogram hierarchy, or None if name exists or node is a leaf
-        """
         print(f"Renaming cluster {cluster_id} to {new_name}")
 
         # Collect all existing names in the dendrogram
@@ -248,7 +221,6 @@ class Dendrogram:
             names.add(node.get('name'))
             for child in node.get('children', []):
                 collect_names(child, names)
-
         existing_names = set()
         collect_names(self.Z_tree_format, existing_names)
 
@@ -279,9 +251,6 @@ class Dendrogram:
 
         # Rename the node
         target_node['name'] = new_name
-<<<<<<< Updated upstream
-        return self.Z_tree_format
-=======
         return self.Z_tree_format
     
     def get_common_ancestor_subtree(self, labels, max_leaf_nodes=35):
@@ -407,5 +376,4 @@ def download_pickle_from_s3(bucket_name: str, s3_key: str):
         return pickle.loads(pickle_bytes)
     except ClientError as e:
         logger.error(f"Error downloading pickle from S3: {e}")
-        raise
->>>>>>> Stashed changes
+        
