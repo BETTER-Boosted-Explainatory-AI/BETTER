@@ -4,6 +4,7 @@ from typing import Dict, Any, List, Tuple
 import numpy as np
 from utilss.classes.datasets.dataset_factory import DatasetFactory
 from utilss.s3_connector.s3_dataset_loader import S3DatasetLoader
+from utilss.enums.datasets_enum import DatasetsEnum
 
 def _get_dataset_config(dataset_str: str) -> Dict[str, Any]:
     """Get dataset configuration based on dataset string from S3."""
@@ -24,7 +25,8 @@ def _load_dataset(dataset_str: str):
 
     dataset_name = dataset_config["dataset"]        # "cifar100" | "imagenet" | …
     dataset = DatasetFactory.create_dataset(dataset_name)
-    # dataset.load(dataset_name)       
+    if dataset_str == DatasetsEnum.CIFAR100.value:
+        dataset.load(dataset_name)       
 
     return dataset
 

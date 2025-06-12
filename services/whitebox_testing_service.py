@@ -49,7 +49,6 @@ def get_white_box_analysis(current_user, current_model_id, graph_type, source_la
         )
     dataset_str = model_info["dataset"]
     dataset = _load_dataset(dataset_str)
-    # dataset.build_index(save_path="data/imagenet/train_index_imagenet.json")
 
     # Get file paths (now S3 keys)
     edges_df_filename = _get_edges_dataframe_path(

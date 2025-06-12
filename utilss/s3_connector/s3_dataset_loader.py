@@ -112,6 +112,8 @@ class S3DatasetLoader:
         except Exception as e:
             print(f"Error loading dataset info from S3: {str(e)}")
             raise
+
+
     
     def load_numpy_data(self, dataset_name, folder_type):
         if dataset_name == DatasetsEnum.CIFAR100.value:

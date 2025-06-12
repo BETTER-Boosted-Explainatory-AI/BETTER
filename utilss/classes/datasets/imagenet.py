@@ -312,17 +312,17 @@ class ImageNet(Dataset):
 
     #     return image, label
 
-    def get_train_image_by_id(self, image_id, index_path="data/imagenet/train_index_imagenet.json", img_size=(224, 224)):
+    def get_train_image_by_id(self, image_id, index_s3_key="imagenet/train_index_imagenet.json", img_size=(224, 224)):
         """
         Fetch a single training image and label by image_id using the S3 image_key.
         Loads the index from JSON if not already loaded.
         """
         import json
 
-        # Load index from JSON if not already loaded
-        # if not self.train_index:
-        with open(index_path, "r", encoding="utf-8") as f:
-            self.train_index = json.load(f)
+        index_bytes = self.s3_loader.s3_handler.get_object_data(index_s3_key)
+        if index_bytes is None:
+            raise ValueError("Could not fetch index JSON from S3")
+        self.train_index = json.loads(index_bytes.decode("utf-8"))
 
         # IDs in the index start from 1
         if image_id < 1 or image_id > len(self.train_index):
