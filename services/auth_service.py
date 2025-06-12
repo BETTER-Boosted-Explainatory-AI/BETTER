@@ -12,6 +12,7 @@ cognito_client_id = os.getenv("COGNITO_CLIENT_ID")
 aws_region = os.getenv("AWS_REGION")
 cognito_user_pool_id = os.getenv("COGNITO_USER_POOL_ID")
 incognito_client = boto3.client('cognito-idp', region_name=aws_region)
+ses_client = boto3.client('ses', region_name=aws_region)
 
 def get_secret_hash(username: str, client_id: str, client_secret: str) -> str:
     message = username + client_id
@@ -60,6 +61,11 @@ def confirm_user_signup(email: str, confirmation_code: str):
     """
 
     secret_hash = get_secret_hash(email, cognito_client_id, cognito_client_secret)
+
+    ses_client.verify_email_identity(
+            EmailAddress=email
+        )
+    print(f"Verification email sent to {email}")
     
     response = incognito_client.confirm_sign_up(
         ClientId=cognito_client_id,

@@ -39,12 +39,12 @@ def _handle_nma_submission(
         )
         
         
-    # has_running_job = user_has_job_running(current_user)
-    # if has_running_job:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_409_CONFLICT,
-    #         detail="User already has a running NMA job. Please wait for it to finish before submitting a new one."
-    #     )
+    has_running_job = user_has_job_running(current_user)
+    if has_running_job:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User already has a running NMA job. Please wait for it to finish before submitting a new one."
+        )
     
     model_filename = model_file.filename if model_file else None
     if model_file is not None:
