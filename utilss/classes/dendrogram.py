@@ -279,4 +279,133 @@ class Dendrogram:
 
         # Rename the node
         target_node['name'] = new_name
+<<<<<<< Updated upstream
         return self.Z_tree_format
+=======
+        return self.Z_tree_format
+    
+    def get_common_ancestor_subtree(self, labels, max_leaf_nodes=35):
+        if self.Z_tree_format is None:
+            raise ValueError("Dendrogram not loaded or empty")
+        
+        if not 2 <= len(labels) <= 4:
+            raise ValueError("Number of labels must be between 2 and 4")
+        
+        # Find paths to each label
+        paths = []
+        for label in labels:
+            path = self.find_name_hierarchy(self.Z_tree_format, label)
+            if path is None:
+                raise ValueError(f"Label '{label}' not found in dendrogram")
+            paths.append(path)
+        
+        common_ancestor = None
+        for i in range(len(paths[0])):
+            current = paths[0][i]
+            if all(current in path for path in paths):
+                common_ancestor = current
+                break
+        
+        if common_ancestor is None:
+            raise ValueError("No common ancestor found for the specified labels")
+        
+        # Get subtree from common ancestor
+        def find_subtree(node, target_name):
+            if node.get('name') == target_name:
+                return node
+            if 'children' in node:
+                for child in node['children']:
+                    result = find_subtree(child, target_name)
+                    if result:
+                        return result
+            return None
+        
+        subtree = find_subtree(self.Z_tree_format, common_ancestor)
+        
+        # Count leaf nodes and collect leaf labels
+        def count_leaf_nodes_and_labels(node):
+            if 'children' not in node:
+                return 1, [node['name']]
+            count = 0
+            labels = []
+            for child in node['children']:
+                child_count, child_labels = count_leaf_nodes_and_labels(child)
+                count += child_count
+                labels.extend(child_labels)
+            return count, labels
+        
+        leaf_count, leaf_labels = count_leaf_nodes_and_labels(subtree)
+        
+        if leaf_count > max_leaf_nodes:
+            raise ValueError(f"Subtree contains {leaf_count} leaf nodes, which exceeds the maximum of {max_leaf_nodes}")
+        
+        return subtree, leaf_labels
+
+def s3_file_exists(bucket_name: str, s3_key: str) -> bool:
+    """Check if a file exists in S3"""
+    s3_client = get_users_s3_client() 
+    print(f"Checking if file exists in S3: {bucket_name}/{s3_key}")
+    try:
+        s3_client.head_object(Bucket=bucket_name, Key=s3_key)
+        print(f"File found: {bucket_name}/{s3_key}")
+        return True
+    except ClientError as e:
+        print(f"File not found: {bucket_name}/{s3_key}, Error: {str(e)}")
+        return False
+
+
+def upload_json_to_s3(data: dict, bucket_name: str, s3_key: str):
+    """Upload JSON data directly to S3"""
+    s3_client = get_users_s3_client() 
+    try:
+        json_string = json.dumps(data, indent=2)
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=s3_key,
+            Body=json_string.encode('utf-8'),
+            ContentType='application/json'
+        )
+        logger.info(f"JSON data uploaded to s3://{bucket_name}/{s3_key}")
+    except ClientError as e:
+        logger.error(f"Error uploading JSON to S3: {e}")
+        raise
+
+def download_json_from_s3(bucket_name: str, s3_key: str) -> dict:
+    """Download and parse JSON data from S3"""
+    s3_client = get_users_s3_client() 
+    try:
+        response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+        content = response['Body'].read().decode('utf-8')
+        return json.loads(content)
+    except ClientError as e:
+        logger.error(f"Error downloading JSON from S3: {e}")
+        raise
+
+def upload_pickle_to_s3(data, bucket_name: str, s3_key: str):
+    """Upload pickle data directly to S3"""
+    s3_client = get_users_s3_client() 
+    try:
+        # Serialize to bytes
+        pickle_bytes = pickle.dumps(data)
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=s3_key,
+            Body=pickle_bytes,
+            ContentType='application/octet-stream'
+        )
+        logger.info(f"Pickle data uploaded to s3://{bucket_name}/{s3_key}")
+    except ClientError as e:
+        logger.error(f"Error uploading pickle to S3: {e}")
+        raise
+
+def download_pickle_from_s3(bucket_name: str, s3_key: str):
+    """Download and deserialize pickle data from S3"""
+    s3_client = get_users_s3_client() 
+    try:
+        response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+        pickle_bytes = response['Body'].read()
+        return pickle.loads(pickle_bytes)
+    except ClientError as e:
+        logger.error(f"Error downloading pickle from S3: {e}")
+        raise
+>>>>>>> Stashed changes
