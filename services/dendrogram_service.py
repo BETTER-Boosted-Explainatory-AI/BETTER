@@ -9,9 +9,22 @@ import os
 from utilss.s3_utils import get_users_s3_client 
 
 def _get_dendrogram_path(user_id, model_id, graph_type):
-    model_path = _check_model_path(user_id, model_id, graph_type)
-    dendrogram_filename = f'{model_path}/{graph_type}/dendrogram'
-    return dendrogram_filename
+    try:
+        model_path = _check_model_path(user_id, model_id, graph_type)
+        if model_path is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Model path not found"
+            )
+        dendrogram_filename = f'{model_path}/{graph_type}/dendrogram'
+        return dendrogram_filename
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting dendrogram path: {str(e)}"
+        )
 
 
 def _get_sub_dendrogram(current_user, model_id, graph_type, selected_labels):
@@ -74,4 +87,33 @@ def _rename_cluster(user_id, model_id, graph_type, selected_labels, cluster_id, 
     dendrogram.save_dendrogram()
     sub_dendrogram = dendrogram.get_sub_dendrogram_formatted(selected_labels)
     sub_dendrogram_json = json.loads(sub_dendrogram)
+
     return sub_dendrogram_json
+
+def _get_common_ancestor_subtree(current_user, model_id, graph_type, selected_labels):
+    if not current_user or not hasattr(current_user, 'user_id'):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not authenticated"
+        )
+        
+    if not selected_labels or not 2 <= len(selected_labels) <= 4:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Number of labels must be between 2 and 4"
+        )
+    
+
+    dendrogram_filename = _get_dendrogram_path(current_user.user_id, model_id, graph_type)
+    dendrogram = Dendrogram(dendrogram_filename)
+    try:
+        dendrogram.load_dendrogram()
+    except ValueError as e:
+        return None, None
+    
+    subtree, labels = dendrogram.get_common_ancestor_subtree(selected_labels)
+    if not subtree or 'id' not in subtree or 'name' not in subtree:
+        return None, None
+    
+    return subtree, labels
+
