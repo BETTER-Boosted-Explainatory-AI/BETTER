@@ -268,17 +268,17 @@ class Dendrogram:
                 raise ValueError(f"Label '{label}' not found in dendrogram")
             paths.append(path)
         
+        # Find the common ancestor (first name in all paths)
         common_ancestor = None
-        for i in range(len(paths[0])):
-            current = paths[0][i]
-            if all(current in path for path in paths):
-                common_ancestor = current
+        for name in paths[0]:
+            if all(name in path for path in paths):
+                common_ancestor = name
                 break
         
         if common_ancestor is None:
             raise ValueError("No common ancestor found for the specified labels")
         
-        # Get subtree from common ancestor
+        # Find the subtree rooted at the common ancestor
         def find_subtree(node, target_name):
             if node.get('name') == target_name:
                 return node
@@ -291,22 +291,19 @@ class Dendrogram:
         
         subtree = find_subtree(self.Z_tree_format, common_ancestor)
         
-        # Count leaf nodes and collect leaf labels
-        def count_leaf_nodes_and_labels(node):
-            if 'children' not in node:
-                return 1, [node['name']]
-            count = 0
-            labels = []
-            for child in node['children']:
-                child_count, child_labels = count_leaf_nodes_and_labels(child)
-                count += child_count
-                labels.extend(child_labels)
-            return count, labels
+        # Collect all leaf labels in the subtree
+        def collect_leaf_labels(node, leaf_labels):
+            if 'children' not in node or not node['children']:
+                leaf_labels.append(node.get('name'))
+            else:
+                for child in node['children']:
+                    collect_leaf_labels(child, leaf_labels)
         
-        leaf_count, leaf_labels = count_leaf_nodes_and_labels(subtree)
+        leaf_labels = []
+        collect_leaf_labels(subtree, leaf_labels)
         
-        if leaf_count > max_leaf_nodes:
-            raise ValueError(f"Subtree contains {leaf_count} leaf nodes, which exceeds the maximum of {max_leaf_nodes}")
+        if len(leaf_labels) > max_leaf_nodes:
+            raise ValueError(f"Number of leaf nodes ({len(leaf_labels)}) exceeds the maximum allowed ({max_leaf_nodes})")
         
         return subtree, leaf_labels
 

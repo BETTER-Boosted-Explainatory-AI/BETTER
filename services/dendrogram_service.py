@@ -97,23 +97,32 @@ def _get_common_ancestor_subtree(current_user, model_id, graph_type, selected_la
             detail="User not authenticated"
         )
         
-    if not selected_labels or not 2 <= len(selected_labels) <= 4:
+    if not selected_labels:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Number of labels must be between 2 and 4"
+            detail="No selected labels or invalid number of labels"
         )
     
-
+    print(f"Selected labels: {selected_labels}")
     dendrogram_filename = _get_dendrogram_path(current_user.user_id, model_id, graph_type)
     dendrogram = Dendrogram(dendrogram_filename)
     try:
         dendrogram.load_dendrogram()
     except ValueError as e:
-        return None, None
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
+        )
     
-    subtree, labels = dendrogram.get_common_ancestor_subtree(selected_labels)
+    try:
+        subtree, labels = dendrogram.get_common_ancestor_subtree(selected_labels)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_417_EXPECTATION_FAILED,
+            detail=str(e)
+        )
     if not subtree or 'id' not in subtree or 'name' not in subtree:
         return None, None
-    
+    print(f"Subtree: {subtree}")
     return subtree, labels
 
