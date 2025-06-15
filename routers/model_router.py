@@ -56,7 +56,7 @@ async def get_current_model_info(current_user: User = Depends(require_authentica
     if curr_model_info is None or not curr_model_info.get("model_id"):
         raise HTTPException(status_code=404, detail="Model not found")
     
-    return curr_model_info
+    return ModelRequest(**curr_model_info)
 
 @model_router.put(
     "/api/models/current", 
@@ -71,6 +71,8 @@ async def get_current_model_info(current_user: User = Depends(require_authentica
 async def set_current_model_info(model: CurrentModelRequest, current_user: User = Depends(require_authenticated_user)) -> ModelRequest:
     model_dict = model.model_dump(exclude_unset=True) 
     models_info = get_user_models_info(current_user, model.model_id)
+    if models_info is None:
+        raise HTTPException(status_code=404, detail="Model not found")
     model_dict = {
         "model_id": models_info["model_id"],
         "file_name": models_info["file_name"],
@@ -83,4 +85,4 @@ async def set_current_model_info(model: CurrentModelRequest, current_user: User 
     if curr_model_info is None:
         raise HTTPException(status_code=404, detail="Model not found")
     
-    return curr_model_info
+    return ModelRequest(**curr_model_info)

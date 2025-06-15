@@ -16,7 +16,7 @@ datasets_router = APIRouter()
     }
 )
 
-async def _get_dataset_labels(dataset_name: str) -> DatasetLabelsResult:
+async def get_dataset_labels_route(dataset_name: str) -> DatasetLabelsResult:
     dataset_labels = get_dataset_labels(dataset_name)  # Pass dataset_name correctly
 
     if dataset_labels is None:

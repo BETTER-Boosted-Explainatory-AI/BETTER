@@ -5,7 +5,6 @@ from utilss.classes.user import User
 from typing import List, Optional
 from request_models.adversarial_model import DetectorResponse, AnalysisResult, DetectionResult, DetectorListRequest
 import logging
-from utilss import debug_utils
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -35,7 +34,7 @@ async def generate_adversarial_detector(
         # Validate clean_images
         if clean_images:
             for file in clean_images:
-                if not file.filename.endswith(".npy"):
+                if not file.filename or not file.filename.endswith(".npy"):
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                         detail=f"Invalid file type for clean_images: {file.filename}. Only .npy files are allowed."
@@ -44,7 +43,7 @@ async def generate_adversarial_detector(
         # Validate adversarial_images
         if adversarial_images:
             for file in adversarial_images:
-                if not file.filename.endswith(".npy"):
+                if not file.filename or not file.filename.endswith(".npy"):
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                         detail=f"Invalid file type for adversarial_images: {file.filename}. Only .npy files are allowed."
@@ -208,32 +207,4 @@ async def get_detectors(
         return detectors_list
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-
-# @adversarial_router.delete(
-#     "/api/adversarial/delete_detector",
-#     status_code=status.HTTP_200_OK,
-#     responses={
-#         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
-#         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
-#         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
-#     }
-# )
-# async def delete_detector(
-#     current_model_id: str = Form(...),
-#     graph_type: str = Form(...),
-#     current_user: User = Depends(require_authenticated_user)
-# ):
-#     try:
-#         logger.info("Deleting adversarial detector")
-#         result = does_detector_exist_(current_model_id, graph_type, current_user)
-#         if not result:
-#             raise HTTPException(status_code=404, detail="Detector does not exist")
-        
-#         # Assuming a function to delete the detector exists
-#         # delete_adversarial_detector(current_model_id, graph_type, current_user)
-        
-#         return {"message": "Detector deleted successfully"}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
     

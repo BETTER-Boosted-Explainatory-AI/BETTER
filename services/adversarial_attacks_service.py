@@ -11,17 +11,22 @@ import io
 from PIL import Image
 import os
 import logging
-from utilss import debug_utils
 from utilss.s3_utils import get_users_s3_client
 logger = logging.getLogger(__name__)
 
 
 
-def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_filename, dataset) -> AdversarialDataset:
+def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_filename, dataset) -> dict:
     logger.info("Creating adversarial dataset")
     adversarial_dataset = AdversarialDataset(Z_file, clean_images, adversarial_images, model_filename, dataset)
     X_train, y_train, X_test, y_test = adversarial_dataset.create_logistic_regression_dataset()
-    return {"X_train": X_train, "y_train": y_train, "X_test": X_test, "y_test": y_test}
+    result = {
+        "X_train": X_train,
+        "y_train": y_train,
+        "X_test": X_test,
+        "y_test": y_test
+    }   
+    return result
 
 
 

@@ -1,5 +1,4 @@
 import logging
-import traceback
 
 # Set up logging with a more detailed format
 logging.basicConfig(
