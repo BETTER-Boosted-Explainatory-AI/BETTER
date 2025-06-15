@@ -37,12 +37,14 @@ def _handle_nma_submission(
         )
         
         
-    has_running_job = user_has_job_running(current_user)
-    if has_running_job:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="User already has a running NMA job. Please wait for it to finish before submitting a new one."
-        )
+    # has_running_job = user_has_job_running(current_user)
+    # if has_running_job:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_409_CONFLICT,
+    #         detail="User already has a running NMA job. Please wait for it to finish before submitting a new one."
+    #     )
+    
+    print("in _handle_nma_submission")
     
     model_filename = model_file.filename if model_file else None
     if model_file is not None:
@@ -51,6 +53,8 @@ def _handle_nma_submission(
         model_id_f = model_id_md
     else:
         model_id_f = model_id 
+
+    print(f"Model ID: {model_id_f}")
     job_id = submit_nma_batch_job(current_user.user_id, model_id_f, dataset, graph_type, min_confidence, top_k)        
     
     print(f"Submitting NMA job with parameters: {current_user.user_id}, {model_filename},{graph_type}")
