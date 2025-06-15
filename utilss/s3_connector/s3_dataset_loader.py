@@ -57,40 +57,6 @@ class S3DatasetLoader:
         """Load CIFAR-100 metadata"""
         return self.cifar_loader.load_cifar100_meta()
     
-    def load_dataset_split(self, dataset_name, split_type):
-        if split_type not in ['test', 'train']:
-            raise ValueError(f"Invalid split type: {split_type}")
-        
-        try:
-            files = self.load_folder(dataset_name, split_type)
-            if files:
-                return files
-            
-            print("IN DATASET LOADER")
-            # If no files found, try looking in subdirectories
-            all_dataset_files = self.load_from_s3(dataset_name)
-            split_prefix = f"{dataset_name}/{split_type}/"
-            
-            # Get all files with the split prefix
-            split_files = [f for f in all_dataset_files if f.startswith(split_prefix)]
-            
-            # Get all unique subdirectories
-            subdirs = set()
-            for file_path in split_files:
-                parts = file_path.replace(split_prefix, '').split('/')
-                if len(parts) > 1 and parts[0]:
-                    subdirs.add(parts[0])
-            
-            if subdirs:
-                # If subdirectories exist, return files from first subdirectory
-                first_subdir = sorted(list(subdirs))[0]
-                subdir_files = [f for f in split_files if f.startswith(f"{split_prefix}{first_subdir}/")]
-                return subdir_files
-                
-            return split_files
-        except Exception as e:
-            print(f"Warning: Could not load {split_type} split for {dataset_name}: {str(e)}")
-            return []
     
     def get_dataset_info(self, dataset_name):
         """Get dataset info directly from S3"""

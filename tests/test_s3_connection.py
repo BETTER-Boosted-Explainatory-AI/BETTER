@@ -1,14 +1,9 @@
 import os
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
-import io
-from PIL import Image
-import uuid
+import logging
 import boto3
-import pytest
 import json
-import tempfile
 from botocore.exceptions import ClientError
 
 # Import path setup
@@ -19,31 +14,26 @@ load_dotenv(os.path.join(project_root, '.env'))
 
 # Import services to test
 from services.models_service import (
-    s3_file_exists, read_json_from_s3, load_model_from_s3, get_user_models_info,
-    _get_model_path, _get_model_filename, _check_model_path, construct_model,
-    query_model, query_predictions, get_model_files, get_model_specific_file
+    s3_file_exists, read_json_from_s3, _get_model_path, _get_model_filename,
+    _check_model_path, get_user_models_info
 )
-from services.dendrogram_service import (
-    _get_dendrogram_path, _get_sub_dendrogram, _rename_cluster, _get_common_ancestor_subtree
-)
-from services.whitebox_service import (
-    _get_edges_dataframe_path, get_white_box_analysis
-)
-from services.dataset_service import (
-    _get_dataset_config, get_dataset_labels, load_single_image,
-    load_imagenet_train, load_cifar100_numpy, load_cifar100_meta
-)
+from services.dendrogram_service import _get_dendrogram_path, _get_sub_dendrogram
+from services.whitebox_testing_service import _get_edges_dataframe_path
+from services.dataset_service import _get_dataset_config, get_dataset_labels, _load_dataset
 from utilss.s3_connector.s3_dataset_utils import (
     load_dataset_numpy, load_cifar100_adversarial_or_clean,
     load_imagenet_adversarial_or_clean, load_dataset_folder,
-    get_image_stream, load_cifar100_as_numpy, load_dataset_split,
-    unpickle_from_s3
+    get_image_stream, load_cifar100_as_numpy
 )
 from utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
-from utilss.classes.dendrogram import Dendrogram
-from utilss.classes.edges_dataframe import EdgesDataframe
 from utilss.classes.user import User
-from utilss.classes.whitebox_testing import WhiteBoxTesting
+from utilss.classes.datasets.cifar100 import Cifar100
+from utilss.classes.datasets.imagenet import ImageNet
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Color for terminal output
 class TermColors:
@@ -108,513 +98,467 @@ def check_environment():
         print_error("Please set all required environment variables before running this script.")
         return False
 
-@pytest.fixture(scope="session")
-def datasets_bucket():
-    return os.environ["S3_DATASETS_BUCKET_NAME"]
+# ====================== S3 Client Tests ======================
 
-@pytest.fixture(scope="session")
-def users_bucket():
-    return os.environ["S3_USERS_BUCKET_NAME"]
-
-@pytest.fixture
-def datasets_s3_prefix(datasets_bucket):
-    """Give each test its own clean prefix in datasets bucket, and tear it down at the end."""
-    client = boto3.client("s3", region_name="us-east-1")
-    prefix = f"integration-tests/{uuid.uuid4()}/"
-    client.put_object(Bucket=datasets_bucket, Key=prefix)  # create the "folder"
-    yield datasets_bucket, prefix
-    # teardown: delete everything under that prefix
-    paginator = client.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=datasets_bucket, Prefix=prefix):
-        for obj in page.get("Contents", []):
-            client.delete_object(Bucket=datasets_bucket, Key=obj["Key"])
-
-@pytest.fixture
-def users_s3_prefix(users_bucket):
-    """Give each test its own clean prefix in users bucket, and tear it down at the end."""
-    client = boto3.client("s3", region_name="us-east-1")
-    prefix = f"integration-tests/{uuid.uuid4()}/"
-    client.put_object(Bucket=users_bucket, Key=prefix)  # create the "folder"
-    yield users_bucket, prefix
-    # teardown: delete everything under that prefix
-    paginator = client.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=users_bucket, Prefix=prefix):
-        for obj in page.get("Contents", []):
-            client.delete_object(Bucket=users_bucket, Key=obj["Key"])
-
-@pytest.fixture
-def mock_user():
-    """Create a mock user for testing."""
-    user_id = str(uuid.uuid4())
-    email = f"test-{user_id}@example.com"
+def test_s3_clients():
+    """Test S3 client connections."""
+    print_subheader("Testing S3 Clients")
     
-    class MockUser:
-        def get_user_id(self):
-            return user_id
-            
-        def get_user_folder(self):
-            return user_id
-            
-        def __init__(self, user_id=user_id, email=email):
-            self.user_id = user_id
-            self.email = email
-    
-    return MockUser()
-
-@pytest.fixture
-def mock_model_info():
-    """Create mock model info for testing."""
-    return {
-        "model_id": str(uuid.uuid4()),
-        "file_name": "model.keras",
-        "dataset": "cifar100"
-    }
-
-# ====================== Tests for S3 Dataset Utils ======================
-
-def test_get_datasets_s3_client():
-    """Test getting S3 client for datasets."""
-    print_subheader("Testing get_datasets_s3_client()")
+    # Test datasets S3 client
     try:
-        s3_client = get_datasets_s3_client()
-        if s3_client:
-            print_success("Successfully got S3 client for datasets")
-            print_info(f"Client type: {type(s3_client).__name__}")
+        datasets_client = get_datasets_s3_client()
+        datasets_bucket = os.environ.get('S3_DATASETS_BUCKET_NAME')
+        response = datasets_client.list_objects_v2(Bucket=datasets_bucket, MaxKeys=1)
+        if 'Contents' in response:
+            print_success(f"Successfully connected to datasets S3 bucket: {datasets_bucket}")
+            print_info(f"Found {len(response['Contents'])} objects")
         else:
-            print_error("Failed to get S3 client for datasets")
+            print_warning(f"Connected to datasets S3 bucket: {datasets_bucket} but it appears empty")
     except Exception as e:
-        print_error(f"Error in get_datasets_s3_client(): {str(e)}")
-
-def test_get_users_s3_client():
-    """Test getting S3 client for users."""
-    print_subheader("Testing get_users_s3_client()")
-    try:
-        s3_client = get_users_s3_client()
-        if s3_client:
-            print_success("Successfully got S3 client for users")
-            print_info(f"Client type: {type(s3_client).__name__}")
-        else:
-            print_error("Failed to get S3 client for users")
-    except Exception as e:
-        print_error(f"Error in get_users_s3_client(): {str(e)}")
-
-# ====================== Tests for Models Service ======================
-
-def test_get_model_path(users_s3_prefix, mock_user, mock_model_info):
-    """Test _get_model_path function."""
-    print_subheader("Testing _get_model_path()")
-    bucket, prefix = users_s3_prefix
-    user_id = mock_user.get_user_id()
-    model_id = mock_model_info["model_id"]
+        print_error(f"Failed to connect to datasets S3 bucket: {str(e)}")
     
+    # Test users S3 client
     try:
-        # Create a dummy model directory structure
-        client = boto3.client("s3")
-        model_key = f"{prefix}{user_id}/{model_id}/dummy.txt"
-        client.put_object(Bucket=bucket, Key=model_key, Body=b"dummy content")
+        users_client = get_users_s3_client()
+        users_bucket = os.environ.get('S3_USERS_BUCKET_NAME')
+        response = users_client.list_objects_v2(Bucket=users_bucket, MaxKeys=1)
+        if 'Contents' in response:
+            print_success(f"Successfully connected to users S3 bucket: {users_bucket}")
+            print_info(f"Found {len(response['Contents'])} objects")
+        else:
+            print_warning(f"Connected to users S3 bucket: {users_bucket} but it appears empty")
+    except Exception as e:
+        print_error(f"Failed to connect to users S3 bucket: {str(e)}")
+
+# ====================== User Service Tests ======================
+
+def test_user_operations():
+    """Test User class S3 operations without modifying data."""
+    print_subheader("Testing User Class S3 Operations")
+    
+    # List users and pick one for testing
+    try:
+        users_client = get_users_s3_client()
+        users_bucket = os.environ.get('S3_USERS_BUCKET_NAME')
         
-        # Test the function
+        # Try to read users.json
+        try:
+            response = users_client.get_object(Bucket=users_bucket, Key="users.json")
+            users = json.loads(response['Body'].read().decode('utf-8'))
+            if users and len(users) > 0:
+                print_success(f"Successfully read users.json, found {len(users)} users")
+                
+                # Pick first user for testing
+                test_user_id = users[0]["id"]
+                test_user_email = users[0]["email"]
+                print_info(f"Using user: {test_user_id} with email: {test_user_email} for testing")
+                
+                # Test User class functionality
+                user = User(user_id=test_user_id, email=test_user_email)
+                
+                # Test finding user in DB
+                found_user = user.find_user_in_db()
+                if found_user:
+                    print_success(f"Successfully found user in DB: {test_user_id}")
+                else:
+                    print_warning(f"Could not find user in DB: {test_user_id}")
+                
+                # Test loading models
+                user.load_models()
+                models = user.get_models()
+                print_success(f"Successfully loaded models for user, found {len(models) if isinstance(models, list) else 0} models")
+                
+                # Test loading current model (if exists)
+                try:
+                    current_model = user.get_current_model()
+                    if current_model and isinstance(current_model, dict):
+                        print_success(f"Successfully loaded current model: {current_model.get('model_id', 'Unknown ID')}")
+                    else:
+                        print_info("No current model set for user")
+                except Exception as e:
+                    print_warning(f"Error loading current model: {str(e)}")
+                
+                return test_user_id, test_user_email, models
+            else:
+                print_warning("users.json exists but contains no users")
+        except users_client.exceptions.NoSuchKey:
+            print_warning("users.json not found in S3 bucket")
+        except Exception as e:
+            print_error(f"Error reading users.json: {str(e)}")
+    except Exception as e:
+        print_error(f"Error testing User class: {str(e)}")
+    
+    return None, None, []
+
+# ====================== Models Service Tests ======================
+
+def test_models_service(user_id, models):
+    """Test models_service functions with actual data."""
+    print_subheader("Testing Models Service Functions")
+    
+    if not user_id or not models or len(models) == 0:
+        print_warning("No user ID or models available for testing")
+        return None
+    
+    # Get the first model for testing
+    test_model = models[0] if isinstance(models, list) and len(models) > 0 else None
+    if not test_model:
+        print_warning("No models available for testing")
+        return None
+    
+    model_id = test_model.get("model_id")
+    print_info(f"Using model: {model_id} for testing")
+    
+    # Test _get_model_path
+    try:
         model_path = _get_model_path(user_id, model_id)
-        
         if model_path:
             print_success(f"Successfully got model path: {model_path}")
         else:
-            print_warning("Model path not found")
-            
-        # Test with non-existent model
-        non_existent_path = _get_model_path(user_id, "non-existent-model-id")
-        if non_existent_path is None:
-            print_success("Correctly returned None for non-existent model")
-        else:
-            print_error(f"Incorrectly found path for non-existent model: {non_existent_path}")
+            print_warning(f"Could not get model path for user {user_id}, model {model_id}")
     except Exception as e:
         print_error(f"Error in _get_model_path(): {str(e)}")
-
-def test_check_model_path(users_s3_prefix, mock_user, mock_model_info):
-    """Test _check_model_path function."""
-    print_subheader("Testing _check_model_path()")
-    bucket, prefix = users_s3_prefix
-    user_id = mock_user.get_user_id()
-    model_id = mock_model_info["model_id"]
-    graph_type = "activation"
     
+    # Test _check_model_path with a graph type
     try:
-        # Create a dummy model directory structure with graph type
-        client = boto3.client("s3")
-        model_key = f"{prefix}{user_id}/{model_id}/{graph_type}/dummy.txt"
-        client.put_object(Bucket=bucket, Key=model_key, Body=b"dummy content")
-        
-        # Test the function (will need to monkeypatch _get_model_path)
-        # This is a complex test due to HTTP exceptions, so we'll just check if it's callable
-        print_info("Function exists but requires HTTP context to test fully")
-        
-        # Verify the function signature
-        import inspect
-        sig = inspect.signature(_check_model_path)
-        print_success(f"Function signature validated: {sig}")
+        graph_types = ["activation", "weights"]
+        for graph_type in graph_types:
+            try:
+                model_path = _check_model_path(user_id, model_id, graph_type)
+                if model_path:
+                    print_success(f"Successfully checked model path with graph type {graph_type}: {model_path}")
+                    
+                    # Now we have a valid graph type, use it for further tests
+                    
+                    # Test _get_model_filename
+                    try:
+                        model_filename = _get_model_filename(user_id, model_id, graph_type)
+                        if model_filename:
+                            print_success(f"Successfully got model filename: {model_filename}")
+                        else:
+                            print_warning(f"Could not get model filename for graph type {graph_type}")
+                    except Exception as e:
+                        print_error(f"Error in _get_model_filename(): {str(e)}")
+                    
+                    # Test get_user_models_info with a mock user
+                    try:
+                        class MockUser:
+                            def get_user_folder(self):
+                                return user_id
+                                
+                            def __init__(self, user_id=user_id, email=None):
+                                self.user_id = user_id
+                                self.email = email
+                        
+                        model_info = get_user_models_info(MockUser(), model_id)
+                        if model_info:
+                            print_success(f"Successfully got model info: {model_info.get('model_id')}")
+                        else:
+                            print_warning(f"Could not get model info for model {model_id}")
+                    except Exception as e:
+                        print_error(f"Error in get_user_models_info(): {str(e)}")
+                    
+                    return model_id, graph_type
+                else:
+                    print_info(f"Model path not found for graph type {graph_type}")
+            except Exception as e:
+                print_info(f"Graph type {graph_type} not available: {str(e)}")
     except Exception as e:
-        print_error(f"Error in _check_model_path() test: {str(e)}")
+        print_error(f"Error testing _check_model_path(): {str(e)}")
+    
+    return model_id, None
 
-def test_get_model_filename(users_s3_prefix, mock_user, mock_model_info):
-    """Test _get_model_filename function."""
-    print_subheader("Testing _get_model_filename()")
-    bucket, prefix = users_s3_prefix
-    user_id = mock_user.get_user_id()
-    model_id = mock_model_info["model_id"]
-    graph_type = "activation"
-    
-    try:
-        # Create a dummy model file
-        client = boto3.client("s3")
-        model_key = f"{prefix}{user_id}/{model_id}/model.keras"
-        client.put_object(Bucket=bucket, Key=model_key, Body=b"dummy model content")
-        
-        # Create graph directory
-        graph_key = f"{prefix}{user_id}/{model_id}/{graph_type}/dummy.txt"
-        client.put_object(Bucket=bucket, Key=graph_key, Body=b"dummy graph content")
-        
-        # Test the function (would need monkeypatching for S3_BUCKET)
-        print_info("Function exists but requires environment setup to test fully")
-        
-        # Verify the function signature
-        import inspect
-        sig = inspect.signature(_get_model_filename)
-        print_success(f"Function signature validated: {sig}")
-    except Exception as e:
-        print_error(f"Error in _get_model_filename() test: {str(e)}")
+# ====================== Dendrogram Service Tests ======================
 
-def test_s3_file_exists(users_s3_prefix):
-    """Test s3_file_exists function."""
-    print_subheader("Testing s3_file_exists()")
-    bucket, prefix = users_s3_prefix
-    client = boto3.client("s3")
+def test_dendrogram_service(user_id, model_id, graph_type):
+    """Test dendrogram_service functions with actual data."""
+    print_subheader("Testing Dendrogram Service Functions")
     
-    # Create a test file
-    test_key = f"{prefix}test_file.txt"
-    client.put_object(Bucket=bucket, Key=test_key, Body=b"test content")
+    if not user_id or not model_id or not graph_type:
+        print_warning("Missing user ID, model ID, or graph type for dendrogram tests")
+        return
     
+    # Test _get_dendrogram_path
     try:
-        # Test existing file
-        exists = s3_file_exists(bucket, test_key)
-        if exists:
-            print_success(f"Successfully detected existing file: {test_key}")
-        else:
-            print_error(f"Failed to detect existing file: {test_key}")
+        dendrogram_path = _get_dendrogram_path(user_id, model_id, graph_type)
+        if dendrogram_path:
+            print_success(f"Successfully got dendrogram path: {dendrogram_path}")
             
-        # Test non-existent file
-        non_existent_key = f"{prefix}non_existent.txt"
-        exists = s3_file_exists(bucket, non_existent_key)
-        if not exists:
-            print_success(f"Correctly reported non-existent file: {non_existent_key}")
-        else:
-            print_error(f"Incorrectly reported non-existent file exists: {non_existent_key}")
-    except Exception as e:
-        print_error(f"Error in s3_file_exists(): {str(e)}")
-
-def test_read_json_from_s3(users_s3_prefix):
-    """Test read_json_from_s3 function."""
-    print_subheader("Testing read_json_from_s3()")
-    bucket, prefix = users_s3_prefix
-    client = boto3.client("s3")
-    
-    # Create a test JSON file
-    test_data = {"key1": "value1", "key2": 42, "nested": {"a": [1, 2, 3]}}
-    test_key = f"{prefix}test_data.json"
-    client.put_object(
-        Bucket=bucket, 
-        Key=test_key, 
-        Body=json.dumps(test_data).encode('utf-8'),
-        ContentType="application/json"
-    )
-    
-    try:
-        # Test reading the JSON
-        data = read_json_from_s3(bucket, test_key)
-        if data == test_data:
-            print_success(f"Successfully read and parsed JSON from {test_key}")
-            print_info(f"Data: {data}")
-        else:
-            print_error(f"JSON data mismatch. Expected: {test_data}, Got: {data}")
-            
-        # Test reading non-existent file
-        non_existent_key = f"{prefix}non_existent.json"
-        try:
-            read_json_from_s3(bucket, non_existent_key)
-            print_error(f"Should have raised exception for non-existent file: {non_existent_key}")
-        except Exception as e:
-            print_success(f"Correctly raised exception for non-existent file: {str(e)}")
-    except Exception as e:
-        print_error(f"Error in read_json_from_s3(): {str(e)}")
-
-def test_get_user_models_info(users_s3_prefix, mock_user, mock_model_info):
-    """Test get_user_models_info function."""
-    print_subheader("Testing get_user_models_info()")
-    bucket, prefix = users_s3_prefix
-    client = boto3.client("s3")
-    user_id = mock_user.get_user_id()
-    model_id = mock_model_info["model_id"]
-    
-    # Create a models.json file
-    models_data = [
-        {
-            "model_id": model_id,
-            "dataset": "cifar100",
-            "file_name": "model.keras",
-            "created_at": "2023-01-01T00:00:00Z"
-        }
-    ]
-    models_key = f"{user_id}/models.json"
-    
-    try:
-        # Upload the models.json
-        client.put_object(
-            Bucket=bucket,
-            Key=models_key,
-            Body=json.dumps(models_data).encode('utf-8'),
-            ContentType="application/json"
-        )
-        
-        # Test the function
-        import inspect
-        sig = inspect.signature(get_user_models_info)
-        print_success(f"Function signature validated: {sig}")
-        print_info("Function requires S3_BUCKET environment variable to test fully")
-        
-    except Exception as e:
-        print_error(f"Error in get_user_models_info() test: {str(e)}")
-
-def test_get_model_files(users_s3_prefix, mock_user, mock_model_info):
-    """Test get_model_files function."""
-    print_subheader("Testing get_model_files()")
-    bucket, prefix = users_s3_prefix
-    client = boto3.client("s3")
-    user_id = mock_user.get_user_id()
-    model_id = mock_model_info["model_id"]
-    graph_type = "activation"
-    
-    # Create necessary files for testing
-    model_file_key = f"{user_id}/{model_id}/model.keras"
-    graph_folder_key = f"{user_id}/{model_id}/{graph_type}/"
-    dendrogram_key = f"{user_id}/{model_id}/{graph_type}/dendrogram.pkl"
-    
-    try:
-        # Upload test files
-        client.put_object(Bucket=bucket, Key=model_file_key, Body=b"model content")
-        client.put_object(Bucket=bucket, Key=graph_folder_key, Body=b"")
-        client.put_object(Bucket=bucket, Key=dendrogram_key, Body=b"dendrogram data")
-        
-        # Test the function
-        import inspect
-        sig = inspect.signature(get_model_files)
-        print_success(f"Function signature validated: {sig}")
-        print_info("Function requires S3_BUCKET environment variable to test fully")
-        
-    except Exception as e:
-        print_error(f"Error in get_model_files() test: {str(e)}")
-
-def test_get_model_specific_file(users_s3_prefix, mock_user, mock_model_info):
-    """Test get_model_specific_file function."""
-    print_subheader("Testing get_model_specific_file()")
-    bucket, prefix = users_s3_prefix
-    client = boto3.client("s3")
-    user_id = mock_user.get_user_id()
-    model_id = mock_model_info["model_id"]
-    graph_type = "activation"
-    
-    # Create necessary files for testing
-    model_file_key = f"{user_id}/{model_id}/model.keras"
-    graph_folder_key = f"{user_id}/{model_id}/{graph_type}/"
-    dendrogram_key = f"{user_id}/{model_id}/{graph_type}/dendrogram.json"
-    
-    try:
-        # Upload test files
-        client.put_object(Bucket=bucket, Key=model_file_key, Body=b"model content")
-        client.put_object(Bucket=bucket, Key=graph_folder_key, Body=b"")
-        client.put_object(Bucket=bucket, Key=dendrogram_key, Body=b"dendrogram data")
-        
-        # Test the function
-        import inspect
-        sig = inspect.signature(get_model_specific_file)
-        print_success(f"Function signature validated: {sig}")
-        print_info("Function requires S3_BUCKET environment variable to test fully")
-        
-    except Exception as e:
-        print_error(f"Error in get_model_specific_file() test: {str(e)}")
-
-# ====================== Tests for Dendrogram Service ======================
-
-def test_get_dendrogram_path(users_s3_prefix, mock_user, mock_model_info):
-    """Test _get_dendrogram_path function."""
-    print_subheader("Testing _get_dendrogram_path()")
-    bucket, prefix = users_s3_prefix
-    client = boto3.client("s3")
-    user_id = mock_user.get_user_id()
-    model_id = mock_model_info["model_id"]
-    graph_type = "activation"
-    
-    # Create necessary structure
-    model_dir_key = f"{user_id}/{model_id}/"
-    graph_dir_key = f"{user_id}/{model_id}/{graph_type}/"
-    
-    try:
-        # Create directory structure
-        client.put_object(Bucket=bucket, Key=model_dir_key, Body=b"")
-        client.put_object(Bucket=bucket, Key=graph_dir_key, Body=b"")
-        
-        # Test the function
-        import inspect
-        sig = inspect.signature(_get_dendrogram_path)
-        print_success(f"Function signature validated: {sig}")
-        print_info("Function requires FastAPI context to test fully")
-        
-    except Exception as e:
-        print_error(f"Error in _get_dendrogram_path() test: {str(e)}")
-
-def test_dendrogram_class():
-    """Test Dendrogram class with S3 integration."""
-    print_subheader("Testing Dendrogram class S3 integration")
-    try:
-        # Validate the class has methods for S3 operations
-        methods = [method for method in dir(Dendrogram) if not method.startswith('_')]
-        
-        expected_methods = ['find_name_hierarchy', 'get_common_ancestor_subtree', 
-                           'get_sub_dendrogram_formatted', 'load_dendrogram', 
-                           'rename_cluster', 'save_dendrogram']
-        
-        for method in expected_methods:
-            if method in methods:
-                print_success(f"Dendrogram class has method: {method}")
-            else:
-                print_warning(f"Dendrogram class missing expected method: {method}")
+            # Now we can test other dendrogram functions with a mock user
+            try:
+                class MockUser:
+                    def get_user_id(self):
+                        return user_id
+                        
+                    def get_user_folder(self):
+                        return user_id
+                        
+                    def __init__(self, user_id=user_id, email=None):
+                        self.user_id = user_id
+                        self.email = email
                 
-        # Check initialization with S3 path
-        dendrogram = Dendrogram("s3://test-bucket/test-key")
-        print_success("Successfully initialized Dendrogram with S3 path")
-        
-    except Exception as e:
-        print_error(f"Error testing Dendrogram class: {str(e)}")
-
-# ====================== Tests for Whitebox Service ======================
-
-def test_get_edges_dataframe_path(users_s3_prefix, mock_user, mock_model_info):
-    """Test _get_edges_dataframe_path function."""
-    print_subheader("Testing _get_edges_dataframe_path()")
-    bucket, prefix = users_s3_prefix
-    client = boto3.client("s3")
-    user_id = mock_user.get_user_id()
-    model_id = mock_model_info["model_id"]
-    graph_type = "activation"
-    
-    # Create necessary files
-    edges_df_key = f"{user_id}/{model_id}/{graph_type}/edges_df.csv"
-    
-    try:
-        # Upload test file
-        client.put_object(Bucket=bucket, Key=edges_df_key, Body=b"edges data")
-        
-        # Test the function
-        import inspect
-        sig = inspect.signature(_get_edges_dataframe_path)
-        print_success(f"Function signature validated: {sig}")
-        print_info("Function requires S3_BUCKET environment variable to test fully")
-        
-    except Exception as e:
-        print_error(f"Error in _get_edges_dataframe_path() test: {str(e)}")
-
-def test_edges_dataframe_class():
-    """Test EdgesDataframe class with S3 integration."""
-    print_subheader("Testing EdgesDataframe class S3 integration")
-    try:
-        # Validate the class has methods for S3 operations
-        methods = [method for method in dir(EdgesDataframe) if not method.startswith('_')]
-        
-        expected_methods = ['get_dataframe', 'load_dataframe', 'save_dataframe']
-        
-        for method in expected_methods:
-            if method in methods:
-                print_success(f"EdgesDataframe class has method: {method}")
-            else:
-                print_warning(f"EdgesDataframe class missing expected method: {method}")
+                # Test _get_sub_dendrogram with no selected labels (uses defaults)
+                try:
+                    sub_dendrogram, selected_labels = _get_sub_dendrogram(MockUser(), model_id, graph_type, None)
+                    if sub_dendrogram:
+                        print_success(f"Successfully got sub dendrogram with {len(selected_labels)} default selected labels")
+                    else:
+                        print_warning("Could not get sub dendrogram with default labels")
+                except Exception as e:
+                    print_error(f"Error in _get_sub_dendrogram(): {str(e)}")
                 
-        # Check initialization with S3 paths
-        edges_df = EdgesDataframe("s3://test-bucket/model.keras", "s3://test-bucket/edges_df.csv")
-        print_success("Successfully initialized EdgesDataframe with S3 paths")
-        
-    except Exception as e:
-        print_error(f"Error testing EdgesDataframe class: {str(e)}")
-
-def test_whitebox_testing_class():
-    """Test WhiteBoxTesting class with S3 integration."""
-    print_subheader("Testing WhiteBoxTesting class S3 integration")
-    try:
-        # Validate the class has methods for finding problematic images
-        methods = [method for method in dir(WhiteBoxTesting) if not method.startswith('_')]
-        
-        if 'find_problematic_images' in methods:
-            print_success("WhiteBoxTesting class has find_problematic_images method")
+                # Test _get_common_ancestor_subtree with selected labels
+                if selected_labels and len(selected_labels) >= 2:
+                    try:
+                        # Take first two labels for testing
+                        test_labels = selected_labels[:2]
+                        subtree, labels = _get_common_ancestor_subtree(MockUser(), model_id, graph_type, test_labels)
+                        if subtree:
+                            print_success(f"Successfully got common ancestor subtree for labels: {test_labels}")
+                        else:
+                            print_warning(f"Could not get common ancestor subtree for labels: {test_labels}")
+                    except Exception as e:
+                        print_error(f"Error in _get_common_ancestor_subtree(): {str(e)}")
+            except Exception as e:
+                print_error(f"Error testing dendrogram functions with mock user: {str(e)}")
         else:
-            print_warning("WhiteBoxTesting class missing find_problematic_images method")
-                
-        # Check initialization with S3 path
-        whitebox = WhiteBoxTesting("s3://test-bucket/model.keras")
-        print_success("Successfully initialized WhiteBoxTesting with S3 path")
-        
+            print_warning(f"Could not get dendrogram path for user {user_id}, model {model_id}, graph type {graph_type}")
     except Exception as e:
-        print_error(f"Error testing WhiteBoxTesting class: {str(e)}")
+        print_error(f"Error in _get_dendrogram_path(): {str(e)}")
 
-# ====================== Tests for Dataset Service ======================
+# ====================== Whitebox Service Tests ======================
 
-def test_get_dataset_config():
-    """Test _get_dataset_config function."""
-    print_subheader("Testing _get_dataset_config()")
+def test_whitebox_service(user_id, model_id, graph_type):
+    """Test whitebox_service functions with actual data."""
+    print_subheader("Testing Whitebox Service Functions")
+    
+    if not user_id or not model_id or not graph_type:
+        print_warning("Missing user ID, model ID, or graph type for whitebox tests")
+        return
+    
+    # Test _get_edges_dataframe_path
     try:
-        # Test with CIFAR100
+        edges_df_path = _get_edges_dataframe_path(user_id, model_id, graph_type)
+        if edges_df_path:
+            print_success(f"Successfully got edges dataframe path: {edges_df_path}")
+        else:
+            print_warning(f"Could not get edges dataframe path for user {user_id}, model {model_id}, graph type {graph_type}")
+    except Exception as e:
+        print_error(f"Error in _get_edges_dataframe_path(): {str(e)}")
+
+# ====================== Dataset Service Tests ======================
+
+def test_dataset_service():
+    """Test dataset_service functions with actual data."""
+    print_subheader("Testing Dataset Service Functions")
+    
+    # Test _get_dataset_config for CIFAR100
+    try:
         cifar_config = _get_dataset_config('cifar100')
         if cifar_config:
-            print_success("Successfully loaded CIFAR100 config")
+            print_success("Successfully got CIFAR100 dataset config")
             print_info(f"Config keys: {list(cifar_config.keys())}")
+            
+            # Test get_dataset_labels
+            try:
+                labels = get_dataset_labels('cifar100')
+                if labels:
+                    print_success(f"Successfully got CIFAR100 labels: {len(labels)} labels")
+                else:
+                    print_warning("Could not get CIFAR100 labels")
+            except Exception as e:
+                print_error(f"Error in get_dataset_labels(): {str(e)}")
         else:
-            print_warning("No CIFAR100 config found")
-            
-        # Test with ImageNet
-        try:
-            imagenet_config = _get_dataset_config('imagenet')
-            if imagenet_config:
-                print_success("Successfully loaded ImageNet config")
-                print_info(f"Config keys: {list(imagenet_config.keys())}")
-            else:
-                print_warning("No ImageNet config found")
-        except Exception as e:
-            print_warning(f"Could not load ImageNet config: {str(e)}")
-            
+            print_warning("Could not get CIFAR100 dataset config")
     except Exception as e:
         print_error(f"Error in _get_dataset_config(): {str(e)}")
-
-def test_user_class_s3_integration():
-    """Test User class S3 integration."""
-    print_subheader("Testing User class S3 integration")
+    
+    # Test _get_dataset_config for ImageNet
     try:
-        # Create a test user
-        test_user_id = str(uuid.uuid4())
-        test_email = f"test-{test_user_id}@example.com"
+        imagenet_config = _get_dataset_config('imagenet')
+        if imagenet_config:
+            print_success("Successfully got ImageNet dataset config")
+            print_info(f"Config keys: {list(imagenet_config.keys())}")
+        else:
+            print_warning("Could not get ImageNet dataset config")
+    except Exception as e:
+        print_warning(f"Error in _get_dataset_config() for ImageNet: {str(e)}")
+
+# ====================== Dataset Classes Tests ======================
+
+def test_dataset_classes():
+    """Test dataset classes directly."""
+    print_subheader("Testing Dataset Classes")
+    
+    # Test Cifar100 class
+    try:
+        # Create Cifar100 dataset
+        cifar_dataset = Cifar100()
         
-        # Check initialization
-        user = User(user_id=test_user_id, email=test_email)
-        
-        # Validate methods that might interact with S3
-        methods = [method for method in dir(User) if not method.startswith('_')]
-        s3_related_methods = ['create_user', 'find_user_in_db', 'get_user_folder']
-        
-        for method in s3_related_methods:
-            if method in methods:
-                print_success(f"User class has method: {method}")
+        # Test loading from S3
+        try:
+            # Get S3 client
+            s3_client = get_datasets_s3_client()
+            bucket = os.environ.get('S3_DATASETS_BUCKET_NAME')
+            
+            # Test load_from_s3 method
+            x_train, y_train = cifar_dataset.load_from_s3(s3_client, bucket, 'cifar100/')
+            if x_train is not None and len(x_train) > 0:
+                print_success(f"Successfully loaded CIFAR100 train data using dataset class: {len(x_train)} images")
             else:
-                print_warning(f"User class missing expected method: {method}")
-                
-        print_success(f"Successfully validated User class S3 integration")
+                print_warning("Could not load CIFAR100 train data using dataset class")
+        except Exception as e:
+            print_error(f"Error in Cifar100.load_from_s3(): {str(e)}")
+        
+        # Test load method
+        try:
+            result = cifar_dataset.load('cifar100')
+            if result:
+                print_success(f"Successfully loaded CIFAR100 dataset: {len(cifar_dataset.x_train)} train images, {len(cifar_dataset.x_test)} test images")
+            else:
+                print_warning("Could not load CIFAR100 dataset")
+        except Exception as e:
+            print_error(f"Error in Cifar100.load(): {str(e)}")
         
     except Exception as e:
-        print_error(f"Error testing User class S3 integration: {str(e)}")
+        print_error(f"Error testing Cifar100 class: {str(e)}")
+    
+    # Test ImageNet class if available
+    try:
+        # Create ImageNet dataset
+        imagenet_dataset = ImageNet()
+        
+        # Test load method if available
+        if hasattr(imagenet_dataset, 'load'):
+            try:
+                result = imagenet_dataset.load('imagenet')
+                if result:
+                    print_success("Successfully loaded ImageNet dataset")
+                else:
+                    print_warning("Could not load ImageNet dataset")
+            except Exception as e:
+                print_warning(f"Error in ImageNet.load(): {str(e)}")
+        else:
+            print_info("ImageNet class does not have a load method")
+        
+        # Test load_from_s3 method if available
+        if hasattr(imagenet_dataset, 'load_from_s3'):
+            try:
+                s3_client = get_datasets_s3_client()
+                bucket = os.environ.get('S3_DATASETS_BUCKET_NAME')
+                result = imagenet_dataset.load_from_s3(s3_client, bucket, 'imagenet/')
+                if result:
+                    print_success("Successfully loaded ImageNet data using dataset class")
+                else:
+                    print_warning("Could not load ImageNet data using dataset class")
+            except Exception as e:
+                print_warning(f"Error in ImageNet.load_from_s3(): {str(e)}")
+        else:
+            print_info("ImageNet class does not have a load_from_s3 method")
+    except Exception as e:
+        print_warning(f"Error testing ImageNet class: {str(e)}")
+
+# ====================== Direct Load Dataset Split Test ======================
+
+def test_direct_load_dataset_split():
+    """Test loading dataset splits directly with dataset classes."""
+    print_subheader("Testing Direct Dataset Split Loading")
+    
+    # Test CIFAR100 train split using S3 client directly
+    try:
+        s3_client = get_datasets_s3_client()
+        bucket = os.environ.get('S3_DATASETS_BUCKET_NAME')
+        
+        # List objects with CIFAR100 train prefix
+        response = s3_client.list_objects_v2(Bucket=bucket, Prefix='cifar100/train')
+        
+        if 'Contents' in response:
+            print_success(f"Successfully listed CIFAR100 train objects: {len(response['Contents'])} objects")
+            
+            # Show a few objects
+            if len(response['Contents']) > 0:
+                sample_keys = [obj['Key'] for obj in response['Contents'][:3]]
+                print_info(f"Sample keys: {sample_keys}")
+        else:
+            print_warning("No CIFAR100 train objects found")
+    except Exception as e:
+        print_error(f"Error listing CIFAR100 train objects: {str(e)}")
+    
+    # Try loading using unpickle_from_s3
+    try:
+        from utilss.s3_connector.s3_dataset_utils import unpickle_from_s3
+        
+        bucket = os.environ.get('S3_DATASETS_BUCKET_NAME')
+        data = unpickle_from_s3(bucket, 'cifar100/train')
+        
+        if data:
+            print_success("Successfully loaded CIFAR100 train data using unpickle_from_s3")
+            if isinstance(data, dict):
+                print_info(f"Data keys: {[k.decode('utf-8') if isinstance(k, bytes) else k for k in data.keys()]}")
+                if b'data' in data:
+                    print_info(f"Data shape: {data[b'data'].shape}")
+        else:
+            print_warning("Could not load CIFAR100 train data using unpickle_from_s3")
+    except Exception as e:
+        print_error(f"Error in unpickle_from_s3(): {str(e)}")
+
+# ====================== S3 Dataset Utils Tests ======================
+
+def test_s3_dataset_utils():
+    """Test S3 dataset utility functions."""
+    print_subheader("Testing S3 Dataset Utility Functions")
+    
+    # Test load_dataset_numpy
+    try:
+        cifar_data = load_dataset_numpy('cifar100', 'clean')
+        if cifar_data:
+            print_success(f"Successfully loaded CIFAR100 clean numpy data: {len(cifar_data)} arrays")
+        else:
+            print_warning("Could not load CIFAR100 clean numpy data")
+    except Exception as e:
+        print_error(f"Error in load_dataset_numpy(): {str(e)}")
+    
+    # Test load_cifar100_adversarial_or_clean
+    try:
+        cifar_clean = load_cifar100_adversarial_or_clean('clean')
+        if cifar_clean:
+            print_success(f"Successfully loaded CIFAR100 clean data: {len(cifar_clean)} arrays")
+        else:
+            print_warning("Could not load CIFAR100 clean data")
+    except Exception as e:
+        print_error(f"Error in load_cifar100_adversarial_or_clean(): {str(e)}")
+    
+    # Test load_dataset_folder
+    try:
+        cifar_files = load_dataset_folder('cifar100', 'clean')
+        if cifar_files:
+            print_success(f"Successfully listed CIFAR100 clean folder: {len(cifar_files)} files")
+        else:
+            print_warning("Could not list CIFAR100 clean folder")
+    except Exception as e:
+        print_error(f"Error in load_dataset_folder(): {str(e)}")
+    
+    # Test load_cifar100_as_numpy
+    try:
+        images, labels = load_cifar100_as_numpy('clean')
+        if images is not None and len(images) > 0:
+            print_success(f"Successfully loaded CIFAR100 clean as numpy: {len(images)} images")
+        else:
+            print_warning("Could not load CIFAR100 clean as numpy")
+    except Exception as e:
+        print_error(f"Error in load_cifar100_as_numpy(): {str(e)}")
+    
+
+    try:
+        cifar_dataset = _load_dataset('cifar100')
+        if cifar_dataset and hasattr(cifar_dataset, 'x_train') and cifar_dataset.x_train is not None:
+            print_success(f"Successfully loaded CIFAR100 train split using _load_dataset: {len(cifar_dataset.x_train)} images")
+        else:
+            print_warning("Could not load CIFAR100 train split using _load_dataset")
+    except Exception as e:
+        print_error(f"Error in _load_dataset(): {str(e)}")
+        
+
 
 # ====================== Main Test Runner ======================
 
@@ -626,39 +570,33 @@ def run_all_s3_connection_tests():
     if not check_environment():
         return False
     
-    # S3 Utils Tests
-    test_get_datasets_s3_client()
-    test_get_users_s3_client()
+    # Test S3 clients
+    test_s3_clients()
     
-    # Models Service Tests
-    # These may not work directly due to environment and HTTP dependencies
-    print_subheader("Models Service Tests")
-    print_info("Some tests may require specific environment setup and FastAPI context")
-    test_s3_file_exists(None)  # Mock bucket
-    test_read_json_from_s3(None)  # Mock bucket
-    test_get_model_path(None, None, None)  # Mock fixtures
-    test_check_model_path(None, None, None)  # Mock fixtures
-    test_get_model_filename(None, None, None)  # Mock fixtures
-    test_get_user_models_info(None, None, None)  # Mock fixtures
-    test_get_model_files(None, None, None)  # Mock fixtures
-    test_get_model_specific_file(None, None, None)  # Mock fixtures
+    # Test User operations and get test user/model
+    user_id, user_email, models = test_user_operations()
     
-    # Dendrogram Service Tests
-    print_subheader("Dendrogram Service Tests")
-    print_info("Some tests may require specific environment setup and FastAPI context")
-    test_get_dendrogram_path(None, None, None)  # Mock fixtures
-    test_dendrogram_class()
+    # If we have a user and models, test other services
+    if user_id and models:
+        # Test Models Service
+        model_id, graph_type = test_models_service(user_id, models)
+        
+        # If we have a model and graph type, test dendrogram and whitebox services
+        if model_id and graph_type:
+            test_dendrogram_service(user_id, model_id, graph_type)
+            test_whitebox_service(user_id, model_id, graph_type)
     
-    # Whitebox Service Tests
-    print_subheader("Whitebox Service Tests")
-    print_info("Some tests may require specific environment setup and FastAPI context")
-    test_get_edges_dataframe_path(None, None, None)  # Mock fixtures
-    test_edges_dataframe_class()
-    test_whitebox_testing_class()
+    # Test Dataset Service
+    test_dataset_service()
     
-    # Dataset Service Tests
-    test_get_dataset_config()
-    test_user_class_s3_integration()
+    # Test Dataset Classes directly
+    test_dataset_classes()
+    
+    # Test direct dataset split loading
+    test_direct_load_dataset_split()
+    
+    # Test S3 Dataset Utils
+    test_s3_dataset_utils()
     
     print_header("ALL S3 CONNECTION TESTS COMPLETED")
     return True
@@ -673,59 +611,73 @@ def main():
     
     # Test menu
     print_subheader("Test Menu")
-    print("1.  Test S3 Utils Clients")
-    print("2.  Test Model Service S3 Functions")
-    print("3.  Test Dendrogram Service S3 Functions")
-    print("4.  Test Whitebox Service S3 Functions")
-    print("5.  Test Dataset Service S3 Functions")
-    print("6.  Test User Class S3 Integration")
-    print("7.  Run Dataset S3 Utility Tests (from original script)")
-    print("8.  Run all S3 connection tests")
-    print("9.  Exit")
+    print("1. Test S3 Clients")
+    print("2. Test User Operations")
+    print("3. Test Models Service")
+    print("4. Test Dendrogram Service")
+    print("5. Test Whitebox Service")
+    print("6. Test Dataset Service")
+    print("7. Test Dataset Classes")
+    print("8. Test Direct Dataset Split Loading")
+    print("9. Test S3 Dataset Utils")
+    print("10. Run All S3 Connection Tests")
+    print("11. Exit")
     
     while True:
-        choice = input("\nEnter your choice (1-9): ").strip()
+        choice = input("\nEnter your choice (1-11): ").strip()
         
         if choice == '1':
-            test_get_datasets_s3_client()
-            test_get_users_s3_client()
+            test_s3_clients()
         elif choice == '2':
-            print_subheader("Models Service Tests")
-            print_info("Some tests may require specific environment setup and FastAPI context")
-            test_s3_file_exists(None)
-            test_read_json_from_s3(None)
-            test_get_model_path(None, None, None)
-            test_check_model_path(None, None, None)
-            test_get_model_filename(None, None, None)
-            test_get_user_models_info(None, None, None)
-            test_get_model_files(None, None, None)
-            test_get_model_specific_file(None, None, None)
+            user_id, user_email, models = test_user_operations()
+            if not user_id:
+                print_warning("No user available for testing subsequent services")
         elif choice == '3':
-            print_subheader("Dendrogram Service Tests")
-            test_get_dendrogram_path(None, None, None)
-            test_dendrogram_class()
+            # First get a test user
+            user_id, user_email, models = test_user_operations()
+            if user_id and models:
+                test_models_service(user_id, models)
+            else:
+                print_warning("No user available for testing Models Service")
         elif choice == '4':
-            print_subheader("Whitebox Service Tests")
-            test_get_edges_dataframe_path(None, None, None)
-            test_edges_dataframe_class()
-            test_whitebox_testing_class()
+            # First get a test user and model
+            user_id, user_email, models = test_user_operations()
+            if user_id and models:
+                model_id, graph_type = test_models_service(user_id, models)
+                if model_id and graph_type:
+                    test_dendrogram_service(user_id, model_id, graph_type)
+                else:
+                    print_warning("No model or graph type available for testing Dendrogram Service")
+            else:
+                print_warning("No user available for testing Dendrogram Service")
         elif choice == '5':
-            test_get_dataset_config()
+            # First get a test user and model
+            user_id, user_email, models = test_user_operations()
+            if user_id and models:
+                model_id, graph_type = test_models_service(user_id, models)
+                if model_id and graph_type:
+                    test_whitebox_service(user_id, model_id, graph_type)
+                else:
+                    print_warning("No model or graph type available for testing Whitebox Service")
+            else:
+                print_warning("No user available for testing Whitebox Service")
         elif choice == '6':
-            test_user_class_s3_integration()
+            test_dataset_service()
         elif choice == '7':
-            # Import and run functions from the original script
-            from test_s3_dataset_utils import run_all_tests
-            run_all_tests()
+            test_dataset_classes()
         elif choice == '8':
-            run_all_s3_connection_tests()
+            test_direct_load_dataset_split()
         elif choice == '9':
+            test_s3_dataset_utils()
+        elif choice == '10':
+            run_all_s3_connection_tests()
+        elif choice == '11':
             print("Exiting...")
             break
         else:
-            print_error("Invalid choice! Please enter 1-9.")
+            print_error("Invalid choice! Please enter 1-11.")
         
-        if choice in [str(i) for i in range(1, 9)]:
+        if choice in [str(i) for i in range(1, 11)]:
             input("\nPress Enter to continue...")
 
 if __name__ == "__main__":
