@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Form, UploadFile, Depends
-from services.adversarial_attacks_service import create_logistic_regression_detector, detect_adversarial_image, analysis_adversarial_image, does_detector_exist_, get_detector_list
+from services.adversarial_attacks_service import create_logistic_regression_detector, detect_adversarial_image, analysis_adversarial_image, get_detector_list
 from services.users_service import require_authenticated_user
 from utilss.classes.user import User
 from typing import List, Optional
@@ -157,30 +157,6 @@ async def analyze_adversarial(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-
-@adversarial_router.get(
-    "/api/adversarial/does_detector_exist",
-    status_code=status.HTTP_200_OK,
-    response_model=bool,
-    responses={
-        status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
-        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
-        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
-    }
-)
-async def does_detector_exist(
-    current_model_id,
-    graph_type,
-    current_user: User = Depends(require_authenticated_user)
-):
-    try:
-        logger.info("Checking if detector exists")
-        detector_exists = does_detector_exist_(current_model_id, graph_type, current_user)
-        logger.info(f"Detector exists: {detector_exists}")
-        return detector_exists
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 @adversarial_router.post(
     "/api/adversarial/get_detectors",

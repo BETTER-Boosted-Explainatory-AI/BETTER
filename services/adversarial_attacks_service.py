@@ -4,7 +4,7 @@ from utilss.classes.score_calculator import ScoreCalculator
 from utilss.photos_utils import preprocess_image, encode_image_to_base64, deprocess_resnet_image, preprocess_deepfool_image, preprocess_loaded_image
 from services.dataset_service import get_dataset_labels
 from utilss.classes.adversarial_attacks.adversarial_attack_factory import get_attack
-from services.models_service import get_top_k_predictions, query_model, get_user_models_info, get_model_files, get_model_specific_file
+from services.models_service import get_top_k_predictions, query_model, get_user_models_info, get_model_specific_file
 import tensorflow as tf
 import numpy as np
 import io
@@ -12,8 +12,32 @@ from PIL import Image
 import os
 import logging
 from utilss.s3_utils import get_users_s3_client
+from typing import Optional, Tuple
 logger = logging.getLogger(__name__)
 
+
+def _parse_s3_path(model_file: Optional[str], s3_bucket: str) -> Tuple[str, str]:
+    """
+    Parse the model file path to get the S3 bucket and key.
+    
+    Args:
+        model_file (Optional[str]): The path to the model file, either an S3 path or relative path
+        s3_bucket (str): The default S3 bucket name to use if model_file is not an S3 path
+        
+    Returns:
+        Tuple[str, str]: A tuple containing (bucket, key)
+        
+    Raises:
+        ValueError: If model_file is None
+    """
+    if model_file is None:
+        raise ValueError("model_file is None. Cannot proceed to load model.")
+        
+    if model_file.startswith('s3://'):
+        parts = model_file.replace('s3://', '').split('/', 1)
+        return parts[0], parts[1]
+    else:
+        return s3_bucket, model_file
 
 
 def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_filename, dataset) -> dict:
@@ -35,12 +59,8 @@ def create_logistic_regression_detector(model_id, graph_type, clean_images, adve
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
-        # model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
-        # model_graph_folder = model_files["model_graph_folder"]
         model_graph_folder = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "graph_folder")
-        # model_file = model_files["model_file"]
         model_file = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "model_file")
-        # Z_file = model_files["Z_file"]
         Z_file = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "Z_file")
         
     adversarial_detector = AdversarialDetector(model_graph_folder)
@@ -49,22 +69,6 @@ def create_logistic_regression_detector(model_id, graph_type, clean_images, adve
 
     return adversarial_detector
 
-def does_detector_exist_(model_id, graph_type, user):
-    model_info = get_user_models_info(user, model_id)
-
-    if model_info is None:
-        raise ValueError(f"Model ID {model_id} not found in models.json")
-    else:
-        # model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
-        # model_graph_folder = model_files["model_graph_folder"]
-        model_graph_folder = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "graph_folder")
-        adversarial_detector = AdversarialDetector(model_graph_folder)
-        if adversarial_detector.does_detector_exist():
-            logger.info("Adversarial detector already exists.")
-            return True
-        else:
-            logger.info("Adversarial detector does not exist.")
-            return False
 
 
 def detect_adversarial_image(model_id, graph_type, image, user, detector_filename):
@@ -95,28 +99,17 @@ def detect_adversarial_image(model_id, graph_type, image, user, detector_filenam
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
-        # model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
-        # model_graph_folder = model_files["model_graph_folder"]
         model_graph_folder = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "graph_folder")
-        # model_file = model_files["model_file"]
         model_file = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "model_file")
 
         dataset = model_info["dataset"]
-        # Z_full = model_files["Z_file"]
         Z_full = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "Z_file")
         labels = get_dataset_labels(dataset)
 
         # Check if model file exists in S3
         try:
-            # Extract key from model_file path (assuming it's already an S3 path or relative path)
-            if model_file.startswith('s3://'):
-                parts = model_file.replace('s3://', '').split('/', 1)
-                bucket = parts[0]
-                key = parts[1]
-            else:
-                bucket = s3_bucket
-                key = model_file
-                
+            bucket, key = _parse_s3_path(model_file, s3_bucket)
+            
             # Check if the file exists
             s3_client.head_object(Bucket=bucket, Key=key)
             
@@ -179,25 +172,14 @@ def analysis_adversarial_image(model_id, graph_type, attack_type, image, user, d
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
-        # model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
-        # model_graph_folder = model_files["model_graph_folder"]
-        # model_file = model_files["model_file"]
-        # Z_full = model_files["Z_file"]
         model_graph_folder = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "graph_folder")
         model_file = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "model_file")
         Z_full = get_model_specific_file(user.get_user_folder(), model_info, graph_type, "Z_file")
         
         # Check if model file exists in S3
         try:
-            # Extract key from model_file path
-            if model_file.startswith('s3://'):
-                parts = model_file.replace('s3://', '').split('/', 1)
-                bucket = parts[0]
-                key = parts[1]
-            else:
-                bucket = s3_bucket
-                key = model_file
-                
+            bucket, key = _parse_s3_path(model_file, s3_bucket)
+            
             # Check if the file exists
             s3_client.head_object(Bucket=bucket, Key=key)
             
