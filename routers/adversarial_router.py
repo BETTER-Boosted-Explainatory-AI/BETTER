@@ -183,4 +183,3 @@ async def get_detectors(
         return detectors_list
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    

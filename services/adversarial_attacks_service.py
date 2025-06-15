@@ -301,4 +301,3 @@ def get_detector_list(user, model_id, graph_type):
             detector_keys.append(os.path.basename(obj['Key']))
 
     return detector_keys
-    

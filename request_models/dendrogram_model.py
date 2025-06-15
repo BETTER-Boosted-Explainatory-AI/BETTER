@@ -24,4 +24,3 @@ class NamingClusterRequest(BaseModel):
     selected_labels: List[str]
     cluster_id: int
     new_name: str
-

@@ -1,7 +1,5 @@
-import os
 from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Depends
 from request_models.nma_model import NMAResult
-from typing import Dict
 from utilss.files_utils import upload_model, _update_model_metadata, user_has_job_running
 from services.users_service import require_authenticated_user
 from utilss.classes.user import User

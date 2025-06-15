@@ -25,3 +25,4 @@ class DetectionResult(BaseModel):
 class DetectorListRequest(BaseModel):
     current_model_id: str
     graph_type: str
+ 

@@ -37,19 +37,6 @@ def get_dataset_labels(dataset_str: str) -> List[str]:
     return dataset_config["labels"]
 
 
-def _load_dataset_folder(dataset_str: str, folder_type: str):
-    """
-    Load a specific folder (clean/adversarial/train) from a dataset
-    """
-    bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
-    if not bucket_name:
-        raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
-        
-    s3_loader = S3DatasetLoader(bucket_name=bucket_name)
-    
-    return s3_loader.load_folder(dataset_str, folder_type)
-
-
 def load_single_image(image_key: str) -> bytes:
     """
     Load a single image from S3
@@ -112,13 +99,3 @@ def load_cifar100_meta() -> Dict:
     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
     return s3_loader.load_cifar100_meta()
-
-
-def _load_dataset_split(dataset_str: str, split_type: str) -> str:
-    bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
-    if not bucket_name:
-        raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
-        
-    s3_loader = S3DatasetLoader(bucket_name=bucket_name)
-    
-    return s3_loader.load_dataset_split(dataset_str, split_type)
