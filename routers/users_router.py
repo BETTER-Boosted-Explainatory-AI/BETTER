@@ -205,8 +205,8 @@ def logout_user(response: Response):
     """
     Log out the user by clearing the session cookie.
     """
-    response.delete_cookie(key="session_token")
-    response.delete_cookie(key="user_id")
-    response.delete_cookie(key="refresh_token")
+    response.delete_cookie(key="session_token", secure=True, samesite="none")
+    response.delete_cookie(key="user_id", secure=True, samesite="none")
+    response.delete_cookie(key="refresh_token", secure=True, samesite="none")
 
     return {"message": "Logout successful"}
