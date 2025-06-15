@@ -37,7 +37,7 @@ class Dendrogram:
             }
 
     def _build_tree_hierarchy(self, linkage_matrix, labels):
-        tree, nodes = to_tree(linkage_matrix, rd=True)
+        tree, _ = to_tree(linkage_matrix, rd=True)
         self.Z_tree_format = self._build_tree_format(tree, labels)
         self.Z_tree_format = process_hierarchy(self.Z_tree_format)
         return self.Z_tree_format  
@@ -373,4 +373,3 @@ def download_pickle_from_s3(bucket_name: str, s3_key: str):
         return pickle.loads(pickle_bytes)
     except ClientError as e:
         logger.error(f"Error downloading pickle from S3: {e}")
-        

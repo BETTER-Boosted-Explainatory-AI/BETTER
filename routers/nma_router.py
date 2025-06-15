@@ -1,9 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Depends
 from request_models.nma_model import NMAResult
-from utilss.files_utils import upload_model, _update_model_metadata, user_has_job_running
+from utilss.files_utils import upload_model, _update_model_metadata
 from services.users_service import require_authenticated_user
 from utilss.classes.user import User
-from utilss.enums.graph_types import GraphTypes
 from utilss.enums.graph_types import GraphTypes
 from utilss.aws_job_utils import submit_nma_batch_job
 
@@ -36,16 +35,9 @@ def _handle_nma_submission(
             detail="Model file or model_id is required"
         )
         
-        
-    # has_running_job = user_has_job_running(current_user)
-    # if has_running_job:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_409_CONFLICT,
-    #         detail="User already has a running NMA job. Please wait for it to finish before submitting a new one."
-    #     )
     model_filename = model_file.filename if model_file else None
     if model_file is not None:
-        model_path, model_id_md = upload_model(
+        _, model_id_md = upload_model(
             current_user, model_id, model_file, graph_type)
         model_id_f = model_id_md
     else:

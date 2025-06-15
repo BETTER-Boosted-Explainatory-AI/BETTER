@@ -1,10 +1,10 @@
 import os
-import numpy as np
 from .dataset import Dataset
 import logging
 from utilss.s3_connector.s3_dataset_utils import unpickle_from_s3
 from utilss.s3_connector.s3_dataset_utils import get_dataset_config
-
+import pickle
+import numpy as np
 class Cifar100(Dataset):
     def __init__(self):
         cfg = get_dataset_config("cifar100")
@@ -81,10 +81,7 @@ class Cifar100(Dataset):
         Returns:
             Tuple of (x_train, y_train)
         """
-        import io
-        import pickle
-        import numpy as np
-        
+       
         self.log.info(f"Loading CIFAR-100 from S3: {bucket}/{prefix}")
         
         # Normalize the prefix to ensure it has the right format
