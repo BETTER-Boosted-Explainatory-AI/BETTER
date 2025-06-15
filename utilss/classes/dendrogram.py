@@ -1,5 +1,3 @@
-from scipy.cluster.hierarchy import to_tree
-from utilss.wordnet_utils import process_hierarchy
 import json
 import os
 import pickle
@@ -21,27 +19,7 @@ class Dendrogram:
         self.dendrogram_filename = dendrogram_filename
         self.s3_pickle_key = f"{dendrogram_filename}.pkl"
         self.s3_json_key   = f"{dendrogram_filename}.json"
-        
-    def _build_tree_format(self, node, labels):
-        if node.is_leaf():
-            return {
-                "id": node.id,
-                "name": labels[node.id],
-                }
-        else:
-            return {
-                "id": node.id,
-                "name": f"Cluster {node.id}",
-                "children": [self._build_tree_format(node.get_left(), labels), self._build_tree_format(node.get_right(), labels)],
-                "value": node.dist
-            }
-
-    def _build_tree_hierarchy(self, linkage_matrix, labels):
-        tree, _ = to_tree(linkage_matrix, rd=True)
-        self.Z_tree_format = self._build_tree_format(tree, labels)
-        self.Z_tree_format = process_hierarchy(self.Z_tree_format)
-        return self.Z_tree_format  
-    
+            
     def filter_dendrogram_by_labels(self, full_data, target_labels):
         """
         Create a minimal dendrogram containing only the specified labels while preserving hierarchy.
