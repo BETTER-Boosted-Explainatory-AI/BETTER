@@ -14,6 +14,8 @@ def submit_nma_batch_job(user_id, model_id, dataset, graph_type, min_confidence,
     job_name = f"nma-job-{uuid.uuid4()}"
     job_queue = os.getenv("JOB_QUEUE_NAME")
     job_definition = os.getenv("JOB_DEFINITION_NAME")
+
+    print(f"Submitting NMA job with parameters: {user_id}, {model_id}, {dataset}, {graph_type}, {min_confidence}, {top_k}")
     
     environment = [
         {'name': 'user_id', 'value': str(user_id)},
