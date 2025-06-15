@@ -13,54 +13,6 @@ from datetime import datetime
 import logging
 logger = logging.getLogger(__name__)
 
-
-### original implemetation ###
-# def upload_model(
-#     current_user: User,
-#     model_id: str,
-#     model_file: UploadFile,
-#     dataset: str,
-#     graph_type: str,
-#     min_confidence: float,
-#     top_k: int,
-# ) -> str:
-   
-#     filename = os.path.basename(model_file.filename)
-#     models_json_path = os.path.join(current_user.get_user_folder(), "models.json")
-#     if os.path.exists(models_json_path):
-#         with open(models_json_path, "r") as json_file:
-#             models_data = json.load(json_file)
-#     else:
-#         models_data = []
-
-#     try:
-#         model_id_md = check_models_metadata(models_data, model_id, graph_type)
-#     except ValueError as e:
-#         print(str(e))
-#         raise 
-
-#     model_subfolder = os.path.join(current_user.get_user_folder(), model_id_md)
-#     os.makedirs(model_subfolder, exist_ok=True)
-    
-#     save_model_metadata(
-#         models_data,
-#         models_json_path,
-#         model_id_md,
-#         model_file.filename,
-#         dataset,
-#         graph_type,
-#         min_confidence,
-#         top_k,
-#     )
-    
-#     model_path = f'{model_subfolder}/{filename}'
-#     print(f"Saving model to {model_path}")
-#     with open(model_path, "wb") as f:
-#         shutil.copyfileobj(model_file.file, f)
-
-#     return model_path, model_id_md
-
-### S3 implementation ### 
 def upload_model(
     current_user: User,
     model_id: str,
@@ -68,6 +20,7 @@ def upload_model(
     graph_type: str,
 ) -> str:
     
+    print(f"Uploading model with ID: {model_id} and graph type: {graph_type}")
     s3_client = get_users_s3_client()
     s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
     if not s3_bucket:
@@ -76,84 +29,46 @@ def upload_model(
     filename = os.path.basename(model_file.filename)
     user_folder = current_user.get_user_folder()
     models_json_path = f"{user_folder}/models.json"
+
+    print(f"User folder: {user_folder}")
+    print(f"Models JSON path: {models_json_path}")
     
-    # Get models data from S3
     try:
         response = s3_client.get_object(Bucket=s3_bucket, Key=models_json_path)
         models_data = json.loads(response['Body'].read().decode('utf-8'))
+        print(f"Models data loaded from S3: {len(models_data)} entries found.")
+        print(f"Models data: {models_data}")
+
     except s3_client.exceptions.NoSuchKey:
         models_data = []
         
     try:
         model_id_md = check_models_metadata(models_data, model_id, graph_type)
+        print(f"Model ID MD: {model_id_md}")
     except ValueError as e:
         print(str(e))
         raise
 
     # # Define S3 paths (no need to create directories in S3)
     model_subfolder = f"{user_folder}/{model_id_md}"
+
+    print(f"Model subfolder: {model_subfolder}")
     
     model_path = f'{model_subfolder}/{filename}'
-    # print(f"Saving model to S3: {s3_bucket}/{model_path}")
-    
-    
-    # # Read the file content
-    model_content = model_file.file.read()
-    
-    # # Upload to S3
-    s3_client.put_object(
-        Bucket=s3_bucket,
-        Key=model_path,
-        Body=model_content
+    print(f"Saving model to S3: {s3_bucket}/{model_path}")
+
+    model_file.file.seek(0)  # Ensure pointer is at the start
+    s3_client.upload_fileobj(
+    model_file.file,
+    s3_bucket,
+    model_path
     )
+
+    print(f"Model uploaded to S3 at {s3_bucket}/{model_path}")
 
     return model_path, model_id_md
 
-
-### original implemetation ###
-# def save_model_metadata(
-#     models_data, models_json_path, model_id, model_filename, dataset, graph_type, min_confidence, top_k,
-# ) -> None:
-#     # Prepare model metadata
-#     model_metadata = {
-#         "model_id": model_id,
-#         "file_name": model_filename,
-#         "dataset": dataset,
-#         "graph_type": [graph_type],
-#         "min_confidence": min_confidence,
-#         "top_k": top_k
-#     }
-
-#     # Check if the model_id already exists
-#     for model in models_data:
-#         if model["model_id"] == model_id:
-#             # If graph_type is not already a list, convert it to a list
-#             if not isinstance(model["graph_type"], list):
-#                 model["graph_type"] = [model["graph_type"]]
-
-#             # Add the new graph_type if it doesn't already exist
-#             if graph_type not in model["graph_type"]:
-#                 model["graph_type"].append(graph_type)
-#                 print(
-#                     f"Adding '{graph_type}' to graph_type for file '{model_filename}'."
-#                 )
-#             else:
-#                 print(
-#                     f"Graph type '{graph_type}' already exists for file '{model_filename}'. Skipping."
-#                 )
-#             break
-#     else:
-#         # If no matching model_id is found, append new metadata
-#         models_data.append(model_metadata)
-#         print(
-#             f"Adding new metadata for file '{model_filename}' with graph type '{graph_type}'."
-#         )
-
-#     with open(models_json_path, "w") as json_file:
-#         json.dump(models_data, json_file, indent=4)
-
 def _update_model_metadata(current_user, model_id, model_filename, dataset, graph_type, min_confidence, top_k, job_id, job_status="submitted"):
-    from utilss.s3_utils import get_users_s3_client
     s3_client = get_users_s3_client()
     s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
     
@@ -191,8 +106,6 @@ def _update_model_metadata(current_user, model_id, model_filename, dataset, grap
         job_metadata
     )
 
-
-### S3 implementation ### 
 def save_model_metadata(
     models_data, 
     models_json_path, 
@@ -360,24 +273,6 @@ def load_raw_image(file_path):
     # Load the numpy array and convert back to tensor
     img_example = np.load(file_path)
     return tf.convert_to_tensor(img_example, dtype=tf.float32)
-
-
-
-### original implemetation ###
-# def update_current_model(user, model_id, graph_type, model_filename, dataset, min_confidence, top_k):
-#     """
-#     Update the current model for the user
-#     """
-#     model_metadata = {
-#         "model_id": model_id,
-#         "file_name": model_filename,
-#         "dataset": dataset,
-#         "graph_type": graph_type,
-#         "min_confidence": min_confidence,
-#         "top_k": top_k
-#     }
-
-#     user.set_current_model(model_metadata)
 
 def user_has_job_running(current_user):
     s3_client = get_users_s3_client()
