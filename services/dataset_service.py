@@ -5,23 +5,13 @@ import numpy as np
 from utilss.classes.datasets.dataset_factory import DatasetFactory
 from utilss.s3_connector.s3_dataset_loader import S3DatasetLoader
 from utilss.enums.datasets_enum import DatasetsEnum
-
-def _get_dataset_config(dataset_str: str) -> Dict[str, Any]:
-    """Get dataset configuration based on dataset string from S3."""
-    bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
-    if not bucket_name:
-        raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
-        
-    s3_loader = S3DatasetLoader(bucket_name=bucket_name)
-    
-    return s3_loader.get_dataset_info(dataset_str)
-
+from utilss.s3_connector.s3_dataset_utils import get_dataset_config
 
 def _load_dataset(dataset_str: str):
     """
     Return a Dataset object populated directly from S3.
     """
-    dataset_config = _get_dataset_config(dataset_str)
+    dataset_config = get_dataset_config(dataset_str)
 
     dataset_name = dataset_config["dataset"]        # "cifar100" | "imagenet" | …
     dataset = DatasetFactory.create_dataset(dataset_name)
@@ -33,7 +23,7 @@ def _load_dataset(dataset_str: str):
 
 def get_dataset_labels(dataset_str: str) -> List[str]:
     """Get dataset labels from S3."""
-    dataset_config = _get_dataset_config(dataset_str)
+    dataset_config = get_dataset_config(dataset_str)
     return dataset_config["labels"]
 
 

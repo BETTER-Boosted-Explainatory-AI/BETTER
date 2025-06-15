@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 from .models_service import _check_model_path
 from utilss.classes.dendrogram import Dendrogram
 import json
-from services.dataset_service import _get_dataset_config
+from utilss.s3_connector.s3_dataset_utils import get_dataset_config
 from .models_service import get_user_models_info
 
 def _get_dendrogram_path(user_id, model_id, graph_type):
@@ -35,9 +35,9 @@ def _get_sub_dendrogram(current_user, model_id, graph_type, selected_labels):
         dataset = model_info["dataset"]
         
         if dataset == "cifar100":
-            selected_labels = _get_dataset_config(dataset)["init_selected_labels"]
+            selected_labels = get_dataset_config(dataset)["init_selected_labels"]
         elif dataset == "imagenet":
-            selected_labels = _get_dataset_config(dataset)["init_selected_labels"]
+            selected_labels = get_dataset_config(dataset)["init_selected_labels"]
         else:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Dataset not supported")
     

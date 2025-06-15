@@ -66,7 +66,7 @@ def get_white_box_analysis(current_user, current_model_id, graph_type, source_la
     
     for image_id, matches in problematic_imgs_dict.items():
         try:
-            img, label = dataset.get_train_image_by_id(image_id)
+            img, _ = dataset.get_train_image_by_id(image_id)
             
             # Process the image for encoding
             if img.max() <= 1.0:

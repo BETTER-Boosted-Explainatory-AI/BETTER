@@ -1,31 +1,27 @@
 import os
-import time
 import io
 from PIL import Image
 from .dataset import Dataset
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-# from data.datasets.imagenet_info import IMAGENET_INFO
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from utilss.s3_connector.s3_dataset_loader import S3DatasetLoader
 from utilss.s3_connector.s3_imagenet_loader import S3ImagenetLoader
+from utilss.s3_connector.s3_dataset_utils import get_dataset_config
+
 
 import logging
 logger = logging.getLogger(__name__)
 
 class ImageNet(Dataset):
     def __init__(self):
-        from services.dataset_service import _get_dataset_config
-        config = _get_dataset_config("imagenet")
-
-        super().__init__(config["dataset"], config["threshold"], config["infinity"], config["directory_labels"])
+        cfg = get_dataset_config("imagenet")
+        super().__init__(cfg["dataset"], cfg["threshold"], cfg["infinity"], cfg["labels"])
         self.x_train = None
         self.y_train = None
         self.x_test = None
         self.y_test = None
-        self.directory_labels = config["directory_labels"]
+        self.directory_labels = cfg["labels"]
+        self.directory_to_readable = cfg["directory_to_readable"]
         self.s3_loader = S3ImagenetLoader()
-
         self.train_index = []
         
 
@@ -127,24 +123,8 @@ class ImageNet(Dataset):
         labels = np.array(labels)
         
         return images, labels
-
-    # def load(self, name):
-    #     from services.dataset_service import _get_dataset_config
-
-    #     dataset_path = os.path.join("data", "datasets", name)
-    #     train_path = os.path.join(dataset_path, "train")
-    #     test_path = os.path.join(dataset_path, "test")
-
-    #     self.x_train, self.y_train = self.load_mini_imagenet(train_path)
-    # #    self.x_test, self.y_test = self.load_mini_imagenet(test_path)
-    
-    #     self.directory_labels = _get_dataset_config("imagenet")["directory_labels"]
-    #     print("loaded imagenet dataset")
-    
     
     def load(self, name):
-        from services.dataset_service import _get_dataset_config
-        
         # Check if S3 bucket is configured
         bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
         if not bucket:
@@ -155,13 +135,10 @@ class ImageNet(Dataset):
         # S3: imagenet/train
         dataset_path = os.path.join("data", "datasets", name) 
         train_path = os.path.join(dataset_path, "train")
-        test_path = os.path.join(dataset_path, "test")
 
         # Load using the same function but it will now fetch from S3
         self.x_train, self.y_train = self.load_mini_imagenet(train_path)
-        # self.x_test, self.y_test = self.load_mini_imagenet(test_path)
         
-        self.directory_labels = _get_dataset_config("imagenet")["directory_labels"]
         print(f"Loaded {len(self.x_train)} training images")
 
         print("loaded imagenet dataset")
@@ -247,9 +224,7 @@ class ImageNet(Dataset):
 
 
     def directory_to_labels_conversion(self, label):
-        from services.dataset_service import _get_dataset_config
-        dir_to_readable = _get_dataset_config("imagenet")["directory_to_readable"]
-        return dir_to_readable[label]
+        return self.directory_to_readable[label]
     
     def get_label_readable_name(self, label):
         return self.directory_to_labels_conversion(label)
@@ -261,13 +236,10 @@ class ImageNet(Dataset):
         """
         logger.info(f"Loading ImageNet from S3: {bucket}/{prefix}")
         
-        # Ensure we have the directory_labels loaded
-        from services.dataset_service import _get_dataset_config
-        config = _get_dataset_config("imagenet")
-        
         # Load required attributes if not already loaded
         if not hasattr(self, 'directory_labels') or not self.directory_labels:
-            self.directory_labels = config["directory_labels"]
+            cfg = get_dataset_config("imagenet")
+            self.directory_labels = cfg["labels"]
         
         # Ensure prefix ends with / for proper directory listing
         if not prefix.endswith('/'):
