@@ -104,7 +104,7 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
 
         response.set_cookie(
             key="user_id",
-            value=user.user_id,
+            value=str(user.user_id),
             httponly=True,      # Prevents JS access
             secure=True,        # Only sent over HTTPS
             samesite="none",     # Adjust as needed

@@ -6,11 +6,23 @@ import boto3
 import requests
 from jose import jwt, JWTError
 from fastapi import Request
+from typing import cast
 
+# Validate required environment variables
 cognito_client_secret = os.getenv("COGNITO_CLIENT_SECRET")
 cognito_client_id = os.getenv("COGNITO_CLIENT_ID")
 aws_region = os.getenv("AWS_REGION")
 cognito_user_pool_id = os.getenv("COGNITO_USER_POOL_ID")
+
+if not all([cognito_client_secret, cognito_client_id, aws_region, cognito_user_pool_id]):
+    raise ValueError("Missing required environment variables: COGNITO_CLIENT_SECRET, COGNITO_CLIENT_ID, AWS_REGION, or COGNITO_USER_POOL_ID")
+
+# Type assertions after validation
+cognito_client_secret = cast(str, cognito_client_secret)
+cognito_client_id = cast(str, cognito_client_id)
+aws_region = cast(str, aws_region)
+cognito_user_pool_id = cast(str, cognito_user_pool_id)
+
 incognito_client = boto3.client('cognito-idp', region_name=aws_region)
 ses_client = boto3.client('ses', region_name=aws_region)
 

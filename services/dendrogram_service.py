@@ -1,12 +1,9 @@
-import numpy as np
 from fastapi import HTTPException, status
 from .models_service import _check_model_path
 from utilss.classes.dendrogram import Dendrogram
 import json
 from services.dataset_service import _get_dataset_config
 from .models_service import get_user_models_info
-import os
-from utilss.s3_utils import get_users_s3_client 
 
 def _get_dendrogram_path(user_id, model_id, graph_type):
     try:
@@ -33,6 +30,8 @@ def _get_sub_dendrogram(current_user, model_id, graph_type, selected_labels):
     
     if selected_labels is None or selected_labels == []:   
         model_info = get_user_models_info(current_user, model_id)
+        if model_info is None or "dataset" not in model_info:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model info or dataset not found")
         dataset = model_info["dataset"]
         
         if dataset == "cifar100":
@@ -41,18 +40,6 @@ def _get_sub_dendrogram(current_user, model_id, graph_type, selected_labels):
             selected_labels = _get_dataset_config(dataset)["init_selected_labels"]
         else:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Dataset not supported")
-    
-    # Initialize S3 client
-    s3_client = get_users_s3_client() 
-    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
-    if not s3_bucket:
-        raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
-    
-    # Set up S3 params for Dendrogram class
-    s3_params = {
-        "s3_client": s3_client,
-        "s3_bucket": s3_bucket
-    }
     
     # Create and load dendrogram with S3 support
     dendrogram = Dendrogram(dendrogram_filename)
@@ -64,19 +51,6 @@ def _get_sub_dendrogram(current_user, model_id, graph_type, selected_labels):
 def _rename_cluster(user_id, model_id, graph_type, selected_labels, cluster_id, new_name):
     # Get the S3 path to the dendrogram
     dendrogram_filename = _get_dendrogram_path(user_id, model_id, graph_type)
-    
-    # Initialize S3 client
-    s3_client = get_users_s3_client()
-    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
-    if not s3_bucket:
-        raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
-    
-    # Set up S3 params for Dendrogram class
-    s3_params = {
-        "s3_client": s3_client,
-        "s3_bucket": s3_bucket
-    }
-    
     # Create and load dendrogram with S3 support
     dendrogram = Dendrogram(dendrogram_filename)
     dendrogram.load_dendrogram()
@@ -125,4 +99,3 @@ def _get_common_ancestor_subtree(current_user, model_id, graph_type, selected_la
         return None, None
     print(f"Subtree: {subtree}")
     return subtree, labels
-

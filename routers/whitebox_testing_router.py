@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from services.whitebox_testing_service import get_white_box_analysis
 from utilss.classes.user import User
 from services.users_service import require_authenticated_user
