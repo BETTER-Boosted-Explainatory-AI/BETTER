@@ -29,15 +29,10 @@ def upload_model(
     filename = os.path.basename(model_file.filename)
     user_folder = current_user.get_user_folder()
     models_json_path = f"{user_folder}/models.json"
-
-    print(f"User folder: {user_folder}")
-    print(f"Models JSON path: {models_json_path}")
     
     try:
         response = s3_client.get_object(Bucket=s3_bucket, Key=models_json_path)
         models_data = json.loads(response['Body'].read().decode('utf-8'))
-        print(f"Models data loaded from S3: {len(models_data)} entries found.")
-        print(f"Models data: {models_data}")
 
     except s3_client.exceptions.NoSuchKey:
         models_data = []
@@ -59,9 +54,9 @@ def upload_model(
 
     model_file.file.seek(0)  # Ensure pointer is at the start
     s3_client.upload_fileobj(
-    model_file.file,
-    s3_bucket,
-    model_path
+        model_file.file,
+        s3_bucket,
+        model_path
     )
 
     print(f"Model uploaded to S3 at {s3_bucket}/{model_path}")

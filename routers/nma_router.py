@@ -43,9 +43,6 @@ def _handle_nma_submission(
     #         status_code=status.HTTP_409_CONFLICT,
     #         detail="User already has a running NMA job. Please wait for it to finish before submitting a new one."
     #     )
-    
-    print("in _handle_nma_submission")
-    
     model_filename = model_file.filename if model_file else None
     if model_file is not None:
         model_path, model_id_md = upload_model(
