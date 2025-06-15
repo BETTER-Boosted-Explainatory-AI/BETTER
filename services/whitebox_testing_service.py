@@ -6,7 +6,6 @@ from utilss.classes.edges_dataframe import EdgesDataframe
 from .models_service import _get_model_path, _get_model_filename, get_user_models_info
 from .dataset_service import _load_dataset
 from utilss.photos_utils import encode_image_to_base64
-import os
 from utilss.s3_utils import get_users_s3_client 
 
 def _get_edges_dataframe_path(user_id, model_id, graph_type):

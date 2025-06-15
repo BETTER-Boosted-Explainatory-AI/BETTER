@@ -85,8 +85,8 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
             key="session_token",
             value=id_token,
             httponly=True,      # Prevents JS access
-            secure=False,      # Only for local testing, set to True in production!
-            samesite="lax",      # Adjust as needed
+            secure=True,        # Only sent over HTTPS
+            samesite="none",     # Adjust as needed
             max_age=900        # 1 hour, adjust as needed
         )
 
@@ -94,8 +94,8 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
             key="refresh_token",
             value=refresh_token,
             httponly=True,      # Prevents JS access
-            secure=False,      # Only for local testing, set to True in production!
-            samesite="lax",      # Adjust as needed
+            secure=True,        # Only sent over HTTPS
+            samesite="none",     # Adjust as needed
             max_age=7*24*3600      # 7 days, adjust as needed
         )
 
@@ -106,8 +106,8 @@ def login_user(user_create_request: UserCreateRequest, response: Response) -> di
             key="user_id",
             value=str(user.user_id),
             httponly=True,      # Prevents JS access
-            secure=False,      # Only for local testing, set to True in production!
-            samesite="lax",      # Adjust as needed
+            secure=True,        # Only sent over HTTPS
+            samesite="none",     # Adjust as needed
             max_age=7*24*3600      # 7 days, adjust as needed
         )
 
@@ -172,8 +172,8 @@ def refresh_user_session(request: Request, response: Response):
             key="session_token",
             value=id_token,
             httponly=True,
-            secure=False,  # Only for local testing, set to True in production!
-            samesite="lax",  # Adjust as needed
+            secure=True,  # Set to True in production!
+            samesite="none",
             max_age=900
         )
 
@@ -182,8 +182,8 @@ def refresh_user_session(request: Request, response: Response):
                 key="refresh_token",
                 value=refresh_token,
                 httponly=True,
-                secure=False,  # Only for local testing, set to True in production!
-                samesite="lax",  # Adjust as needed
+                secure=True,  # Set to True in production!
+                samesite="none",
                 max_age=7*24*3600  # 7 days
             )
 
@@ -205,8 +205,8 @@ def logout_user(response: Response):
     """
     Log out the user by clearing the session cookie.
     """
-    response.delete_cookie(key="session_token")
-    response.delete_cookie(key="user_id")
-    response.delete_cookie(key="refresh_token")
+    response.delete_cookie(key="session_token", secure=True, samesite="none")
+    response.delete_cookie(key="user_id", secure=True, samesite="none")
+    response.delete_cookie(key="refresh_token", secure=True, samesite="none")
 
     return {"message": "Logout successful"}
