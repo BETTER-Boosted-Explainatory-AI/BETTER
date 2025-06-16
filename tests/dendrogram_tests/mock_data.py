@@ -70,3 +70,5 @@ mock_sub_dendrogram = {
 }
 
 selected_labels = ["bathtub", "tub"]
+common_labels = ["Persian_cat", "tabby", "Egyptian_cat"]
+labels = ["Persian_cat", "tabby", "Egyptian_cat", "bathtub", "tub"]
