@@ -122,3 +122,20 @@ def test_get_dendrogram_invalid_request(client, mock_s3_bucket):
     response = client.post("/api/dendrograms", json=invalid_request)
     assert response.status_code == 422  # Validation error
 
+## status code 500 - internal server error
+def test_get_dendrogram_internal_error(client, mock_s3_bucket, dendrogram_request):
+    """Test handling of internal server errors during dendrogram retrieval"""
+    with patch("services.dendrogram_service._check_model_path") as mock_check_path:
+        mock_check_path.return_value = "test/path"
+        
+        # Mock the Dendrogram class to raise an exception
+        mock_dendrogram_obj = MagicMock()
+        mock_dendrogram_obj.load_dendrogram.side_effect = Exception("Unexpected error")
+        
+        with patch("services.dendrogram_service.Dendrogram", return_value=mock_dendrogram_obj):
+            response = client.post("/api/dendrograms", json=dendrogram_request)
+            
+            assert response.status_code == 500
+            assert "detail" in response.json()
+            assert "Unexpected error" in response.json()["detail"]
+

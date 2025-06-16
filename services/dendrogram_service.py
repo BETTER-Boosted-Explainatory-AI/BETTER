@@ -41,12 +41,18 @@ def _get_sub_dendrogram(current_user, model_id, graph_type, selected_labels):
         else:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Dataset not supported")
     
-    # Create and load dendrogram with S3 support
-    dendrogram = Dendrogram(dendrogram_filename)
-    dendrogram.load_dendrogram()
-    sub_dendrogram = dendrogram.get_sub_dendrogram_formatted(selected_labels)
-    sub_dendrogram_json = json.loads(sub_dendrogram)
-    return sub_dendrogram_json, selected_labels
+    try:
+        # Create and load dendrogram with S3 support
+        dendrogram = Dendrogram(dendrogram_filename)
+        dendrogram.load_dendrogram()
+        sub_dendrogram = dendrogram.get_sub_dendrogram_formatted(selected_labels)
+        sub_dendrogram_json = json.loads(sub_dendrogram)
+        return sub_dendrogram_json, selected_labels
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 def _rename_cluster(user_id, model_id, graph_type, selected_labels, cluster_id, new_name):
     # Get the S3 path to the dendrogram
