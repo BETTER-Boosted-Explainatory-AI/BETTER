@@ -55,20 +55,28 @@ def _get_sub_dendrogram(current_user, model_id, graph_type, selected_labels):
         )
 
 def _rename_cluster(user_id, model_id, graph_type, selected_labels, cluster_id, new_name):
-    # Get the S3 path to the dendrogram
-    dendrogram_filename = _get_dendrogram_path(user_id, model_id, graph_type)
-    # Create and load dendrogram with S3 support
-    dendrogram = Dendrogram(dendrogram_filename)
-    dendrogram.load_dendrogram()
-    result = dendrogram.rename_cluster(cluster_id, new_name)
-    if not result:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Cluster rename failed")
-    
-    dendrogram.save_dendrogram()
-    sub_dendrogram = dendrogram.get_sub_dendrogram_formatted(selected_labels)
-    sub_dendrogram_json = json.loads(sub_dendrogram)
+    try:
+        # Get the S3 path to the dendrogram
+        dendrogram_filename = _get_dendrogram_path(user_id, model_id, graph_type)
+        # Create and load dendrogram with S3 support
+        dendrogram = Dendrogram(dendrogram_filename)
+        dendrogram.load_dendrogram()
+        result = dendrogram.rename_cluster(cluster_id, new_name)
+        if not result:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Cluster rename failed")
+        
+        dendrogram.save_dendrogram()
+        sub_dendrogram = dendrogram.get_sub_dendrogram_formatted(selected_labels)
+        sub_dendrogram_json = json.loads(sub_dendrogram)
 
-    return sub_dendrogram_json
+        return sub_dendrogram_json, selected_labels
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 def _get_common_ancestor_subtree(current_user, model_id, graph_type, selected_labels):
     if not current_user or not hasattr(current_user, 'user_id'):
