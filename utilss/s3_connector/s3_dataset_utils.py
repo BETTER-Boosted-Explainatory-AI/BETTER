@@ -84,14 +84,6 @@ def load_cifar100_meta() -> Dict:
     
     return s3_loader.load_cifar100_meta()
 
-def load_dataset_split(dataset_str: str, split_type: str) -> List[str]:
-
-    bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
-    if not bucket_name:
-        raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
-    s3_loader = S3DatasetLoader(bucket_name=bucket_name)
-    return s3_loader.load_dataset_split(dataset_str, split_type)
-
 
 def unpickle_from_s3(bucket: str, key: str):
     """

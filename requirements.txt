@@ -20,3 +20,5 @@ flask
 requests
 python-jose
 boto3
+moto[all]
+httpx

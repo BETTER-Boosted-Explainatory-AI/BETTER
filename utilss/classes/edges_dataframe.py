@@ -1,12 +1,11 @@
 import pandas as pd
 import os
 import logging
-import boto3
 from botocore.exceptions import ClientError
-logger = logging.getLogger(__name__)
 import io 
 from utilss.s3_utils import get_users_s3_client
 
+logger = logging.getLogger(__name__)
 class EdgesDataframe:
     def __init__(self, model_filename, df_filename, edges_df=None):
 

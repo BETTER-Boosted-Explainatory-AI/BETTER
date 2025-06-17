@@ -130,5 +130,3 @@ class User:
             return None
         except self.s3_client.exceptions.NoSuchKey:
             return None
-
-        

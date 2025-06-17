@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 import uuid
 
@@ -9,14 +9,13 @@ class DendrogramRequest(BaseModel):
     selected_labels: Optional[List[str]] = None
 
 class DendrogramResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     name: str
     value: Optional[float] = None
     children: Optional[List['DendrogramResult']] = None
-    selected_labels: Optional[List[str]] = None  # <-- Add this line
-
-    class Config:
-        from_attributes = True
+    selected_labels: Optional[List[str]] = None
 
 class NamingClusterRequest(BaseModel):
     model_id: uuid.UUID

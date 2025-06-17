@@ -178,4 +178,3 @@ class ScoreCalculator:
             score = 0
         
         return score
-        

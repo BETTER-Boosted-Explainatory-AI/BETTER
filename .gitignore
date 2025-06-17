@@ -18,3 +18,5 @@
 /data
 /env
 **/pyrightconfig.json
+**/.pytest_cache
+**/.vscode
