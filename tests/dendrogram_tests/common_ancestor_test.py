@@ -3,7 +3,6 @@ import boto3
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 import moto
-import json
 from utilss.classes.user import User
 import uuid
 
@@ -96,7 +95,7 @@ def test_common_ancestors(client, mock_s3_bucket, dendrogram_request):
             )
             
 ## status code 404 - not found
-def test_get_dendrogram_not_found(client, mock_s3_bucket, dendrogram_request):
+def test_common_ancestors_not_found(client, mock_s3_bucket, dendrogram_request):
     """Test handling of non-existent dendrogram"""
     with patch("services.dendrogram_service._check_model_path") as mock_check_path:
         mock_check_path.return_value = None
@@ -106,7 +105,7 @@ def test_get_dendrogram_not_found(client, mock_s3_bucket, dendrogram_request):
         assert response.status_code == 404
         assert response.json()["detail"] == "Model path not found"
 
-def test_get_dendrogram_invalid_request(client, mock_s3_bucket):
+def test_common_ancestors_invalid_request(client, mock_s3_bucket):
     """Test handling of invalid request data"""
     # Missing required field
     invalid_request = {
@@ -118,7 +117,7 @@ def test_get_dendrogram_invalid_request(client, mock_s3_bucket):
     assert response.status_code == 422  # Validation error
 
 ## status code 500 - internal server error
-def test_get_dendrogram_internal_error(client, mock_s3_bucket, dendrogram_request):
+def test_common_ancestors_internal_error(client, mock_s3_bucket, dendrogram_request):
     """Test handling of internal server errors during dendrogram retrieval"""
     with patch("services.dendrogram_service._check_model_path") as mock_check_path:
         mock_check_path.return_value = "test/path"
