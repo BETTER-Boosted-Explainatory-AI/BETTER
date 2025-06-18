@@ -96,7 +96,7 @@ mock_sub_dendrogram = {
 }
 
 top_label = "bathtub"
-top_predictions = ["bathtub", "tubs"]
+query_predictions = ["bathtub", "tubs"]
 
 top_k_predictions = [("bathtub", 0.99), ("tubs", 0.01)]
 verbal_explanation = ["bathtub", "tubs", "bathtub_2", "whole_116", "whole_121"]
