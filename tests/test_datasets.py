@@ -17,7 +17,6 @@ from unittest.mock import patch, MagicMock
 
 dotenv.load_dotenv()
 
-# ─────────────────────────── app imports ────────────────────────────
 from services.dataset_service import get_dataset_labels
 from utilss.classes.datasets.cifar100 import Cifar100
 from utilss.classes.datasets.imagenet import ImageNet
@@ -31,7 +30,6 @@ from request_models.dataset_model import DatasetLabelsResult
 class TestDatasetInfo(unittest.TestCase):
     """Verify dataset information for CIFAR-100 and (Mini) ImageNet."""
 
-    # ───── common fixtures ──────────────────────────────────────────
     def setUp(self) -> None:
         # Expected sizes
         self.cifar100_expected_labels = 100
@@ -51,7 +49,6 @@ class TestDatasetInfo(unittest.TestCase):
             b"fine_labels": np.random.randint(0, 100, 10_000).tolist(),
         }
 
-        # Mock dataset-config files
         self.mock_cifar100_config = {
             "dataset": "cifar100",
             "threshold": 0.5,
@@ -68,7 +65,6 @@ class TestDatasetInfo(unittest.TestCase):
             },
         }
 
-    # ──────── simple “service layer” tests (remain unchanged) ───────
     @patch("services.dataset_service.get_dataset_config")
     def test_cifar100_labels_count(self, mock_cfg):
         mock_cfg.return_value = self.mock_cifar100_config
@@ -83,7 +79,6 @@ class TestDatasetInfo(unittest.TestCase):
         self.assertEqual(len(labels), self.imagenet_expected_labels)
         self.assertEqual(labels, self.mock_imagenet_config["labels"])
 
-    # ───── CIFAR-100 tests (patch inside cifar100 module) ────────────
     @patch("utilss.classes.datasets.cifar100.get_dataset_config")
     @patch("utilss.classes.datasets.cifar100.unpickle_from_s3")
     @patch.dict(os.environ, {"S3_DATASETS_BUCKET_NAME": "test-bucket"})
@@ -135,7 +130,6 @@ class TestDatasetInfo(unittest.TestCase):
         self.assertEqual(ds.x_train.shape, (50_000, 32, 32, 3))
         self.assertEqual(ds.x_test.shape, (10_000, 32, 32, 3))
 
-    # ───── ImageNet tests (patch inside imagenet module) ────────────
     @patch("utilss.classes.datasets.imagenet.get_dataset_config")
     def test_imagenet_label_structure(self, mock_cfg):
         mock_cfg.return_value = self.mock_imagenet_config
@@ -193,7 +187,6 @@ class TestDatasetInfo(unittest.TestCase):
             readable_to_synset[readable] = synset
         self.assertEqual(len(readable_to_synset), len(ds.directory_labels))
 
-    # ───── factory & service quick checks ───────────────────────────
     def test_dataset_factory_registration(self):
         avail = DatasetFactory.get_available_datasets()
         self.assertIn("cifar100", avail)
