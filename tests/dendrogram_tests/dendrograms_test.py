@@ -8,9 +8,7 @@ from utilss.classes.user import User
 import uuid
 
 from app import app
-from routers.dendrogram_router import dendrogram_router
 from services.users_service import require_authenticated_user
-from request_models.dendrogram_model import DendrogramRequest, DendrogramResult
 from .mock_data import user, mock_dendrogram, mock_sub_dendrogram, selected_labels
 
 # reusable client fixture for testing
