@@ -197,6 +197,17 @@ def check_models_metadata(models_data, model_id, graph_type):
             return model_id
     return str(uuid.uuid4())
 
+
+def user_has_job_running(current_user):
+    current_user.load_models()
+    for model in current_user.models:
+        batch_jobs = model.get("batch_jobs", [])
+        for job in batch_jobs:
+            if job.get("job_status") not in ("succeeded", "failed"):
+                return True
+    return False
+
+
 def load_numpy_from_directory(model, source):
     """
     Load images from a given directory or from a list of uploaded files.
