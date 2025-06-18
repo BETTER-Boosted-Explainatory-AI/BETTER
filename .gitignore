@@ -20,3 +20,4 @@
 **/pyrightconfig.json
 **/.pytest_cache
 **/.vscode
+**/**.keras

@@ -24,22 +24,24 @@ async def get_model_info(
     models_info = get_user_models_info(current_user, None)
     if models_info is None:
         raise HTTPException(status_code=404, detail="Model not found")
-    print(f"Models info: {models_info}")
-    if status_filter == "succeeded":
-        filtered_models = []
-        for model in models_info:
-            succeeded_types = [
-                job["job_graph_type"]
-                for job in model.get("batch_jobs", [])
-                if job.get("job_status") == "succeeded"
-            ]
-            if succeeded_types:
-                model_copy = model.copy()
-                model_copy["graph_type"] = list(set(succeeded_types))
-                filtered_models.append(model_copy)
-        return filtered_models
-    return models_info
-
+    try:
+        if status_filter == "succeeded":
+            filtered_models = []
+            for model in models_info:
+                succeeded_types = [
+                    job["job_graph_type"]
+                    for job in model.get("batch_jobs", [])
+                    if job.get("job_status") == "succeeded"
+                ]
+                if succeeded_types:
+                    model_copy = model.copy()
+                    model_copy["graph_type"] = list(set(succeeded_types))
+                    filtered_models.append(model_copy)
+            return filtered_models
+        return models_info
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    
 @model_router.get(
     "/api/models/current", 
     response_model=ModelRequest, 
@@ -51,12 +53,15 @@ async def get_model_info(
     }
 )
 async def get_current_model_info(current_user: User = Depends(require_authenticated_user)) -> ModelRequest:
-    curr_model_info = current_user.get_current_model()
+    try:
+        curr_model_info = current_user.get_current_model()
 
-    if curr_model_info is None or not curr_model_info.get("model_id"):
-        raise HTTPException(status_code=404, detail="Model not found")
-    
-    return ModelRequest(**curr_model_info)
+        if curr_model_info is None or not curr_model_info.get("model_id"):
+            raise HTTPException(status_code=404, detail="Model not found")
+        
+        return ModelRequest(**curr_model_info)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @model_router.put(
     "/api/models/current", 
@@ -79,10 +84,12 @@ async def set_current_model_info(model: CurrentModelRequest, current_user: User 
         "dataset": models_info["dataset"],
         "graph_type": model_dict.get("graph_type")
     }
-    
-    curr_model_info = current_user.set_current_model(model_dict)
-    
-    if curr_model_info is None:
-        raise HTTPException(status_code=404, detail="Model not found")
-    
-    return ModelRequest(**curr_model_info)
+    try:
+        curr_model_info = current_user.set_current_model(model_dict)
+        
+        if curr_model_info is None:
+            raise HTTPException(status_code=404, detail="Model not found")
+        
+        return ModelRequest(**curr_model_info)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

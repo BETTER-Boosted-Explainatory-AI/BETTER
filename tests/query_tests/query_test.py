@@ -5,6 +5,7 @@ import moto
 from utilss.classes.user import User
 import uuid
 from pathlib import Path
+import tensorflow as tf
 
 from app import app
 from services.users_service import require_authenticated_user
