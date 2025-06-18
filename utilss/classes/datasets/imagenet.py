@@ -24,6 +24,7 @@ class ImageNet(Dataset):
         self.s3_loader = S3ImagenetLoader()
         self.train_index = []
         
+
     def load_mini_imagenet(self, dataset_path, img_size=(224, 224)):
         """
         Returns:

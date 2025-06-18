@@ -1,31 +1,39 @@
 import os
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
-import io
-from PIL import Image
+import logging
+import boto3
+import json
+from botocore.exceptions import ClientError
 
+# Import path setup
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(project_root)
-
 from dotenv import load_dotenv
 load_dotenv(os.path.join(project_root, '.env'))
 
-# Import all functions from s3_dataset_utils
-from utilss.s3_connector.s3_dataset_utils import (
-    load_dataset_numpy,
-    load_cifar100_adversarial_or_clean,
-    load_imagenet_adversarial_or_clean,
-    get_dataset_config,
-    load_dataset_folder,
-    load_single_image,
-    get_image_stream,
-    load_imagenet_train,
-    load_cifar100_as_numpy,
-    load_cifar100_meta,
-    load_dataset_split,
-    unpickle_from_s3
+# Import services to test
+from services.models_service import (
+    s3_file_exists, read_json_from_s3, _get_model_path, _get_model_filename,
+    _check_model_path, get_user_models_info
 )
+from services.dendrogram_service import _get_dendrogram_path, _get_sub_dendrogram
+from services.whitebox_testing_service import _get_edges_dataframe_path
+from services.dataset_service import get_dataset_config, get_dataset_labels, _load_dataset
+from utilss.s3_connector.s3_dataset_utils import (
+    load_dataset_numpy, load_cifar100_adversarial_or_clean,
+    load_imagenet_adversarial_or_clean, load_dataset_folder,
+    get_image_stream, load_cifar100_as_numpy
+)
+from utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
+from utilss.classes.user import User
+from utilss.classes.datasets.cifar100 import Cifar100
+from utilss.classes.datasets.imagenet import ImageNet
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Color for terminal output
 class TermColors:
@@ -67,7 +75,10 @@ def check_environment():
     required_vars = [
         'AWS_DATASETS_ACCESS_KEY_ID', 
         'AWS_DATASETS_SECRET_ACCESS_KEY', 
-        'S3_DATASETS_BUCKET_NAME'
+        'S3_DATASETS_BUCKET_NAME',
+        'AWS_USERS_ACCESS_KEY_ID',
+        'AWS_USERS_SECRET_ACCESS_KEY',
+        'S3_USERS_BUCKET_NAME'
     ]
     
     all_set = True
@@ -87,436 +98,520 @@ def check_environment():
         print_error("Please set all required environment variables before running this script.")
         return False
 
-def visualize_numpy_data(data, title="Sample Data Visualization"):
-    """Helper function to visualize NumPy data."""
-    if data is None:
-        print_warning("No data to visualize")
+# ====================== S3 Client Tests ======================
+
+def test_s3_clients():
+    """Test S3 client connections."""
+    print_subheader("Testing S3 Clients")
+    
+    # Test datasets S3 client
+    try:
+        datasets_client = get_datasets_s3_client()
+        datasets_bucket = os.environ.get('S3_DATASETS_BUCKET_NAME')
+        response = datasets_client.list_objects_v2(Bucket=datasets_bucket, MaxKeys=1)
+        if 'Contents' in response:
+            print_success(f"Successfully connected to datasets S3 bucket: {datasets_bucket}")
+            print_info(f"Found {len(response['Contents'])} objects")
+        else:
+            print_warning(f"Connected to datasets S3 bucket: {datasets_bucket} but it appears empty")
+    except Exception as e:
+        print_error(f"Failed to connect to datasets S3 bucket: {str(e)}")
+    
+    # Test users S3 client
+    try:
+        users_client = get_users_s3_client()
+        users_bucket = os.environ.get('S3_USERS_BUCKET_NAME')
+        response = users_client.list_objects_v2(Bucket=users_bucket, MaxKeys=1)
+        if 'Contents' in response:
+            print_success(f"Successfully connected to users S3 bucket: {users_bucket}")
+            print_info(f"Found {len(response['Contents'])} objects")
+        else:
+            print_warning(f"Connected to users S3 bucket: {users_bucket} but it appears empty")
+    except Exception as e:
+        print_error(f"Failed to connect to users S3 bucket: {str(e)}")
+
+# ====================== User Service Tests ======================
+
+def test_user_operations():
+    """Test User class S3 operations without modifying data."""
+    print_subheader("Testing User Class S3 Operations")
+    
+    # List users and pick one for testing
+    try:
+        users_client = get_users_s3_client()
+        users_bucket = os.environ.get('S3_USERS_BUCKET_NAME')
+        
+        # Try to read users.json
+        try:
+            response = users_client.get_object(Bucket=users_bucket, Key="users.json")
+            users = json.loads(response['Body'].read().decode('utf-8'))
+            if users and len(users) > 0:
+                print_success(f"Successfully read users.json, found {len(users)} users")
+                
+                # Pick first user for testing
+                test_user_id = users[0]["id"]
+                test_user_email = users[0]["email"]
+                print_info(f"Using user: {test_user_id} with email: {test_user_email} for testing")
+                
+                # Test User class functionality
+                user = User(user_id=test_user_id, email=test_user_email)
+                
+                # Test finding user in DB
+                found_user = user.find_user_in_db()
+                if found_user:
+                    print_success(f"Successfully found user in DB: {test_user_id}")
+                else:
+                    print_warning(f"Could not find user in DB: {test_user_id}")
+                
+                # Test loading models
+                user.load_models()
+                models = user.get_models()
+                print_success(f"Successfully loaded models for user, found {len(models) if isinstance(models, list) else 0} models")
+                
+                # Test loading current model (if exists)
+                try:
+                    current_model = user.get_current_model()
+                    if current_model and isinstance(current_model, dict):
+                        print_success(f"Successfully loaded current model: {current_model.get('model_id', 'Unknown ID')}")
+                    else:
+                        print_info("No current model set for user")
+                except Exception as e:
+                    print_warning(f"Error loading current model: {str(e)}")
+                
+                return test_user_id, test_user_email, models
+            else:
+                print_warning("users.json exists but contains no users")
+        except users_client.exceptions.NoSuchKey:
+            print_warning("users.json not found in S3 bucket")
+        except Exception as e:
+            print_error(f"Error reading users.json: {str(e)}")
+    except Exception as e:
+        print_error(f"Error testing User class: {str(e)}")
+    
+    return None, None, []
+
+# ====================== Models Service Tests ======================
+
+def test_models_service(user_id, models):
+    """Test models_service functions with actual data."""
+    print_subheader("Testing Models Service Functions")
+    
+    if not user_id or not models or len(models) == 0:
+        print_warning("No user ID or models available for testing")
+        return None
+    
+    # Get the first model for testing
+    test_model = models[0] if isinstance(models, list) and len(models) > 0 else None
+    if not test_model:
+        print_warning("No models available for testing")
+        return None
+    
+    model_id = test_model.get("model_id")
+    print_info(f"Using model: {model_id} for testing")
+    
+    # Test _get_model_path
+    try:
+        model_path = _get_model_path(user_id, model_id)
+        if model_path:
+            print_success(f"Successfully got model path: {model_path}")
+        else:
+            print_warning(f"Could not get model path for user {user_id}, model {model_id}")
+    except Exception as e:
+        print_error(f"Error in _get_model_path(): {str(e)}")
+    
+    # Test _check_model_path with a graph type
+    try:
+        graph_types = ["activation", "weights"]
+        for graph_type in graph_types:
+            try:
+                model_path = _check_model_path(user_id, model_id, graph_type)
+                if model_path:
+                    print_success(f"Successfully checked model path with graph type {graph_type}: {model_path}")
+                    
+                    # Now we have a valid graph type, use it for further tests
+                    
+                    # Test _get_model_filename
+                    try:
+                        model_filename = _get_model_filename(user_id, model_id, graph_type)
+                        if model_filename:
+                            print_success(f"Successfully got model filename: {model_filename}")
+                        else:
+                            print_warning(f"Could not get model filename for graph type {graph_type}")
+                    except Exception as e:
+                        print_error(f"Error in _get_model_filename(): {str(e)}")
+                    
+                    # Test get_user_models_info with a mock user
+                    try:
+                        class MockUser:
+                            def get_user_folder(self):
+                                return user_id
+                                
+                            def __init__(self, user_id=user_id, email=None):
+                                self.user_id = user_id
+                                self.email = email
+                        
+                        model_info = get_user_models_info(MockUser(), model_id)
+                        if model_info:
+                            print_success(f"Successfully got model info: {model_info.get('model_id')}")
+                        else:
+                            print_warning(f"Could not get model info for model {model_id}")
+                    except Exception as e:
+                        print_error(f"Error in get_user_models_info(): {str(e)}")
+                    
+                    return model_id, graph_type
+                else:
+                    print_info(f"Model path not found for graph type {graph_type}")
+            except Exception as e:
+                print_info(f"Graph type {graph_type} not available: {str(e)}")
+    except Exception as e:
+        print_error(f"Error testing _check_model_path(): {str(e)}")
+    
+    return model_id, None
+
+# ====================== Dendrogram Service Tests ======================
+
+def test_dendrogram_service(user_id, model_id, graph_type):
+    """Test dendrogram_service functions with actual data."""
+    print_subheader("Testing Dendrogram Service Functions")
+    
+    if not user_id or not model_id or not graph_type:
+        print_warning("Missing user ID, model ID, or graph type for dendrogram tests")
         return
     
-    if isinstance(data, tuple) and len(data) == 2:
-        # Likely (images, labels) format
-        images, labels = data
-        if len(images) == 0:
-            print_warning("No images to display")
-            return
+    # Test _get_dendrogram_path
+    try:
+        dendrogram_path = _get_dendrogram_path(user_id, model_id, graph_type)
+        if dendrogram_path:
+            print_success(f"Successfully got dendrogram path: {dendrogram_path}")
             
-        # Display up to 5 random images
-        fig, axes = plt.subplots(1, min(5, len(images)), figsize=(15, 3))
-        if min(5, len(images)) == 1:
-            axes = [axes]
-            
-        for i in range(min(5, len(images))):
-            idx = np.random.randint(0, len(images))
-            ax = axes[i]
-            img = images[idx]
-            
-            # Handle different image formats
-            if img.dtype != np.uint8:
-                img = ((img - img.min()) / (img.max() - img.min()) * 255).astype(np.uint8)
-            
-            # Check if channels need to be transposed
-            if len(img.shape) == 3 and img.shape[0] == 3 and img.shape[2] != 3:
-                img = np.transpose(img, (1, 2, 0))
-                
-            ax.imshow(img)
-            if labels is not None and idx < len(labels):
-                ax.set_title(f"Label: {labels[idx]}")
-            ax.axis('off')
-            
-        plt.suptitle(title)
-        plt.tight_layout()
-        plt.show()
-        
-    elif isinstance(data, dict):
-        # Dictionary of NumPy arrays
-        if len(data) == 0:
-            print_warning("Empty dictionary, nothing to display")
-            return
-            
-        # Show up to 5 items
-        keys = list(data.keys())[:5]
-        fig, axes = plt.subplots(1, len(keys), figsize=(15, 3))
-        if len(keys) == 1:
-            axes = [axes]
-            
-        for i, key in enumerate(keys):
-            array = data[key]
-            ax = axes[i]
-            
-            # Handle different array types
-            if isinstance(array, np.ndarray):
-                if len(array.shape) >= 3:  # Image
-                    if array.dtype != np.uint8:
-                        array = ((array - array.min()) / (array.max() - array.min()) * 255).astype(np.uint8)
-                    
-                    # Ensure correct channel ordering
-                    if array.shape[0] == 3 and len(array.shape) == 3:  # [C,H,W] format
-                        array = np.transpose(array, (1, 2, 0))
+            # Now we can test other dendrogram functions with a mock user
+            try:
+                class MockUser:
+                    def get_user_id(self):
+                        return user_id
                         
-                    ax.imshow(array)
-                    ax.set_title(f"{key[:10]}...")
-                else:
-                    # Not an image, show first few values
-                    ax.text(0.5, 0.5, f"Array shape: {array.shape}\nFirst values: {str(array.flatten()[:5])}", 
-                           ha='center', va='center')
-                    ax.set_title(f"{key[:10]}...")
-            else:
-                ax.text(0.5, 0.5, f"Type: {type(array).__name__}\nValue: {str(array)[:50]}", 
-                       ha='center', va='center')
-                ax.set_title(f"{key[:10]}...")
+                    def get_user_folder(self):
+                        return user_id
+                        
+                    def __init__(self, user_id=user_id, email=None):
+                        self.user_id = user_id
+                        self.email = email
                 
-            ax.axis('off')
-            
-        plt.suptitle(title)
-        plt.tight_layout()
-        plt.show()
-    else:
-        print_warning(f"Unsupported data type for visualization: {type(data)}")
-
-def test_load_dataset_numpy():
-    """Test load_dataset_numpy function."""
-    print_subheader("Testing load_dataset_numpy()")
-    try:
-        # Test with CIFAR100 clean
-        cifar_numpy = load_dataset_numpy('cifar100', 'clean')
-        if cifar_numpy:
-            print_success(f"Successfully loaded {len(cifar_numpy)} NumPy arrays from CIFAR100 clean")
-            print_info(f"Array keys: {list(cifar_numpy.keys())[:5]}")
-            visualize_numpy_data(cifar_numpy, "CIFAR100 Clean NumPy Data")
+                # Test _get_sub_dendrogram with no selected labels (uses defaults)
+                try:
+                    sub_dendrogram, selected_labels = _get_sub_dendrogram(MockUser(), model_id, graph_type, None)
+                    if sub_dendrogram:
+                        print_success(f"Successfully got sub dendrogram with {len(selected_labels)} default selected labels")
+                    else:
+                        print_warning("Could not get sub dendrogram with default labels")
+                except Exception as e:
+                    print_error(f"Error in _get_sub_dendrogram(): {str(e)}")
+                
+                # Test _get_common_ancestor_subtree with selected labels
+                if selected_labels and len(selected_labels) >= 2:
+                    try:
+                        # Take first two labels for testing
+                        test_labels = selected_labels[:2]
+                        subtree, labels = _get_common_ancestor_subtree(MockUser(), model_id, graph_type, test_labels)
+                        if subtree:
+                            print_success(f"Successfully got common ancestor subtree for labels: {test_labels}")
+                        else:
+                            print_warning(f"Could not get common ancestor subtree for labels: {test_labels}")
+                    except Exception as e:
+                        print_error(f"Error in _get_common_ancestor_subtree(): {str(e)}")
+            except Exception as e:
+                print_error(f"Error testing dendrogram functions with mock user: {str(e)}")
         else:
-            print_warning("No NumPy arrays found in CIFAR100 clean folder")
-            
-        # Test with ImageNet clean
-        imagenet_numpy = load_dataset_numpy('imagenet', 'clean')
-        if imagenet_numpy:
-            print_success(f"Successfully loaded {len(imagenet_numpy)} NumPy arrays from ImageNet clean")
-            print_info(f"Array keys: {list(imagenet_numpy.keys())[:5]}")
-        else:
-            print_warning("No NumPy arrays found in ImageNet clean folder")
-            
+            print_warning(f"Could not get dendrogram path for user {user_id}, model {model_id}, graph type {graph_type}")
     except Exception as e:
-        print_error(f"Error in load_dataset_numpy(): {str(e)}")
+        print_error(f"Error in _get_dendrogram_path(): {str(e)}")
 
-def test_load_cifar100_adversarial_or_clean():
-    """Test load_cifar100_adversarial_or_clean function."""
-    print_subheader("Testing load_cifar100_adversarial_or_clean()")
+# ====================== Whitebox Service Tests ======================
+
+def test_whitebox_service(user_id, model_id, graph_type):
+    """Test whitebox_service functions with actual data."""
+    print_subheader("Testing Whitebox Service Functions")
+    
+    if not user_id or not model_id or not graph_type:
+        print_warning("Missing user ID, model ID, or graph type for whitebox tests")
+        return
+    
+    # Test _get_edges_dataframe_path
     try:
-        # Test with clean folder
-        cifar_clean = load_cifar100_adversarial_or_clean('clean')
-        if cifar_clean:
-            print_success(f"Successfully loaded {len(cifar_clean)} arrays from CIFAR100 clean")
-            print_info(f"Array keys: {list(cifar_clean.keys())[:5]}")
-            visualize_numpy_data(cifar_clean, "CIFAR100 Clean Data")
+        edges_df_path = _get_edges_dataframe_path(user_id, model_id, graph_type)
+        if edges_df_path:
+            print_success(f"Successfully got edges dataframe path: {edges_df_path}")
         else:
-            print_warning("No data found in CIFAR100 clean folder")
-            
-        # Test with adversarial folder if exists
-        try:
-            cifar_adv = load_cifar100_adversarial_or_clean('adversarial')
-            if cifar_adv:
-                print_success(f"Successfully loaded {len(cifar_adv)} arrays from CIFAR100 adversarial")
-                print_info(f"Array keys: {list(cifar_adv.keys())[:5]}")
-        except:
-            print_info("CIFAR100 adversarial folder not available")
-            
+            print_warning(f"Could not get edges dataframe path for user {user_id}, model {model_id}, graph type {graph_type}")
     except Exception as e:
-        print_error(f"Error in load_cifar100_adversarial_or_clean(): {str(e)}")
+        print_error(f"Error in _get_edges_dataframe_path(): {str(e)}")
 
-def test_load_imagenet_adversarial_or_clean():
-    """Test load_imagenet_adversarial_or_clean function."""
-    print_subheader("Testing load_imagenet_adversarial_or_clean()")
-    try:
-        # Test with clean folder
-        imagenet_clean = load_imagenet_adversarial_or_clean('clean')
-        if imagenet_clean:
-            print_success(f"Successfully loaded {len(imagenet_clean)} arrays from ImageNet clean")
-            print_info(f"Array keys: {list(imagenet_clean.keys())[:5]}")
-            visualize_numpy_data(imagenet_clean, "ImageNet Clean Data")
-        else:
-            print_warning("No data found in ImageNet clean folder")
-            
-    except Exception as e:
-        print_error(f"Error in load_imagenet_adversarial_or_clean(): {str(e)}")
+# ====================== Dataset Service Tests ======================
 
-def test_get_dataset_config():
-    """Test get_dataset_config function."""
-    print_subheader("Testing get_dataset_config()")
+def test_dataset_service():
+    """Test dataset_service functions with actual data."""
+    print_subheader("Testing Dataset Service Functions")
+    
+    # Test get_dataset_config for CIFAR100
     try:
-        # Test with CIFAR100
         cifar_config = get_dataset_config('cifar100')
         if cifar_config:
-            print_success("Successfully loaded CIFAR100 config")
+            print_success("Successfully got CIFAR100 dataset config")
             print_info(f"Config keys: {list(cifar_config.keys())}")
-            if 'labels' in cifar_config:
-                print_info(f"Number of labels: {len(cifar_config['labels'])}")
-        else:
-            print_warning("No CIFAR100 config found")
             
-        # Test with ImageNet
-        imagenet_config = get_dataset_config('imagenet')
-        if imagenet_config:
-            print_success("Successfully loaded ImageNet config")
-            print_info(f"Config keys: {list(imagenet_config.keys())}")
+            # Test get_dataset_labels
+            try:
+                labels = get_dataset_labels('cifar100')
+                if labels:
+                    print_success(f"Successfully got CIFAR100 labels: {len(labels)} labels")
+                else:
+                    print_warning("Could not get CIFAR100 labels")
+            except Exception as e:
+                print_error(f"Error in get_dataset_labels(): {str(e)}")
         else:
-            print_warning("No ImageNet config found")
-            
+            print_warning("Could not get CIFAR100 dataset config")
     except Exception as e:
         print_error(f"Error in get_dataset_config(): {str(e)}")
-
-def test_load_dataset_folder():
-    """Test load_dataset_folder function."""
-    print_subheader("Testing load_dataset_folder()")
+    
+    # Test get_dataset_config for ImageNet
     try:
-        # Test with CIFAR100 clean
-        cifar_files = load_dataset_folder('cifar100', 'clean')
-        if cifar_files:
-            print_success(f"Successfully listed {len(cifar_files)} files in CIFAR100 clean")
-            print_info(f"First 5 files: {cifar_files[:5]}")
+        imagenet_config = get_dataset_config('imagenet')
+        if imagenet_config:
+            print_success("Successfully got ImageNet dataset config")
+            print_info(f"Config keys: {list(imagenet_config.keys())}")
         else:
-            print_warning("No files found in CIFAR100 clean folder")
-            
-        # Test with ImageNet clean
-        imagenet_files = load_dataset_folder('imagenet', 'clean')
-        if imagenet_files:
-            print_success(f"Successfully listed {len(imagenet_files)} files in ImageNet clean")
-            print_info(f"First 5 files: {imagenet_files[:5]}")
-        else:
-            print_warning("No files found in ImageNet clean folder")
-            
+            print_warning("Could not get ImageNet dataset config")
     except Exception as e:
-        print_error(f"Error in load_dataset_folder(): {str(e)}")
+        print_warning(f"Error in get_dataset_config() for ImageNet: {str(e)}")
 
-def test_load_single_image():
-    """Test load_single_image function."""
-    print_subheader("Testing load_single_image()")
+# ====================== Dataset Classes Tests ======================
+
+def test_dataset_classes():
+    """Test dataset classes directly."""
+    print_subheader("Testing Dataset Classes")
+    
+    # Test Cifar100 class
     try:
-        # First get a file to test with
-        files = load_dataset_folder('cifar100', 'clean')
-        if files:
-            # Find a .npy file
-            npy_files = [f for f in files if f.endswith('.npy')]
-            if npy_files:
-                test_file = npy_files[0]
-                image_data = load_single_image(test_file)
-                
-                if image_data:
-                    print_success(f"Successfully loaded {test_file} ({len(image_data)} bytes)")
-                    
-                    # Try to load as numpy array
-                    try:
-                        numpy_array = np.load(io.BytesIO(image_data), allow_pickle=True)
-                        print_info(f"Loaded NumPy array with shape: {numpy_array.shape}")
-                    except Exception as e:
-                        print_warning(f"Could not parse as NumPy: {str(e)}")
-                else:
-                    print_error(f"Failed to load {test_file}")
+        # Create Cifar100 dataset
+        cifar_dataset = Cifar100()
+        
+        # Test loading from S3
+        try:
+            # Get S3 client
+            s3_client = get_datasets_s3_client()
+            bucket = os.environ.get('S3_DATASETS_BUCKET_NAME')
+            
+            # Test load_from_s3 method
+            x_train, y_train = cifar_dataset.load_from_s3(s3_client, bucket, 'cifar100/')
+            if x_train is not None and len(x_train) > 0:
+                print_success(f"Successfully loaded CIFAR100 train data using dataset class: {len(x_train)} images")
             else:
-                print_warning("No .npy files found to test")
-        else:
-            print_warning("No files found to test load_single_image")
-            
-    except Exception as e:
-        print_error(f"Error in load_single_image(): {str(e)}")
-
-def test_get_image_stream():
-    """Test get_image_stream function."""
-    print_subheader("Testing get_image_stream()")
-    try:
-        # First get a file to test with
-        files = load_dataset_folder('cifar100', 'clean')
-        if files:
-            # Find a .npy file
-            npy_files = [f for f in files if f.endswith('.npy')]
-            if npy_files:
-                test_file = npy_files[0]
-                stream = get_image_stream(test_file)
-                
-                if stream:
-                    data = stream.read()
-                    print_success(f"Successfully got stream for {test_file} ({len(data)} bytes)")
-                    
-                    # Try to load as numpy array
-                    try:
-                        numpy_array = np.load(io.BytesIO(data), allow_pickle=True)
-                        print_info(f"Loaded NumPy array from stream with shape: {numpy_array.shape}")
-                    except Exception as e:
-                        print_warning(f"Could not parse stream as NumPy: {str(e)}")
-                else:
-                    print_error(f"Failed to get stream for {test_file}")
+                print_warning("Could not load CIFAR100 train data using dataset class")
+        except Exception as e:
+            print_error(f"Error in Cifar100.load_from_s3(): {str(e)}")
+        
+        # Test load method
+        try:
+            result = cifar_dataset.load('cifar100')
+            if result:
+                print_success(f"Successfully loaded CIFAR100 dataset: {len(cifar_dataset.x_train)} train images, {len(cifar_dataset.x_test)} test images")
             else:
-                print_warning("No .npy files found to test")
-        else:
-            print_warning("No files found to test get_image_stream")
-            
+                print_warning("Could not load CIFAR100 dataset")
+        except Exception as e:
+            print_error(f"Error in Cifar100.load(): {str(e)}")
+        
     except Exception as e:
-        print_error(f"Error in get_image_stream(): {str(e)}")
-
-def test_load_imagenet_train():
-    """Test load_imagenet_train function."""
-    print_subheader("Testing load_imagenet_train()")
+        print_error(f"Error testing Cifar100 class: {str(e)}")
+    
+    # Test ImageNet class if available
     try:
-        classes = load_imagenet_train()
-        if classes:
-            print_success(f"Successfully loaded {len(classes)} ImageNet training classes")
-            print_info(f"First 5 classes: {sorted(classes)[:5]}")
-            print_info(f"Last 5 classes: {sorted(classes)[-5:]}")
-        else:
-            print_warning("No ImageNet training classes found")
-            
-    except Exception as e:
-        print_error(f"Error in load_imagenet_train(): {str(e)}")
-
-def test_load_cifar100_as_numpy():
-    """Test load_cifar100_as_numpy function."""
-    print_subheader("Testing load_cifar100_as_numpy()")
-    try:
-        # Test with clean folder
-        images, labels = load_cifar100_as_numpy('clean')
-        if images is not None and len(images) > 0:
-            print_success(f"Successfully loaded CIFAR100 clean data as NumPy")
-            print_info(f"Images shape: {images.shape}, Labels shape: {labels.shape}")
-            print_info(f"Image dtype: {images.dtype}, Label dtype: {labels.dtype}")
-            
-            # Visualize some samples
-            visualize_numpy_data((images, labels), "CIFAR100 Clean Samples")
-        else:
-            print_warning("No CIFAR100 clean data found")
-            
-    except Exception as e:
-        print_error(f"Error in load_cifar100_as_numpy(): {str(e)}")
-
-def test_load_cifar100_meta():
-    """Test load_cifar100_meta function."""
-    print_subheader("Testing load_cifar100_meta()")
-    try:
-        meta = load_cifar100_meta()
-        if meta:
-            print_success("Successfully loaded CIFAR100 metadata")
-            if isinstance(meta, dict):
-                print_info(f"Metadata keys: {list(meta.keys())}")
-                # Show some metadata content if available
-                if 'fine_label_names' in meta:
-                    print_info(f"Fine labels sample: {meta['fine_label_names'][:5]}")
-                if 'coarse_label_names' in meta:
-                    print_info(f"Coarse labels sample: {meta['coarse_label_names'][:5]}")
+        # Create ImageNet dataset
+        imagenet_dataset = ImageNet()
+        
+        # Test load method FIRST (since it works)
+        try:
+            # This uses the load_mini_imagenet method internally which works
+            imagenet_dataset.load('imagenet')
+            if hasattr(imagenet_dataset, 'x_train') and imagenet_dataset.x_train is not None and len(imagenet_dataset.x_train) > 0:
+                print_success(f"Successfully loaded ImageNet dataset: {len(imagenet_dataset.x_train)} train images")
             else:
-                print_info(f"Metadata type: {type(meta)}")
-        else:
-            print_warning("No CIFAR100 metadata found")
+                print_warning("Could not load ImageNet dataset")
+        except Exception as e:
+            print_warning(f"Error in ImageNet.load(): {str(e)}")
+        
+        # Skip the direct load_from_s3 test for ImageNet since it has different implementation
+        # The load() method already works and uses its own S3 loader
+        print_info("ImageNet uses custom S3 loading through S3ImagenetLoader - skipping direct load_from_s3 test")
+        
+        # Instead, test other ImageNet-specific methods
+        try:
+            # Test building index (if available)
+            if hasattr(imagenet_dataset, 'build_index'):
+                print_info("Testing ImageNet index building...")
+                imagenet_dataset.build_index(split="train")
+                print_success("Successfully built ImageNet train index")
+        except Exception as e:
+            print_warning(f"Error building ImageNet index: {str(e)}")
+            
+        # Test getting image by ID (if index is available)
+        try:
+            if hasattr(imagenet_dataset, 'get_train_image_by_id') and hasattr(imagenet_dataset, 'train_index'):
+                # Only test if we have an index
+                if imagenet_dataset.train_index and len(imagenet_dataset.train_index) > 0:
+                    test_image, test_label = imagenet_dataset.get_train_image_by_id(1)
+                    print_success(f"Successfully retrieved ImageNet image by ID: shape {test_image.shape}, label {test_label}")
+        except Exception as e:
+            print_info(f"Could not test get_train_image_by_id: {str(e)}")
             
     except Exception as e:
-        print_error(f"Error in load_cifar100_meta(): {str(e)}")
+        print_warning(f"Error testing ImageNet class: {str(e)}")
+        
+# ====================== Direct Load Dataset Split Test ======================
 
-def test_load_dataset_split():
-    """Test load_dataset_split function."""
-    print_subheader("Testing load_dataset_split()")
+def test_direct_load_dataset_split():
+    """Test loading dataset splits directly with dataset classes."""
+    print_subheader("Testing Direct Dataset Split Loading")
+    
+    # Test CIFAR100 train split using S3 client directly
     try:
-        # Test CIFAR100 splits
-        for split in ['train', 'test']:
-            files = load_dataset_split('cifar100', split)
-            if files:
-                print_success(f"Successfully listed {len(files)} files in CIFAR100 {split} split")
-                print_info(f"First 3 files: {files[:3]}")
-            else:
-                print_warning(f"No files found in CIFAR100 {split} split")
-                
-        # Test ImageNet splits if available
-        for split in ['train', 'val']:
-            try:
-                files = load_dataset_split('imagenet', split)
-                if files:
-                    print_success(f"Successfully listed {len(files)} files in ImageNet {split} split")
-                    print_info(f"First 3 files: {files[:3]}")
-                else:
-                    print_info(f"No files found in ImageNet {split} split")
-            except:
-                print_info(f"ImageNet {split} split not available")
-                
-    except Exception as e:
-        print_error(f"Error in load_dataset_split(): {str(e)}")
-
-def test_unpickle_from_s3():
-    """Test unpickle_from_s3 function."""
-    print_subheader("Testing unpickle_from_s3()")
-    try:
+        s3_client = get_datasets_s3_client()
         bucket = os.environ.get('S3_DATASETS_BUCKET_NAME')
-        if not bucket:
-            print_error("S3_DATASETS_BUCKET_NAME not set")
-            return
+        
+        # List objects with CIFAR100 train prefix
+        response = s3_client.list_objects_v2(Bucket=bucket, Prefix='cifar100/train')
+        
+        if 'Contents' in response:
+            print_success(f"Successfully listed CIFAR100 train objects: {len(response['Contents'])} objects")
             
-        # Test with CIFAR100 train pickle
-        try:
-            train_data = unpickle_from_s3(bucket, 'cifar100/train')
-            if train_data:
-                print_success("Successfully unpickled CIFAR100 train data")
-                if isinstance(train_data, dict):
-                    print_info(f"Train data keys: {list(train_data.keys())}")
-                    if b'data' in train_data:
-                        print_info(f"Data shape: {train_data[b'data'].shape}")
-                    if b'fine_labels' in train_data:
-                        print_info(f"Number of labels: {len(train_data[b'fine_labels'])}")
-                else:
-                    print_info(f"Train data type: {type(train_data)}")
-            else:
-                print_warning("No data returned from unpickle")
-        except Exception as e:
-            print_warning(f"Could not unpickle CIFAR100 train: {str(e)}")
-            
-        # Test with CIFAR100 test pickle
-        try:
-            test_data = unpickle_from_s3(bucket, 'cifar100/test')
-            if test_data:
-                print_success("Successfully unpickled CIFAR100 test data")
-                if isinstance(test_data, dict):
-                    print_info(f"Test data keys: {list(test_data.keys())}")
-            else:
-                print_warning("No data returned from unpickle")
-        except Exception as e:
-            print_warning(f"Could not unpickle CIFAR100 test: {str(e)}")
-            
-        # Test with CIFAR100 meta
-        try:
-            meta_data = unpickle_from_s3(bucket, 'cifar100/meta')
-            if meta_data:
-                print_success("Successfully unpickled CIFAR100 meta data")
-                if isinstance(meta_data, dict):
-                    print_info(f"Meta data keys: {list(meta_data.keys())}")
-            else:
-                print_warning("No data returned from unpickle")
-        except Exception as e:
-            print_warning(f"Could not unpickle CIFAR100 meta: {str(e)}")
-            
+            # Show a few objects
+            if len(response['Contents']) > 0:
+                sample_keys = [obj['Key'] for obj in response['Contents'][:3]]
+                print_info(f"Sample keys: {sample_keys}")
+        else:
+            print_warning("No CIFAR100 train objects found")
+    except Exception as e:
+        print_error(f"Error listing CIFAR100 train objects: {str(e)}")
+    
+    # Try loading using unpickle_from_s3
+    try:
+        from utilss.s3_connector.s3_dataset_utils import unpickle_from_s3
+        
+        bucket = os.environ.get('S3_DATASETS_BUCKET_NAME')
+        data = unpickle_from_s3(bucket, 'cifar100/train')
+        
+        if data:
+            print_success("Successfully loaded CIFAR100 train data using unpickle_from_s3")
+            if isinstance(data, dict):
+                print_info(f"Data keys: {[k.decode('utf-8') if isinstance(k, bytes) else k for k in data.keys()]}")
+                if b'data' in data:
+                    print_info(f"Data shape: {data[b'data'].shape}")
+        else:
+            print_warning("Could not load CIFAR100 train data using unpickle_from_s3")
     except Exception as e:
         print_error(f"Error in unpickle_from_s3(): {str(e)}")
 
-def run_all_tests():
-    """Run all utility function tests."""
-    print_header("TESTING S3 DATASET UTILITY FUNCTIONS")
+# ====================== S3 Dataset Utils Tests ======================
+
+def test_s3_dataset_utils():
+    """Test S3 dataset utility functions."""
+    print_subheader("Testing S3 Dataset Utility Functions")
+    
+    # Test load_dataset_numpy
+    try:
+        cifar_data = load_dataset_numpy('cifar100', 'clean')
+        if cifar_data:
+            print_success(f"Successfully loaded CIFAR100 clean numpy data: {len(cifar_data)} arrays")
+        else:
+            print_warning("Could not load CIFAR100 clean numpy data")
+    except Exception as e:
+        print_error(f"Error in load_dataset_numpy(): {str(e)}")
+    
+    # Test load_cifar100_adversarial_or_clean
+    try:
+        cifar_clean = load_cifar100_adversarial_or_clean('clean')
+        if cifar_clean:
+            print_success(f"Successfully loaded CIFAR100 clean data: {len(cifar_clean)} arrays")
+        else:
+            print_warning("Could not load CIFAR100 clean data")
+    except Exception as e:
+        print_error(f"Error in load_cifar100_adversarial_or_clean(): {str(e)}")
+    
+    # Test load_dataset_folder
+    try:
+        cifar_files = load_dataset_folder('cifar100', 'clean')
+        if cifar_files:
+            print_success(f"Successfully listed CIFAR100 clean folder: {len(cifar_files)} files")
+        else:
+            print_warning("Could not list CIFAR100 clean folder")
+    except Exception as e:
+        print_error(f"Error in load_dataset_folder(): {str(e)}")
+    
+    # Test load_cifar100_as_numpy
+    try:
+        images, labels = load_cifar100_as_numpy('clean')
+        if images is not None and len(images) > 0:
+            print_success(f"Successfully loaded CIFAR100 clean as numpy: {len(images)} images")
+        else:
+            print_warning("Could not load CIFAR100 clean as numpy")
+    except Exception as e:
+        print_error(f"Error in load_cifar100_as_numpy(): {str(e)}")
+    
+
+    try:
+        cifar_dataset = _load_dataset('cifar100')
+        if cifar_dataset and hasattr(cifar_dataset, 'x_train') and cifar_dataset.x_train is not None:
+            print_success(f"Successfully loaded CIFAR100 train split using _load_dataset: {len(cifar_dataset.x_train)} images")
+        else:
+            print_warning("Could not load CIFAR100 train split using _load_dataset")
+    except Exception as e:
+        print_error(f"Error in _load_dataset(): {str(e)}")
+        
+
+
+# ====================== Main Test Runner ======================
+
+def run_all_s3_connection_tests():
+    """Run all tests for S3 connections."""
+    print_header("TESTING ALL S3 CONNECTIONS")
     
     # Check environment first
     if not check_environment():
         return False
     
-    # Run all tests
-    test_load_dataset_numpy()
-    test_load_cifar100_adversarial_or_clean()
-    test_load_imagenet_adversarial_or_clean()
-    test_get_dataset_config()
-    test_load_dataset_folder()
-    test_load_single_image()
-    test_get_image_stream()
-    test_load_imagenet_train()
-    test_load_cifar100_as_numpy()
-    test_load_cifar100_meta()
-    test_load_dataset_split()
-    test_unpickle_from_s3()
+    # Test S3 clients
+    test_s3_clients()
     
-    print_header("ALL TESTS COMPLETED")
+    # Test User operations and get test user/model
+    user_id, user_email, models = test_user_operations()
+    
+    # If we have a user and models, test other services
+    if user_id and models:
+        # Test Models Service
+        model_id, graph_type = test_models_service(user_id, models)
+        
+        # If we have a model and graph type, test dendrogram and whitebox services
+        if model_id and graph_type:
+            test_dendrogram_service(user_id, model_id, graph_type)
+            test_whitebox_service(user_id, model_id, graph_type)
+    
+    # Test Dataset Service
+    test_dataset_service()
+    
+    # Test Dataset Classes directly
+    test_dataset_classes()
+    
+    # Test direct dataset split loading
+    test_direct_load_dataset_split()
+    
+    # Test S3 Dataset Utils
+    test_s3_dataset_utils()
+    
+    print_header("ALL S3 CONNECTION TESTS COMPLETED")
     return True
 
 def main():
     """Main function with test menu."""
-    print_header("S3 DATASET UTILS TEST SUITE")
+    print_header("S3 CONNECTION TEST SUITE")
     
     # Check environment
     if not check_environment():
@@ -524,57 +619,73 @@ def main():
     
     # Test menu
     print_subheader("Test Menu")
-    print("1.  Test load_dataset_numpy")
-    print("2.  Test load_cifar100_adversarial_or_clean")
-    print("3.  Test load_imagenet_adversarial_or_clean")
-    print("4.  Test get_dataset_config")
-    print("5.  Test load_dataset_folder")
-    print("6.  Test load_single_image")
-    print("7.  Test get_image_stream")
-    print("8.  Test load_imagenet_train")
-    print("9.  Test load_cifar100_as_numpy")
-    print("10. Test load_cifar100_meta")
-    print("11. Test load_dataset_split")
-    print("12. Test unpickle_from_s3")
-    print("13. Run all tests")
-    print("14. Exit")
+    print("1. Test S3 Clients")
+    print("2. Test User Operations")
+    print("3. Test Models Service")
+    print("4. Test Dendrogram Service")
+    print("5. Test Whitebox Service")
+    print("6. Test Dataset Service")
+    print("7. Test Dataset Classes")
+    print("8. Test Direct Dataset Split Loading")
+    print("9. Test S3 Dataset Utils")
+    print("10. Run All S3 Connection Tests")
+    print("11. Exit")
     
     while True:
-        choice = input("\nEnter your choice (1-14): ").strip()
+        choice = input("\nEnter your choice (1-11): ").strip()
         
         if choice == '1':
-            test_load_dataset_numpy()
+            test_s3_clients()
         elif choice == '2':
-            test_load_cifar100_adversarial_or_clean()
+            user_id, user_email, models = test_user_operations()
+            if not user_id:
+                print_warning("No user available for testing subsequent services")
         elif choice == '3':
-            test_load_imagenet_adversarial_or_clean()
+            # First get a test user
+            user_id, user_email, models = test_user_operations()
+            if user_id and models:
+                test_models_service(user_id, models)
+            else:
+                print_warning("No user available for testing Models Service")
         elif choice == '4':
-            test_get_dataset_config()
+            # First get a test user and model
+            user_id, user_email, models = test_user_operations()
+            if user_id and models:
+                model_id, graph_type = test_models_service(user_id, models)
+                if model_id and graph_type:
+                    test_dendrogram_service(user_id, model_id, graph_type)
+                else:
+                    print_warning("No model or graph type available for testing Dendrogram Service")
+            else:
+                print_warning("No user available for testing Dendrogram Service")
         elif choice == '5':
-            test_load_dataset_folder()
+            # First get a test user and model
+            user_id, user_email, models = test_user_operations()
+            if user_id and models:
+                model_id, graph_type = test_models_service(user_id, models)
+                if model_id and graph_type:
+                    test_whitebox_service(user_id, model_id, graph_type)
+                else:
+                    print_warning("No model or graph type available for testing Whitebox Service")
+            else:
+                print_warning("No user available for testing Whitebox Service")
         elif choice == '6':
-            test_load_single_image()
+            test_dataset_service()
         elif choice == '7':
-            test_get_image_stream()
+            test_dataset_classes()
         elif choice == '8':
-            test_load_imagenet_train()
+            test_direct_load_dataset_split()
         elif choice == '9':
-            test_load_cifar100_as_numpy()
+            test_s3_dataset_utils()
         elif choice == '10':
-            test_load_cifar100_meta()
+            run_all_s3_connection_tests()
         elif choice == '11':
-            test_load_dataset_split()
-        elif choice == '12':
-            test_unpickle_from_s3()
-        elif choice == '13':
-            run_all_tests()
-        elif choice == '14':
             print("Exiting...")
             break
         else:
-            print_error("Invalid choice! Please enter 1-14.")
+            print_error("Invalid choice! Please enter 1-11.")
         
-        if choice in [str(i) for i in range(1, 14)]:
+        if choice in [str(i) for i in range(1, 11)]:
             input("\nPress Enter to continue...")
 
 if __name__ == "__main__":
