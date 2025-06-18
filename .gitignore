@@ -21,3 +21,4 @@
 **/.pytest_cache
 **/.vscode
 **/**.keras
+**/**.csv

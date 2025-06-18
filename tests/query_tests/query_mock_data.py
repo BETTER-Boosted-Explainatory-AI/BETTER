@@ -26,6 +26,7 @@ models_metadata = {
         }
     ]
 }
+
 model_id = "35f658ac-aa29-461e-85fe-f7dcfe638dde"
 
 labels = ["Persian_cat", "tabby", "Egyptian_cat", "bathtub", "tub"]
