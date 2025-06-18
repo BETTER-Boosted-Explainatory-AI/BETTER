@@ -66,7 +66,7 @@ async def update_naming(naming_cluster_data: NamingClusterRequest, current_user:
     new_name = naming_cluster_data.new_name
     user_id = current_user.user_id
 
-    sub_dendrogram = _rename_cluster(user_id, model_id, graph_type, selected_labels, cluster_id, new_name)
+    sub_dendrogram, selected_labels = _rename_cluster(user_id, model_id, graph_type, selected_labels, cluster_id, new_name)
     if sub_dendrogram is None:
         raise HTTPException(status_code=404, detail="Sub Hierarchical Clustering was not created")
-    return DendrogramResult(**sub_dendrogram)
+    return DendrogramResult(**sub_dendrogram, selected_labels=selected_labels)
