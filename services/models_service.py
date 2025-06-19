@@ -13,6 +13,7 @@ import json
 from utilss.enums.datasets_enum import DatasetsEnum
 import tempfile
 from utilss.s3_utils import get_users_s3_client
+import uuid
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -444,3 +445,29 @@ def get_model_specific_file(user_folder: str, model_info: dict, graph_type: str,
             raise ValueError(f"Unknown file_type: {file_type}")
 
     return file_path
+
+
+def generate_model_upload_url(user, model_file):
+    s3_client = get_users_s3_client()
+    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
+
+    if not s3_bucket:
+        raise HTTPException(status_code=500, detail="Missing S3_BUCKET env")
+
+    # file_ext = model_file.filename.split(".")[-1]
+    model_id = str(uuid.uuid4())
+    user_folder = user.get_user_folder()
+    key = f"{user_folder}/{model_id}/{model_file.filename}"
+
+    try:
+        url = s3_client.generate_presigned_url(
+            "put_object",
+            Params={"Bucket": s3_bucket, "Key": key},
+            ExpiresIn=300,
+            HttpMethod="PUT",
+        )
+
+        print(f"Generated upload URL: {url} for key: {key}")
+        return {"upload_url": url, "key": key, "model_id": model_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

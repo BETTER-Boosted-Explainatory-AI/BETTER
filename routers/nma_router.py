@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Depends
-from request_models.nma_model import NMAResult
+from request_models.nma_model import NMAResult, UploadURLRequest, UploadURLResponse
 from utilss.files_utils import upload_model, _update_model_metadata
 from services.users_service import require_authenticated_user
 from utilss.classes.user import User
 from utilss.enums.graph_types import GraphTypes
 from utilss.aws_job_utils import submit_nma_batch_job
+from services.models_service import generate_model_upload_url
 
 nma_router = APIRouter()
 
@@ -108,5 +109,30 @@ async def create_nma_by_id(
         return _handle_nma_submission(
             current_user, dataset, graph_type, min_confidence, top_k, model_id
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    
+@nma_router.post(
+    "/api/generate-upload-url",
+    response_model=UploadURLResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"},
+    }
+)
+def generate_upload_url(
+    model_file: UploadURLRequest,
+    current_user: User = Depends(require_authenticated_user)
+):
+    """
+    Generate a pre-signed URL for uploading a model file.
+    """
+    try:
+        result = generate_model_upload_url(
+            current_user, model_file)
+        return UploadURLResponse(upload_url=result["upload_url"], model_id=result["model_id"], key=result["key"])
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
