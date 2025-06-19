@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Depends
+from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Depends, Body
 from request_models.nma_model import NMAResult, UploadURLRequest, UploadURLResponse
 from utilss.files_utils import upload_model, _update_model_metadata
 from services.users_service import require_authenticated_user
@@ -124,15 +124,17 @@ async def create_nma_by_id(
     }
 )
 def generate_upload_url(
-    model_file: UploadURLRequest,
+    body: UploadURLRequest,
     current_user: User = Depends(require_authenticated_user)
 ):
     """
     Generate a pre-signed URL for uploading a model file.
     """
     try:
+        filename = body.filename
+        print(body.filename)
         result = generate_model_upload_url(
-            current_user, model_file)
+            current_user, filename)
         return UploadURLResponse(upload_url=result["upload_url"], model_id=result["model_id"], key=result["key"])
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

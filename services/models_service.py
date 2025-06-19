@@ -447,7 +447,7 @@ def get_model_specific_file(user_folder: str, model_info: dict, graph_type: str,
     return file_path
 
 
-def generate_model_upload_url(user, model_file):
+def generate_model_upload_url(user, model_name):
     s3_client = get_users_s3_client()
     s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
 
@@ -457,7 +457,7 @@ def generate_model_upload_url(user, model_file):
     # file_ext = model_file.filename.split(".")[-1]
     model_id = str(uuid.uuid4())
     user_folder = user.get_user_folder()
-    key = f"{user_folder}/{model_id}/{model_file.filename}"
+    key = f"{user_folder}/{model_id}/{model_name}"
 
     try:
         url = s3_client.generate_presigned_url(
