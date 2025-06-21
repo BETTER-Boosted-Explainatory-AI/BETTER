@@ -21,16 +21,23 @@ async def get_whitebox_testing(request: WhiteboxTestingRequest,
                                current_user: User = Depends(
                                    require_authenticated_user)
                                ):
+    try:
+        problematic_imgs = get_white_box_analysis(
+            current_user,
+            request.model_id,
+            request.graph_type,
+            request.source_labels,
+            request.target_labels)
 
-    problematic_imgs = get_white_box_analysis(
-        current_user,
-        request.model_id,
-        request.graph_type,
-        request.source_labels,
-        request.target_labels)
+        if problematic_imgs is None:
+            raise HTTPException(
+                status_code=404, detail="White Box Testing was not created")
 
-    if problematic_imgs is None:
+        return problematic_imgs
+    except HTTPException as e:
+        raise e
+    except Exception as e:
         raise HTTPException(
-            status_code=404, detail="White Box Testing was not created")
-
-    return problematic_imgs
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred while processing the request: {str(e)}"
+        )

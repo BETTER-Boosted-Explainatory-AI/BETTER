@@ -28,7 +28,10 @@ def find_user_in_db(user_id, email) -> User:
 def require_authenticated_user(session_token: str = Cookie(None)):
     if not session_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    user = get_current_session_user(session_token)
+    try:
+        user = get_current_session_user(session_token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid session token")
     if not user:
         raise HTTPException(status_code=401, detail="Invalid session token")
     return user

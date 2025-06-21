@@ -17,9 +17,13 @@ datasets_router = APIRouter()
 )
 
 async def get_dataset_labels_route(dataset_name: str) -> DatasetLabelsResult:
-    dataset_labels = get_dataset_labels(dataset_name)  # Pass dataset_name correctly
-
-    if dataset_labels is None:
-        raise HTTPException(status_code=404, detail="Couldn't find dataset labels")
-    
-    return DatasetLabelsResult(data=dataset_labels)
+    try:
+        dataset_labels = get_dataset_labels(dataset_name)  # Pass dataset_name correctly
+        if dataset_labels is None:
+            raise HTTPException(status_code=404, detail="Couldn't find dataset labels")
+        
+        return DatasetLabelsResult(data=dataset_labels)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

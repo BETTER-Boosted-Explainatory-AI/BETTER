@@ -136,4 +136,3 @@ def test_get_dendrogram_internal_error(client, mock_s3_bucket, dendrogram_reques
             assert response.status_code == 500
             assert "detail" in response.json()
             assert "Unexpected error" in response.json()["detail"]
-

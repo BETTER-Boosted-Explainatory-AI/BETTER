@@ -139,4 +139,3 @@ mock_sub_dendrogram_after_name_change= {
     ],
     "value": 0.7073672218248248
 }
-
