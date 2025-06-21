@@ -14,6 +14,7 @@ from utilss.enums.datasets_enum import DatasetsEnum
 import tempfile
 from utilss.s3_utils import get_users_s3_client
 import uuid
+import re
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -446,28 +447,69 @@ def get_model_specific_file(user_folder: str, model_info: dict, graph_type: str,
 
     return file_path
 
+def sanitize_filename(filename):
+    # Replace spaces and special chars with underscores
+    return re.sub(r'[^A-Za-z0-9._-]', '_', filename)
 
-def generate_model_upload_url(user, model_name):
+def initiate_multipart_upload(user, model_name):
     s3_client = get_users_s3_client()
     s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
 
     if not s3_bucket:
         raise HTTPException(status_code=500, detail="Missing S3_BUCKET env")
+    
+    # Sanitize the model name to ensure it is a valid S3 key
+    model_name = sanitize_filename(model_name)
+    print(f"Initiating multipart upload for model: {model_name}")
 
-    # file_ext = model_file.filename.split(".")[-1]
     model_id = str(uuid.uuid4())
     user_folder = user.get_user_folder()
     key = f"{user_folder}/{model_id}/{model_name}"
 
     try:
-        url = s3_client.generate_presigned_url(
-            "put_object",
-            Params={"Bucket": s3_bucket, "Key": key},
-            ExpiresIn=300,
-            HttpMethod="PUT",
-        )
+        response = s3_client.create_multipart_upload(Bucket=s3_bucket, Key=key)
+        upload_id = response["UploadId"]
 
-        print(f"Generated upload URL: {url} for key: {key}")
-        return {"upload_url": url, "key": key, "model_id": model_id}
+        return {"upload_id": upload_id, "key": key, "model_id": model_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+def presigned_part_url(key, upload_id, part_number):
+    s3_client = get_users_s3_client()
+    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
+
+    print(f"Generating presigned URL for part number: {part_number} of upload ID: {upload_id} for key: {key}")
+    print(f"S3 Bucket: {s3_bucket}")
+    if not s3_bucket:
+        raise HTTPException(status_code=500, detail="Missing S3_BUCKET env")
+
+    url = s3_client.generate_presigned_url(
+        "upload_part",
+        Params={
+            "Bucket": s3_bucket,
+            "Key": key,
+            "UploadId": upload_id,
+            "PartNumber": part_number,
+        },
+        ExpiresIn=3600,
+        HttpMethod="PUT",
+    )
+
+    print(f"Generated presigned URL: {url} for part number: {part_number}")
+    return url
+
+def finalize_multipart_upload(key, upload_id, parts):
+    s3_client = get_users_s3_client()
+    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
+
+    try:
+        response = s3_client.complete_multipart_upload(
+            Bucket=s3_bucket,
+            Key=key,
+            UploadId=upload_id,
+            MultipartUpload={"Parts": parts},
+        )
+        print(f"Multipart upload completed: {response}")
+        return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

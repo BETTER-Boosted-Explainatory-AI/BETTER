@@ -1,11 +1,11 @@
-from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Depends, Body
-from request_models.nma_model import NMAResult, UploadURLRequest, UploadURLResponse
+from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Depends
+from request_models.nma_model import NMAResult, UploadURLResponse, InitiateMultipartUploadRequest, InitiateMultipartUploadResponse, PresignedPartUrlRequest, PresignedPartUrlResponse, CompleteMultipartUploadRequest
 from utilss.files_utils import upload_model, _update_model_metadata
 from services.users_service import require_authenticated_user
 from utilss.classes.user import User
 from utilss.enums.graph_types import GraphTypes
 from utilss.aws_job_utils import submit_nma_batch_job
-from services.models_service import generate_model_upload_url
+from services.models_service import initiate_multipart_upload, presigned_part_url, finalize_multipart_upload
 
 nma_router = APIRouter()
 
@@ -111,11 +111,10 @@ async def create_nma_by_id(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-    
+
 @nma_router.post(
-    "/api/generate-upload-url",
-    response_model=UploadURLResponse,
+    "/api/initiate-multipart-upload",
+    response_model=InitiateMultipartUploadResponse,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
@@ -123,18 +122,74 @@ async def create_nma_by_id(
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"},
     }
 )
-def generate_upload_url(
-    body: UploadURLRequest,
+
+def start_multipart_upload(
+    body: InitiateMultipartUploadRequest,
     current_user: User = Depends(require_authenticated_user)
 ):
     """
-    Generate a pre-signed URL for uploading a model file.
+    Initiate a multipart upload for a model file.
     """
     try:
-        filename = body.filename
-        print(body.filename)
-        result = generate_model_upload_url(
-            current_user, filename)
-        return UploadURLResponse(upload_url=result["upload_url"], model_id=result["model_id"], key=result["key"])
+        model_name = body.filename
+        result = initiate_multipart_upload(
+            current_user, model_name)
+        return InitiateMultipartUploadResponse(upload_id=result["upload_id"], model_id=result["model_id"], key=result["key"])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@nma_router.post(
+    "/api/presigned-part-url",
+    response_model=PresignedPartUrlResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"},
+    }
+)
+def get_presigned_part_url(
+    body: PresignedPartUrlRequest,
+    current_user: User = Depends(require_authenticated_user)
+):
+    """
+    Get a presigned URL for a specific part of a multipart upload.
+    """
+    try:
+        url = presigned_part_url(
+            key=body.key,
+            upload_id=body.upload_id,
+            part_number=body.part_number
+        )
+
+        return PresignedPartUrlResponse(url=url)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@nma_router.post(
+    "/api/complete-multipart-upload",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"},
+    }
+)
+def complete_multipart_upload(
+    body: CompleteMultipartUploadRequest,
+    current_user: User = Depends(require_authenticated_user)
+):
+    """
+    Complete a multipart upload for a model file.
+    """
+    try:
+        print(f"Completing multipart upload with parts: {body.parts}")
+        result = finalize_multipart_upload(
+            key=body.key,
+            upload_id=body.upload_id,
+            parts=body.parts
+        )
+        return {"status": "completed", "location": result.get("Location")}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
