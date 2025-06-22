@@ -1,67 +1,15 @@
 
 import os
-from fastapi import UploadFile
 import json
 import uuid
 import io
 import numpy as np
 import tensorflow as tf
 from utilss.photos_utils import preprocess_numpy_image
-from utilss.classes.user import User
 from utilss.s3_utils import get_users_s3_client
 from datetime import datetime
 import logging
 logger = logging.getLogger(__name__)
-
-def upload_model(
-    current_user: User,
-    model_id: str,
-    model_file: UploadFile,
-    graph_type: str,
-) -> str:
-    
-    print(f"Uploading model with ID: {model_id} and graph type: {graph_type}")
-    s3_client = get_users_s3_client()
-    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
-    if not s3_bucket:
-        raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
-   
-    filename = os.path.basename(model_file.filename)
-    user_folder = current_user.get_user_folder()
-    models_json_path = f"{user_folder}/models.json"
-    
-    try:
-        response = s3_client.get_object(Bucket=s3_bucket, Key=models_json_path)
-        models_data = json.loads(response['Body'].read().decode('utf-8'))
-
-    except s3_client.exceptions.NoSuchKey:
-        models_data = []
-        
-    try:
-        model_id_md = check_models_metadata(models_data, model_id, graph_type)
-        print(f"Model ID MD: {model_id_md}")
-    except ValueError as e:
-        print(str(e))
-        raise
-
-    # # Define S3 paths (no need to create directories in S3)
-    model_subfolder = f"{user_folder}/{model_id_md}"
-
-    print(f"Model subfolder: {model_subfolder}")
-    
-    model_path = f'{model_subfolder}/{filename}'
-    print(f"Saving model to S3: {s3_bucket}/{model_path}")
-
-    model_file.file.seek(0)  # Ensure pointer is at the start
-    s3_client.upload_fileobj(
-        model_file.file,
-        s3_bucket,
-        model_path
-    )
-
-    print(f"Model uploaded to S3 at {s3_bucket}/{model_path}")
-
-    return model_path, model_id_md
 
 def _update_model_metadata(current_user, model_id, model_filename, dataset, graph_type, min_confidence, top_k, job_id, job_status="submitted"):
     s3_client = get_users_s3_client()

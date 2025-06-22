@@ -510,6 +510,30 @@ def finalize_multipart_upload(key, upload_id, parts):
             MultipartUpload={"Parts": parts},
         )
         print(f"Multipart upload completed: {response}")
+
+        head = s3_client.head_object(Bucket=s3_bucket, Key=key)
+        print(f"Model file exists in S3. Size: {head['ContentLength']} bytes, ETag: {head['ETag']}")
+
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+def ensure_model_ready_in_s3(key):
+    """
+    Ensure that the model file exists in S3.
+    If it does not exist, raise an HTTPException.
+    """
+    s3_client = get_users_s3_client()
+    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
+
+    if not s3_bucket:
+        raise HTTPException(status_code=500, detail="Missing S3_BUCKET env")
+
+    try:
+        head = s3_client.head_object(Bucket=s3_bucket, Key=key)
+        print(f"Model file exists in S3. Size: {head['ContentLength']} bytes, ETag: {head['ETag']}")
+        if head["ContentLength"] == 0:
+            raise Exception("Model file is empty in S3.")
+        return True
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Model file not ready in S3: {e}")
