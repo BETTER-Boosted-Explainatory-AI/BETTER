@@ -30,37 +30,6 @@ class User:
             "email": self.email,
         }
 
-        # Check if users.json exists and load it
-        try:
-            response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=self.users_json_path)
-            users = json.loads(response['Body'].read().decode('utf-8'))
-        except self.s3_client.exceptions.NoSuchKey:
-            users = []
-        
-        users.append(user_data)
-        
-        # Write updated users list back to S3
-        users_json = json.dumps(users, indent=4)
-        self.s3_client.put_object(
-            Bucket=self.s3_bucket,
-            Key=self.users_json_path,
-            Body=users_json
-        )
-        
-        # Create empty models.json
-        self.s3_client.put_object(
-            Bucket=self.s3_bucket,
-            Key=self.models_json_path,
-            Body=json.dumps([], indent=4)
-        )
-        
-        # Create empty current_model.json
-        self.s3_client.put_object(
-            Bucket=self.s3_bucket,
-            Key=self.current_model_json,
-            Body=json.dumps({}, indent=4)
-        )
-
     def load_models(self):
         try:
             response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=self.models_json_path)
