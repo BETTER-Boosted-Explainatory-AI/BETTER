@@ -21,11 +21,18 @@ async def get_sub_dendrogram(sub_dendrogram_data: DendrogramRequest, current_use
     graph_type = sub_dendrogram_data.graph_type
     selected_labels = sub_dendrogram_data.selected_labels
     sub_dendrogram, selected_labels = _get_sub_dendrogram(current_user, model_id, graph_type, selected_labels)
-    
-    if sub_dendrogram is None:
-        raise HTTPException(status_code=404, detail="Sub Hierarchical Clustering was not created")
-    
-    return DendrogramResult(**sub_dendrogram, selected_labels=selected_labels)
+    try:
+        if sub_dendrogram is None:
+            raise HTTPException(status_code=404, detail="Sub Hierarchical Clustering was not created")
+        
+        return DendrogramResult(**sub_dendrogram, selected_labels=selected_labels)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        ) from e
 
 @dendrogram_router.post(
     "/api/dendrograms/common_ancestor", 
@@ -41,12 +48,19 @@ async def get_common_ancestor_subtree(sub_dendrogram_data: DendrogramRequest, cu
     model_id = sub_dendrogram_data.model_id
     graph_type = sub_dendrogram_data.graph_type
     selected_labels = sub_dendrogram_data.selected_labels
-    
-    sub_dendrogram, selected_labels = _get_common_ancestor_subtree(current_user, model_id, graph_type, selected_labels)
-    if sub_dendrogram is None:
-        raise HTTPException(status_code=404, detail="Sub Hierarchical Clustering was not created")
-    
-    return DendrogramResult(**sub_dendrogram, selected_labels=selected_labels)
+    try:
+        sub_dendrogram, selected_labels = _get_common_ancestor_subtree(current_user, model_id, graph_type, selected_labels)
+        if sub_dendrogram is None:
+            raise HTTPException(status_code=404, detail="Sub Hierarchical Clustering was not created")
+        
+        return DendrogramResult(**sub_dendrogram, selected_labels=selected_labels)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        ) from e
 
 @dendrogram_router.put(
     "/api/dendrograms/naming_clusters", 
@@ -65,8 +79,15 @@ async def update_naming(naming_cluster_data: NamingClusterRequest, current_user:
     cluster_id = naming_cluster_data.cluster_id
     new_name = naming_cluster_data.new_name
     user_id = current_user.user_id
-
-    sub_dendrogram, selected_labels = _rename_cluster(user_id, model_id, graph_type, selected_labels, cluster_id, new_name)
-    if sub_dendrogram is None:
-        raise HTTPException(status_code=404, detail="Sub Hierarchical Clustering was not created")
-    return DendrogramResult(**sub_dendrogram, selected_labels=selected_labels)
+    try:
+        sub_dendrogram, selected_labels = _rename_cluster(user_id, model_id, graph_type, selected_labels, cluster_id, new_name)
+        if sub_dendrogram is None:
+            raise HTTPException(status_code=404, detail="Sub Hierarchical Clustering was not created")
+        return DendrogramResult(**sub_dendrogram, selected_labels=selected_labels)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        ) from e

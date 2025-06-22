@@ -177,7 +177,7 @@ def refresh_user_session(request: Request, response: Response):
             max_age=900
         )
 
-        if refresh_token:
+        if refresh_token is not None:
             response.set_cookie(
                 key="refresh_token",
                 value=refresh_token,
@@ -188,6 +188,8 @@ def refresh_user_session(request: Request, response: Response):
             )
 
         return {"message": "Session refreshed successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

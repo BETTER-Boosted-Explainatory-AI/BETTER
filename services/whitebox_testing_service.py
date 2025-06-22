@@ -39,6 +39,12 @@ def get_white_box_analysis(current_user, current_model_id, graph_type, source_la
     if not s3_bucket:
         raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
     
+    if current_model_id is None or graph_type is None or source_labels is None or target_labels is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing required parameters"
+        )
+    
     user_id = current_user.get_user_id()
     model_info = get_user_models_info(current_user, current_model_id)
     if model_info is None:
