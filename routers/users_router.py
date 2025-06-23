@@ -177,6 +177,7 @@ def refresh_user_session(request: Request, response: Response):
             max_age=900
         )
 
+
         if refresh_token is not None:
             response.set_cookie(
                 key="refresh_token",

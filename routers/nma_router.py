@@ -46,21 +46,21 @@ def _handle_nma_submission(
     key = f"{current_user.user_id}/{model_id_f}/{model_filename}"
     print(f"key: {key}")
 
-    if(ensure_model_ready_in_s3(key)):
-        job_id = submit_nma_batch_job(current_user.user_id, model_id_f, dataset, graph_type, min_confidence, top_k)        
-        
-        print(f"Submitting NMA job with parameters: {current_user.user_id}, {model_filename},{graph_type}")
-        
-        print(f"Submitted NMA job with ID: {job_id}")
-        metadata_result = _update_model_metadata(
-            current_user, model_id_f, model_filename, dataset, graph_type, min_confidence, top_k, job_id)
-        if not metadata_result:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to update model metadata"
-            )
-        message = {"message": "NMA job has been submitted successfully."}
-        return NMAResult(**message)
+    # if(ensure_model_ready_in_s3(key)):
+    job_id = submit_nma_batch_job(current_user.user_id, model_id_f, dataset, graph_type, min_confidence, top_k)        
+    
+    print(f"Submitting NMA job with parameters: {current_user.user_id}, {model_filename},{graph_type}")
+    
+    print(f"Submitted NMA job with ID: {job_id}")
+    metadata_result = _update_model_metadata(
+        current_user, model_id_f, model_filename, dataset, graph_type, min_confidence, top_k, job_id)
+    if not metadata_result:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update model metadata"
+        )
+    message = {"message": "NMA job has been submitted successfully."}
+    return NMAResult(**message)
 
 
 
