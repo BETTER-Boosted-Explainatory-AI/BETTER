@@ -18,11 +18,12 @@ class User:
         if not self.s3_bucket:
             raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
         
+        self.users_json_path = "users.json"  # At bucket root
         self.user_folder_path = f"{self.user_id}"  # Just the user ID
         self.models_json_path = f"{self.user_id}/models.json"
         self.current_model_json = f"{self.user_id}/current_model.json"
 
-    def create_user(self):       
+    def create_user(self):
         # Create empty models.json
         self.s3_client.put_object(
             Bucket=self.s3_bucket,
@@ -42,7 +43,13 @@ class User:
             response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=self.models_json_path)
             self.models = json.loads(response['Body'].read().decode('utf-8'))
         except self.s3_client.exceptions.NoSuchKey:
-            print(f"No models found for user {self.user_id}")
+            print(f"No models found for user {self.user_id}, creating empty models file")
+            # Create the user's models file if it doesn't exist
+            self.models = []
+            self.create_user()
+        except Exception as e:
+            print(f"Error loading models for user {self.user_id}: {str(e)}")
+            self.models = []
 
     def get_user_id(self):
         return self.user_id
@@ -60,11 +67,8 @@ class User:
         self.s3_client.put_object(
             Bucket=self.s3_bucket,
             Key=self.models_json_path,
-            Body=json.dumps([self.models], indent=4)
+            Body=json.dumps(self.models, indent=4)
         )
-
-        with open(self.models_json_path, "w") as file:
-            json.dump([self.models], file, indent=4)
             
     def set_current_model(self, model_info: dict):
         self.current_model = model_info
@@ -84,8 +88,11 @@ class User:
             self.current_model = json.loads(response['Body'].read().decode('utf-8'))
         except self.s3_client.exceptions.NoSuchKey:
             print(f"No current model found for user {self.user_id}")
+            self.current_model = {}
+        except Exception as e:
+            print(f"Error loading current model for user {self.user_id}: {str(e)}")
+            self.current_model = {}
 
-            
     def get_current_model(self):
         if self.current_model is None:
             self.load_current_model()
@@ -93,3 +100,16 @@ class User:
     
     def get_user_folder(self):
         return self.user_folder_path
+  
+    def find_user_in_db(self):
+        try:
+            response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=self.users_json_path)
+            users = json.loads(response['Body'].read().decode('utf-8'))
+            
+            for user in users:
+                if user["id"] == self.user_id:
+                    return User(user_id=user["id"], email=user["email"])
+            
+            return None
+        except self.s3_client.exceptions.NoSuchKey:
+            return None

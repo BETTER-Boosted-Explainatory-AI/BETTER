@@ -18,13 +18,6 @@ def get_current_session_user(token: str):
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid or expired token: {str(e)}")
 
-def find_user_in_db(user_id, email) -> User:
-    """Find a user in the database."""
-    user = User(user_id=user_id, email=email)
-    if not user.find_user_in_db():
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
-
 def require_authenticated_user(session_token: str = Cookie(None)):
     if not session_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
