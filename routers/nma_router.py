@@ -62,33 +62,6 @@ def _handle_nma_submission(
         message = {"message": "NMA job has been submitted successfully."}
         return NMAResult(**message)
 
-
-
-# @nma_router.post(
-#     "/api/nma",
-#     response_model=NMAResult,
-#     status_code=status.HTTP_202_ACCEPTED,
-#     responses={
-#         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
-#         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
-#         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"},
-#     },
-# )
-# async def create_nma(
-#     current_user: User = Depends(require_authenticated_user),
-#     model_file: UploadFile = File(...),
-#     dataset: str = Form(...),
-#     graph_type: str = Form(...),
-#     min_confidence: float = Form(0.5),
-#     top_k: int = Form(5),
-# ) -> NMAResult:
-#     try:
-#         return _handle_nma_submission(
-#             current_user, dataset, graph_type, min_confidence, top_k, model_file=model_file
-#         )
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
 @nma_router.post(
     "/api/nma/{model_id}",
     response_model=NMAResult,
