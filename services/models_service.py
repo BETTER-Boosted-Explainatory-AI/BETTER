@@ -511,8 +511,24 @@ def finalize_multipart_upload(key, upload_id, parts):
         )
         print(f"Multipart upload completed: {response}")
 
-        head = s3_client.head_object(Bucket=s3_bucket, Key=key)
-        print(f"Model file exists in S3. Size: {head['ContentLength']} bytes, ETag: {head['ETag']}")
+         # Use a waiter to wait for the object to be available
+
+        try:
+            waiter = s3_client.get_waiter('object_exists')
+            waiter.wait(
+                Bucket=s3_bucket, 
+                Key=key,
+                WaiterConfig={
+                    'Delay': 2,  # Number of seconds to wait between attempts
+                    'MaxAttempts': 10  # Maximum number of attempts
+                }
+            )
+            
+            head = s3_client.head_object(Bucket=s3_bucket, Key=key)
+            print(f"Model file exists in S3. Size: {head['ContentLength']} bytes, ETag: {head['ETag']}")
+        except Exception as e:
+            print(f"Warning: Could not verify object after upload: {str(e)}")
+            # You might still want to return the response since the upload likely succeeded
 
         return response
     except Exception as e:
