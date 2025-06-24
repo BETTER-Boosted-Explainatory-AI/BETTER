@@ -23,3 +23,5 @@
 **/**.keras
 **/**.csv
 tests/adversarial_tests/imagenet_info.py
+**.log
+logs.py
