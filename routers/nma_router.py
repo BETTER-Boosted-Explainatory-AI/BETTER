@@ -27,8 +27,8 @@ def _handle_nma_submission(
     graph_type: str,
     min_confidence: float,
     top_k: int,
-    model_id: str = None,
-    model_filename: str = None
+    model_id: str,
+    model_filename: str
 ) -> NMAResult:
     _validate_graph_type(graph_type)
     if model_filename is None and model_id is None:
@@ -36,7 +36,7 @@ def _handle_nma_submission(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Model file or model_id is required"
         )
-        
+    print("_handle_nma_submission")    
     model_file = get_user_models_info(current_user, model_id)    
     model_filename_f = model_file.get("model_filename") if model_file else None
     if(model_filename_f is not None):

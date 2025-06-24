@@ -18,6 +18,8 @@ class ModelsResult(BaseModel):
     dataset: str
     graph_type: List[str]
     batch_jobs: Optional[List[BatchJob]]
+    min_confidence: Optional[float] = None
+    top_k: Optional[int] = None
 
 class CurrentModelRequest(BaseModel):
     model_id: str
