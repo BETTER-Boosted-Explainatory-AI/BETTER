@@ -69,20 +69,10 @@ class AdversarialDataset:
         else:
             # Handle custom paths - extract folder type from path
             if clean_images:
-                if 'clean' in clean_images.lower():
-                    clean_data = load_dataset_numpy(dataset, 'clean')
-                    self.clear_images = self._process_s3_data_with_model(clean_data)
-                else:
-                    # Handle other custom logic if needed
-                    raise ValueError(f"Unsupported clean images path: {clean_images}")
+                    self.clear_images = clean_images
             
             if adversarial_images:
-                if 'adversarial' in adversarial_images.lower():
-                    adversarial_data = load_dataset_numpy(dataset, 'adversarial')
-                    self.adversarial_images = self._process_s3_data_with_model(adversarial_data)
-                else:
-                    # Handle other custom logic if needed
-                    raise ValueError(f"Unsupported adversarial images path: {adversarial_images}")
+                    self.adversarial_images = adversarial_images
 
         print(f"Loaded {len(self.clear_images)} clean images")
         print(f"Loaded {len(self.adversarial_images)} adversarial images")

@@ -109,7 +109,7 @@ def detect_adversarial_image(model_id, graph_type, image, user, detector_filenam
         # Check if model file exists in S3
         try:
             bucket, key = _parse_s3_path(model_file, s3_bucket)
-            
+            logger.debug(f"Trying to access S3 bucket={bucket}, key={key}")
             # Check if the file exists
             s3_client.head_object(Bucket=bucket, Key=key)
             

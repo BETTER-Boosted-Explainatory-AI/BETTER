@@ -27,8 +27,8 @@ def _handle_nma_submission(
     graph_type: str,
     min_confidence: float,
     top_k: int,
-    model_id: str = None,
-    model_filename: str = None
+    model_id: str,
+    model_filename: str
 ) -> NMAResult:
     _validate_graph_type(graph_type)
     if model_filename is None and model_id is None:
@@ -36,7 +36,7 @@ def _handle_nma_submission(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Model file or model_id is required"
         )
-        
+    print("_handle_nma_submission")    
     model_file = get_user_models_info(current_user, model_id)    
     model_filename_f = model_file.get("model_filename") if model_file else None
     if(model_filename_f is not None):
@@ -46,48 +46,21 @@ def _handle_nma_submission(
     key = f"{current_user.user_id}/{model_id_f}/{model_filename}"
     print(f"key: {key}")
 
-    if(ensure_model_ready_in_s3(key)):
-        job_id = submit_nma_batch_job(current_user.user_id, model_id_f, dataset, graph_type, min_confidence, top_k)        
-        
-        print(f"Submitting NMA job with parameters: {current_user.user_id}, {model_filename},{graph_type}")
-        
-        print(f"Submitted NMA job with ID: {job_id}")
-        metadata_result = _update_model_metadata(
-            current_user, model_id_f, model_filename, dataset, graph_type, min_confidence, top_k, job_id)
-        if not metadata_result:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to update model metadata"
-            )
-        message = {"message": "NMA job has been submitted successfully."}
-        return NMAResult(**message)
-
-
-
-# @nma_router.post(
-#     "/api/nma",
-#     response_model=NMAResult,
-#     status_code=status.HTTP_202_ACCEPTED,
-#     responses={
-#         status.HTTP_404_NOT_FOUND: {"description": "Resource not found"},
-#         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error"},
-#         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"},
-#     },
-# )
-# async def create_nma(
-#     current_user: User = Depends(require_authenticated_user),
-#     model_file: UploadFile = File(...),
-#     dataset: str = Form(...),
-#     graph_type: str = Form(...),
-#     min_confidence: float = Form(0.5),
-#     top_k: int = Form(5),
-# ) -> NMAResult:
-#     try:
-#         return _handle_nma_submission(
-#             current_user, dataset, graph_type, min_confidence, top_k, model_file=model_file
-#         )
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+    # if(ensure_model_ready_in_s3(key)):
+    job_id = submit_nma_batch_job(current_user.user_id, model_id_f, dataset, graph_type, min_confidence, top_k)        
+    
+    print(f"Submitting NMA job with parameters: {current_user.user_id}, {model_filename},{graph_type}")
+    
+    print(f"Submitted NMA job with ID: {job_id}")
+    metadata_result = _update_model_metadata(
+        current_user, model_id_f, model_filename, dataset, graph_type, min_confidence, top_k, job_id)
+    if not metadata_result:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update model metadata"
+        )
+    message = {"message": "NMA job has been submitted successfully."}
+    return NMAResult(**message)
 
 @nma_router.post(
     "/api/nma/{model_id}",

@@ -177,7 +177,6 @@ class DeepFoolAttack(AdversarialAttack):
             # Initialize variables to track minimum perturbation
             min_dist = float('inf')
             best_pert = None
-            target_class = None
             
             # Select top classes by prediction score (excluding current class)
             if self.num_classes < len(self.class_names):
@@ -224,7 +223,6 @@ class DeepFoolAttack(AdversarialAttack):
                 if dist < min_dist:
                     min_dist = dist
                     best_pert = grad_normalized
-                    target_class = k
             
             # If no valid perturbation found, try fallback strategies
             if best_pert is None:
@@ -234,7 +232,6 @@ class DeepFoolAttack(AdversarialAttack):
                     if g is not None and np.any(g):
                         g_norm = np.linalg.norm(g) + 1e-8
                         best_pert = g / g_norm
-                        target_class = k
                         min_dist = 0.01  # Small fixed step size
                         break
                 

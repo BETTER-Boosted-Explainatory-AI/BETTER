@@ -38,6 +38,7 @@ async def get_model_info(
                     model_copy["graph_type"] = list(set(succeeded_types))
                     filtered_models.append(model_copy)
             return filtered_models
+        print(f"models_info: {models_info}")
         return models_info
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
