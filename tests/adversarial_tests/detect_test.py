@@ -127,27 +127,60 @@ def dataset_info_py(mock_s3_dataset_bucket):
         ContentType="text/x-python"
     )
 
-@patch.object(ScoreCalculator, "calculate_adversarial_score", return_value=42)
-@patch.dict("os.environ", {"S3_USERS_BUCKET_NAME": "better-xai-users"})
+# @patch.object(ScoreCalculator, "calculate_adversarial_score", return_value=42)
+# @patch.dict("os.environ", {"S3_USERS_BUCKET_NAME": "better-xai-users"})
+# @patch("utilss.s3_utils.get_users_s3_client")
+# @patch("services.models_service.get_user_models_info", return_value=models_metadata['models'])
+# @patch("tensorflow.keras.models.load_model")
+# @patch("services.dataset_service.get_dataset_labels", return_value=labels)
+# def test_image_detection_success(
+#     mock_get_dataset_labels,
+#     mock_load_model,
+#     mock_get_user_models_info,
+#     mock_get_users_s3_client,
+#     mock_calc_score,  
+#     client,
+#     mock_s3_bucket,
+#     mock_user_files,
+#     mock_s3_dataset_bucket,
+#     dataset_info_py,
+# ):
+#     mock_get_users_s3_client.return_value = mock_s3_bucket
+#     mock_load_model.return_value = MagicMock()
+
+#     data = {
+#         "current_model_id": "35f658ac-aa29-461e-85fe-f7dcfe638dde",
+#         "graph_type": "similarity",
+#         "detector_filename": "test_detector.pkl"
+#     }
+
+#     img = Image.new("RGB", (1, 1), color="white")
+#     img_bytes = io.BytesIO()
+#     img.save(img_bytes, format="PNG")
+#     img_bytes.seek(0)
+#     image_content = img_bytes.read()
+
+#     files = [("image", ("image1.png", image_content, "image/png"))]
+
+#     response = client.post("/api/adversarial/detect", data=data, files=files)
+#     assert response.status_code == 200
+#     assert "result" in response.json()
+
 @patch("utilss.s3_utils.get_users_s3_client")
 @patch("services.models_service.get_user_models_info", return_value=models_metadata['models'])
-@patch("tensorflow.keras.models.load_model")
-@patch("services.dataset_service.get_dataset_labels", return_value=labels)
+@patch("services.adversarial_attacks_service.detect_adversarial_image")
 def test_image_detection_success(
-    mock_get_dataset_labels,
-    mock_load_model,
-    mock_get_user_models_info,
-    mock_get_users_s3_client,
-    mock_calc_score,  
+    mock_detect_adversarial_image,
     client,
     mock_s3_bucket,
     mock_user_files,
-    mock_s3_dataset_bucket,
-    dataset_info_py,
 ):
-    mock_get_users_s3_client.return_value = mock_s3_bucket
-    # mock_image_detection.return_value = MagicMock()
-    mock_load_model.return_value = MagicMock()
+    mock_detect_adversarial_image.return_value = {
+        "image": "fake_base64",
+        "predictions": [{"label": "cat", "prob": 0.9}],
+        "result": "Clean",
+        "probability": 0.1
+    }
 
     data = {
         "current_model_id": "35f658ac-aa29-461e-85fe-f7dcfe638dde",
@@ -163,6 +196,7 @@ def test_image_detection_success(
 
     files = [("image", ("image1.png", image_content, "image/png"))]
 
+    # ...rest of your test...
     response = client.post("/api/adversarial/detect", data=data, files=files)
     assert response.status_code == 200
-    assert "result" in response.json()
+    assert response.json()["result"] == "Clean"
