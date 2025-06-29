@@ -10,6 +10,13 @@ from PIL import Image
 import io
 import base64
 
+def load_uploadfile_to_numpy(upload_file):
+    # Read file contents
+    contents = upload_file.file.read()
+    # Load as numpy array
+    array = np.load(io.BytesIO(contents))
+    return array
+
 def get_preprocess_function(model):
     print("Determining preprocessing function based on model configuration...")
     preprocess_map = {
@@ -104,6 +111,8 @@ def preprocess_numpy_image(model, image):
     """
     Preprocess a NumPy array image for the given model.
     """
+    # if isinstance(image, list):
+    #     image = np.array(image)
     if image.ndim == 3:
         # If the image is 3D, add a batch dimension
         image = np.expand_dims(image, axis=0)
