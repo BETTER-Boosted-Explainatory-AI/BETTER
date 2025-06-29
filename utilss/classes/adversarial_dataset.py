@@ -1,7 +1,7 @@
 from sklearn.model_selection import train_test_split
 import numpy as np
 from utilss.classes.score_calculator import ScoreCalculator
-from utilss.photos_utils import load_uploadfile_to_numpy
+# from utilss.files_utils import load_numpy_from_directory
 from services.dataset_service import get_dataset_labels
 from utilss.s3_connector.s3_dataset_utils import load_dataset_numpy
 from utilss.files_utils import preprocess_numpy_image
@@ -69,12 +69,10 @@ class AdversarialDataset:
         else:
             # Handle custom paths - extract folder type from path
             if clean_images:
-                    loaded_clean_images = [load_uploadfile_to_numpy(f) for f in clean_images]
-                    self.clear_images = [preprocess_numpy_image(self.model, img) for img in loaded_clean_images]
+                    self.clear_images = clean_images
             
             if adversarial_images:
-                    loaded_adversarial_images = [load_uploadfile_to_numpy(f) for f in adversarial_images]
-                    self.adversarial_images = [preprocess_numpy_image(self.model, img) for img in loaded_adversarial_images]
+                    self.adversarial_images = adversarial_images
 
         print(f"Loaded {len(self.clear_images)} clean images")
         print(f"Loaded {len(self.adversarial_images)} adversarial images")

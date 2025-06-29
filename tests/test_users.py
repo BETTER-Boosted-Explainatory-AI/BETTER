@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import patch, mock_open
 from utilss.classes.user import User
 import os
 import json
@@ -8,49 +8,50 @@ import uuid
 class TestUser(unittest.TestCase):
     @patch("os.getenv")
     @patch("os.makedirs")
-    @patch("os.path.exists")
     @patch("builtins.open", new_callable=mock_open)
-    def test_create_user(self, mock_open, mock_path_exists, mock_makedirs, mock_getenv):
+    def test_create_user(self, mock_open, mock_makedirs, mock_getenv):
+        # Mock environment variable
         mock_getenv.return_value = "mock_users_path"
-        def path_exists_side_effect(path):
-            if path.endswith("users.json"):
-                return False  # users.json doesn't exist
-            return True  # Directories exist
-            
-        mock_path_exists.side_effect = path_exists_side_effect
-        mock_file_data = {}
-        def mock_open_side_effect(filename, mode="r", *args, **kwargs):
-            m = mock_open()
-            if filename.endswith("users.json") and mode == "r":
-                m.return_value.read.return_value = "[]" 
-            return m()
-            
-        mock_open.side_effect = mock_open_side_effect
-        
+
         # Create a User instance
         user_id = str(uuid.uuid4())
         user = User(user_id=user_id, email="test@example.com", password="password123")
-        
+
         # Call create_user
         user.create_user()
-        
+
+        # Assert os.makedirs was called for the base directory and user-specific directories
         mock_makedirs.assert_any_call("mock_users_path", exist_ok=True)
         mock_makedirs.assert_any_call(os.path.join("mock_users_path", user_id), exist_ok=True)
         mock_makedirs.assert_any_call(os.path.join("mock_users_path", user_id, "models"), exist_ok=True)
-        
+
+        # Assert the correct file operations were performed
         mock_open.assert_any_call(os.path.join("mock_users_path", "users.json"), "w")
         mock_open.assert_any_call(os.path.join("mock_users_path", user_id, "models.json"), "w")
 
+        # Check the content written to users.json
+        handle = mock_open()
+        handle.write.assert_called()  # Ensure write was called
+        written_data = json.loads(handle().write.call_args[0][0])
+        self.assertEqual(written_data[0]["email"], "test@example.com")
+
     @patch("os.getenv")
-    @patch("os.path.exists")
     @patch("builtins.open", new_callable=mock_open)
-    def test_load_models(self, mock_open, mock_path_exists, mock_getenv):
+    def test_load_models(self, mock_open, mock_getenv):
+        # Mock environment variable
         mock_getenv.return_value = "mock_users_path"
-        mock_path_exists.return_value = True
+
+        # Mock models.json content
         mock_open.return_value.read.return_value = json.dumps({"models": ["model1", "model2"]})
+
+        # Create a User instance
         user_id = str(uuid.uuid4())
         user = User(user_id=user_id, email="test@example.com", password="password123")
+
+        # Call load_models
         user.load_models()
+
+        # Assert models were loaded correctly
         self.assertEqual(user.get_models(), ["model1", "model2"])
 
 if __name__ == "__main__":

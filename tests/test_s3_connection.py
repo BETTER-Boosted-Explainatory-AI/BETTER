@@ -6,11 +6,13 @@ import boto3
 import json
 from botocore.exceptions import ClientError
 
+# Import path setup
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(project_root)
 from dotenv import load_dotenv
 load_dotenv(os.path.join(project_root, '.env'))
 
+# Import services to test
 from services.models_service import (
     s3_file_exists, read_json_from_s3, _get_model_path, _get_model_filename,
     _check_model_path, get_user_models_info
@@ -27,10 +29,13 @@ from utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
 from utilss.classes.user import User
 from utilss.classes.datasets.cifar100 import Cifar100
 from utilss.classes.datasets.imagenet import ImageNet
+
+# Set up logging
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Color for terminal output
 class TermColors:
     HEADER = '\033[95m'
     BLUE = '\033[94m'
@@ -96,7 +101,10 @@ def check_environment():
 # ====================== S3 Client Tests ======================
 
 def test_s3_clients():
+    """Test S3 client connections."""
     print_subheader("Testing S3 Clients")
+    
+    # Test datasets S3 client
     try:
         datasets_client = get_datasets_s3_client()
         datasets_bucket = os.environ.get('S3_DATASETS_BUCKET_NAME')
@@ -109,6 +117,7 @@ def test_s3_clients():
     except Exception as e:
         print_error(f"Failed to connect to datasets S3 bucket: {str(e)}")
     
+    # Test users S3 client
     try:
         users_client = get_users_s3_client()
         users_bucket = os.environ.get('S3_USERS_BUCKET_NAME')
@@ -124,77 +133,63 @@ def test_s3_clients():
 # ====================== User Service Tests ======================
 
 def test_user_operations():
+    """Test User class S3 operations without modifying data."""
     print_subheader("Testing User Class S3 Operations")
     
+    # List users and pick one for testing
     try:
         users_client = get_users_s3_client()
         users_bucket = os.environ.get('S3_USERS_BUCKET_NAME')
         
+        # Try to read users.json
         try:
-            response = users_client.list_objects_v2(Bucket=users_bucket, Delimiter='/')
-            if 'CommonPrefixes' in response and len(response['CommonPrefixes']) > 0:
-                user_folders = [prefix['Prefix'].rstrip('/') for prefix in response['CommonPrefixes']]
-                print_success(f"Found {len(user_folders)} user folders in S3 bucket")
-                test_user_id = user_folders[0]
-                try:
-                    models_path = f"{test_user_id}/models.json"
-                    models_response = users_client.get_object(Bucket=users_bucket, Key=models_path)
-                    models_data = json.loads(models_response['Body'].read().decode('utf-8'))
-                    test_user_email = models_data.get("email", "unknown@example.com")
-                    print_info(f"Using user: {test_user_id} with email: {test_user_email} for testing")
+            response = users_client.get_object(Bucket=users_bucket, Key="users.json")
+            users = json.loads(response['Body'].read().decode('utf-8'))
+            if users and len(users) > 0:
+                print_success(f"Successfully read users.json, found {len(users)} users")
                 
-                except Exception as e:
-                    test_user_email = "unknown@example.com"
-                    print_info(f"Using user folder: {test_user_id} for testing (email unknown)")
-                    print_warning(f"Could not get user email: {str(e)}")
+                # Pick first user for testing
+                test_user_id = users[0]["id"]
+                test_user_email = users[0]["email"]
+                print_info(f"Using user: {test_user_id} with email: {test_user_email} for testing")
                 
+                # Test User class functionality
                 user = User(user_id=test_user_id, email=test_user_email)
+                
+                # Test finding user in DB
+                found_user = user.find_user_in_db()
+                if found_user:
+                    print_success(f"Successfully found user in DB: {test_user_id}")
+                else:
+                    print_warning(f"Could not find user in DB: {test_user_id}")
+                
+                # Test loading models
+                user.load_models()
+                models = user.get_models()
+                print_success(f"Successfully loaded models for user, found {len(models) if isinstance(models, list) else 0} models")
+                
+                # Test loading current model (if exists)
                 try:
-                    found_user = user.find_user_in_db()
-                    if found_user:
-                        print_success(f"Successfully found user in DB: {test_user_id}")
+                    current_model = user.get_current_model()
+                    if current_model and isinstance(current_model, dict):
+                        print_success(f"Successfully loaded current model: {current_model.get('model_id', 'Unknown ID')}")
                     else:
-                        print_warning(f"Could not find user in DB: {test_user_id} (expected without users.json)")
+                        print_info("No current model set for user")
                 except Exception as e:
-                    print_warning(f"Error finding user in DB (expected without users.json): {str(e)}")
+                    print_warning(f"Error loading current model: {str(e)}")
                 
-                try:
-                    user.load_models()
-                    models = user.get_models()
-                    print_success(f"Successfully loaded models for user, found {len(models) if isinstance(models, list) else 0} models")
-                    try:
-                        current_model = user.get_current_model()
-                        if current_model and isinstance(current_model, dict):
-                            print_success(f"Successfully loaded current model: {current_model.get('model_id', 'Unknown ID')}")
-                        else:
-                            print_info("No current model set for user")
-                    except Exception as e:
-                        print_warning(f"Error loading current model: {str(e)}")
-                    
-                    return test_user_id, test_user_email, models
-                except Exception as e:
-                    print_error(f"Error loading models: {str(e)}")
+                return test_user_id, test_user_email, models
             else:
-                print_warning("No user folders found in S3 bucket")
-                
-                print_info("Creating mock user data for testing")
-                mock_user_id = "mock_user_123"
-                mock_user_email = "mock@example.com"
-                mock_models = [{"model_id": "mock_model_123", "type": "activation"}]
-                
-                return mock_user_id, mock_user_email, mock_models
+                print_warning("users.json exists but contains no users")
+        except users_client.exceptions.NoSuchKey:
+            print_warning("users.json not found in S3 bucket")
         except Exception as e:
-            print_error(f"Error listing objects in S3 bucket: {str(e)}")
-            
-            mock_user_id = "mock_user_123"
-            mock_user_email = "mock@example.com"
-            mock_models = [{"model_id": "mock_model_123", "type": "activation"}]
-            
-            return mock_user_id, mock_user_email, mock_models
+            print_error(f"Error reading users.json: {str(e)}")
     except Exception as e:
         print_error(f"Error testing User class: {str(e)}")
     
     return None, None, []
+
 # ====================== Models Service Tests ======================
 
 def test_models_service(user_id, models):
@@ -205,6 +200,7 @@ def test_models_service(user_id, models):
         print_warning("No user ID or models available for testing")
         return None
     
+    # Get the first model for testing
     test_model = models[0] if isinstance(models, list) and len(models) > 0 else None
     if not test_model:
         print_warning("No models available for testing")
@@ -213,6 +209,7 @@ def test_models_service(user_id, models):
     model_id = test_model.get("model_id")
     print_info(f"Using model: {model_id} for testing")
     
+    # Test _get_model_path
     try:
         model_path = _get_model_path(user_id, model_id)
         if model_path:
@@ -222,6 +219,7 @@ def test_models_service(user_id, models):
     except Exception as e:
         print_error(f"Error in _get_model_path(): {str(e)}")
     
+    # Test _check_model_path with a graph type
     try:
         graph_types = ["activation", "weights"]
         for graph_type in graph_types:
@@ -230,6 +228,9 @@ def test_models_service(user_id, models):
                 if model_path:
                     print_success(f"Successfully checked model path with graph type {graph_type}: {model_path}")
                     
+                    # Now we have a valid graph type, use it for further tests
+                    
+                    # Test _get_model_filename
                     try:
                         model_filename = _get_model_filename(user_id, model_id, graph_type)
                         if model_filename:
@@ -238,7 +239,8 @@ def test_models_service(user_id, models):
                             print_warning(f"Could not get model filename for graph type {graph_type}")
                     except Exception as e:
                         print_error(f"Error in _get_model_filename(): {str(e)}")
-
+                    
+                    # Test get_user_models_info with a mock user
                     try:
                         class MockUser:
                             def get_user_folder(self):
@@ -276,10 +278,13 @@ def test_dendrogram_service(user_id, model_id, graph_type):
         print_warning("Missing user ID, model ID, or graph type for dendrogram tests")
         return
     
+    # Test _get_dendrogram_path
     try:
         dendrogram_path = _get_dendrogram_path(user_id, model_id, graph_type)
         if dendrogram_path:
             print_success(f"Successfully got dendrogram path: {dendrogram_path}")
+            
+            # Now we can test other dendrogram functions with a mock user
             try:
                 class MockUser:
                     def get_user_id(self):
@@ -291,6 +296,8 @@ def test_dendrogram_service(user_id, model_id, graph_type):
                     def __init__(self, user_id=user_id, email=None):
                         self.user_id = user_id
                         self.email = email
+                
+                # Test _get_sub_dendrogram with no selected labels (uses defaults)
                 try:
                     sub_dendrogram, selected_labels = _get_sub_dendrogram(MockUser(), model_id, graph_type, None)
                     if sub_dendrogram:
@@ -299,7 +306,8 @@ def test_dendrogram_service(user_id, model_id, graph_type):
                         print_warning("Could not get sub dendrogram with default labels")
                 except Exception as e:
                     print_error(f"Error in _get_sub_dendrogram(): {str(e)}")
-
+                
+                # Test _get_common_ancestor_subtree with selected labels
                 if selected_labels and len(selected_labels) >= 2:
                     try:
                         # Take first two labels for testing
@@ -327,6 +335,8 @@ def test_whitebox_service(user_id, model_id, graph_type):
     if not user_id or not model_id or not graph_type:
         print_warning("Missing user ID, model ID, or graph type for whitebox tests")
         return
+    
+    # Test _get_edges_dataframe_path
     try:
         edges_df_path = _get_edges_dataframe_path(user_id, model_id, graph_type)
         if edges_df_path:
@@ -341,12 +351,15 @@ def test_whitebox_service(user_id, model_id, graph_type):
 def test_dataset_service():
     """Test dataset_service functions with actual data."""
     print_subheader("Testing Dataset Service Functions")
+    
+    # Test get_dataset_config for CIFAR100
     try:
         cifar_config = get_dataset_config('cifar100')
         if cifar_config:
             print_success("Successfully got CIFAR100 dataset config")
             print_info(f"Config keys: {list(cifar_config.keys())}")
             
+            # Test get_dataset_labels
             try:
                 labels = get_dataset_labels('cifar100')
                 if labels:
@@ -360,6 +373,7 @@ def test_dataset_service():
     except Exception as e:
         print_error(f"Error in get_dataset_config(): {str(e)}")
     
+    # Test get_dataset_config for ImageNet
     try:
         imagenet_config = get_dataset_config('imagenet')
         if imagenet_config:
@@ -376,13 +390,18 @@ def test_dataset_classes():
     """Test dataset classes directly."""
     print_subheader("Testing Dataset Classes")
     
+    # Test Cifar100 class
     try:
+        # Create Cifar100 dataset
         cifar_dataset = Cifar100()
         
+        # Test loading from S3
         try:
+            # Get S3 client
             s3_client = get_datasets_s3_client()
             bucket = os.environ.get('S3_DATASETS_BUCKET_NAME')
             
+            # Test load_from_s3 method
             x_train, y_train = cifar_dataset.load_from_s3(s3_client, bucket, 'cifar100/')
             if x_train is not None and len(x_train) > 0:
                 print_success(f"Successfully loaded CIFAR100 train data using dataset class: {len(x_train)} images")
@@ -391,6 +410,7 @@ def test_dataset_classes():
         except Exception as e:
             print_error(f"Error in Cifar100.load_from_s3(): {str(e)}")
         
+        # Test load method
         try:
             result = cifar_dataset.load('cifar100')
             if result:
