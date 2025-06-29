@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, status, Form, Depends
 from request_models.nma_model import NMAResult, InitiateMultipartUploadRequest, InitiateMultipartUploadResponse, PresignedPartUrlRequest, PresignedPartUrlResponse, CompleteMultipartUploadRequest
-from utilss.files_utils import _update_model_metadata
+from utilss.files_utils import _update_model_metadata ,does_model_explaination_exist
 from services.users_service import require_authenticated_user
 from utilss.classes.user import User
 from utilss.enums.graph_types import GraphTypes
 from utilss.aws_job_utils import submit_nma_batch_job
-from services.models_service import initiate_multipart_upload, presigned_part_url, finalize_multipart_upload, ensure_model_ready_in_s3, get_user_models_info
+from services.models_service import initiate_multipart_upload, presigned_part_url, finalize_multipart_upload, sanitize_filename, get_user_models_info
 
 
 nma_router = APIRouter()
@@ -36,31 +36,47 @@ def _handle_nma_submission(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Model file or model_id is required"
         )
-    print("_handle_nma_submission")    
+  
     model_file = get_user_models_info(current_user, model_id)    
     model_filename_f = model_file.get("model_filename") if model_file else None
     if(model_filename_f is not None):
-        model_filename = model_filename_f
-    model_id_f = model_id 
+        model_filename = sanitize_filename(model_filename_f)
+    model_id_f = model_id
 
-    key = f"{current_user.user_id}/{model_id_f}/{model_filename}"
-    print(f"key: {key}")
+    try:
+        can_submit = does_model_explaination_exist(current_user, model_id_f, graph_type)
+        if not can_submit:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot submit job for graph type '{graph_type}'."
+            )
 
-    # if(ensure_model_ready_in_s3(key)):
-    job_id = submit_nma_batch_job(current_user.user_id, model_id_f, dataset, graph_type, min_confidence, top_k)        
-    
-    print(f"Submitting NMA job with parameters: {current_user.user_id}, {model_filename},{graph_type}")
-    
-    print(f"Submitted NMA job with ID: {job_id}")
-    metadata_result = _update_model_metadata(
-        current_user, model_id_f, model_filename, dataset, graph_type, min_confidence, top_k, job_id)
-    if not metadata_result:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update model metadata"
+        # Submit the NMA batch job
+        print("Job can be submitted.")
+        job_id = submit_nma_batch_job(current_user.user_id, model_id_f, dataset, graph_type, min_confidence, top_k)
+        print(f"Submitting NMA job with parameters: {current_user.user_id}, {model_filename}, {graph_type}")
+        print(f"Submitted NMA job with ID: {job_id}")
+
+        # Update model metadata
+        metadata_result = _update_model_metadata(
+            current_user, model_id_f, model_filename, dataset, graph_type, min_confidence, top_k, job_id
         )
-    message = {"message": "NMA job has been submitted successfully."}
-    return NMAResult(**message)
+        if not metadata_result:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update model metadata"
+            )
+
+        # Return success message
+        return NMAResult(message="NMA job has been submitted successfully.")
+
+    except ValueError as e:
+        # Handle job submission errors
+        print(f"Cannot submit job: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 @nma_router.post(
     "/api/nma/{model_id}",
