@@ -49,6 +49,47 @@ def _update_model_metadata(current_user, model_id, model_filename, dataset, grap
         job_metadata
     )
 
+def does_model_explaination_exist(current_user, model_id, graph_type):
+    """
+    Check if a job for the given graph_type exists and whether it can be submitted.
+    If the job exists and its status is 'failed', allow submission.
+    If the job exists and its status is not 'failed', raise an error.
+    If no job exists for the graph_type, allow submission.
+    """
+    s3_client = get_users_s3_client()
+    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
+    
+    user_folder = current_user.get_user_folder()
+    models_json_path = f"{user_folder}/models.json"
+    
+    try:
+        response = s3_client.get_object(Bucket=s3_bucket, Key=models_json_path)
+        models_data = json.loads(response['Body'].read().decode('utf-8'))
+    except s3_client.exceptions.NoSuchKey:
+        models_data = []
+
+    # Check for existing jobs for the same graph_type
+    for model in models_data:
+        if model["model_id"] == model_id:
+            for job in model["batch_jobs"]:
+                if job["job_graph_type"] == graph_type:
+                    if job["job_status"] == "failed":
+                        print(f"Previous job for graph_type '{graph_type}' failed. Allowing new job submission.")
+                        return True
+                    else:
+                        raise ValueError(
+                            f"A batch job for graph_type '{graph_type}' already exists with status '{job['job_status']}'."
+                        )
+            # If no job exists for the graph_type, allow submission
+            print(f"No existing job found for graph_type '{graph_type}'. Allowing new job submission.")
+            return True
+
+    # If no model with the given model_id exists, allow submission
+    print(f"No model found with model_id '{model_id}'. Allowing new job submission.")
+    return True
+
+
+
 def save_model_metadata(
     models_data, 
     models_json_path, 
@@ -61,7 +102,6 @@ def save_model_metadata(
     job_metadata=None
 ) -> bool:  
     
-    from utilss.s3_utils import get_users_s3_client
     s3_client = get_users_s3_client()
         
     s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
@@ -87,17 +127,7 @@ def save_model_metadata(
             if not isinstance(model["graph_type"], list):
                 model["graph_type"] = [model["graph_type"]]
 
-            # Add the new graph_type if it doesn't already exist
-            if graph_type not in model["graph_type"]:
-                model["graph_type"].append(graph_type)
-                print(
-                    f"Adding '{graph_type}' to graph_type for file '{model_filename}'."
-                )
-            else:
-                raise ValueError(
-                    f"Graph type '{graph_type}' for model ID '{model_id}' already exists."
-                )
-
+            # Check if a batch job for the same graph_type exists
             if "batch_jobs" not in model or not isinstance(model["batch_jobs"], list):
                 model["batch_jobs"] = []
 
