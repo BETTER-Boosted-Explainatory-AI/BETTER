@@ -12,7 +12,6 @@ class User:
         self.models = models if models is not None else []
         self.current_model = None
         
-        # S3 client setup
         self.s3_client = get_users_s3_client()
         self.s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
         if not self.s3_bucket:
