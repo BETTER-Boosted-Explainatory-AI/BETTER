@@ -179,20 +179,8 @@ class ImageNet(Dataset):
     def get_train_image_by_id(self, image_id, index_s3_key="imagenet/train_index_imagenet.json", img_size=(224, 224)):
         """
         Fetch a single training image and label by image_id using the S3 image_key.
-        Loads the index from JSON if not already loaded.
         """
-        import json
-
-        index_bytes = self.s3_loader.s3_handler.get_object_data(index_s3_key)
-        if index_bytes is None:
-            raise ValueError("Could not fetch index JSON from S3")
-        self.train_index = json.loads(index_bytes.decode("utf-8"))
-
-        # IDs in the index start from 1
-        if image_id < 1 or image_id > len(self.train_index):
-            raise ValueError("Invalid image_id")
-
-        entry = self.train_index[image_id - 1]
+        entry = self._get_index_entry_by_id(image_id, index_s3_key)
         image_key = entry["image_key"]
         label = entry["label"]
 
@@ -221,7 +209,33 @@ class ImageNet(Dataset):
             raise ValueError("Invalid image_id")
 
         return image, label
+    
+    def _get_index_entry_by_id(self, image_id, index_s3_key="imagenet/train_index_imagenet.json"):
+        """
+        Helper method to load the index and retrieve the entry for a given image_id.
+        """
+        import json
 
+        # Load the index if not already loaded
+        if not self.train_index:
+            index_bytes = self.s3_loader.s3_handler.get_object_data(index_s3_key)
+            if index_bytes is None:
+                raise ValueError("Could not fetch index JSON from S3")
+            self.train_index = json.loads(index_bytes.decode("utf-8"))
+
+        # Validate the image_id
+        if image_id < 1 or image_id > len(self.train_index):
+            raise ValueError("Invalid image_id")
+
+        # Retrieve the entry
+        return self.train_index[image_id - 1]
+
+    def get_image_key_by_id(self, image_id, index_s3_key="imagenet/train_index_imagenet.json"):
+        """
+        Fetch the image key (filename) for a given image_id using the S3 index.
+        """
+        entry = self._get_index_entry_by_id(image_id, index_s3_key)
+        return entry["image_key"]
 
     def directory_to_labels_conversion(self, label):
         return self.directory_to_readable[label]

@@ -73,7 +73,14 @@ def get_white_box_analysis(current_user, current_model_id, graph_type, source_la
     for image_id, matches in problematic_imgs_dict.items():
         try:
             img, _ = dataset.get_train_image_by_id(image_id)
-            
+            if dataset_str.lower() == "imagenet":
+                # Fetch the full image key and extract only the filename
+                full_image_key = dataset.get_image_key_by_id(image_id)
+                image_filename = os.path.basename(full_image_key)  # Extract the filename
+            else:
+                image_filename = image_id
+        
+        
             # Process the image for encoding
             if img.max() <= 1.0:
                 # If normalized to [0,1], scale to [0,255]
@@ -84,7 +91,7 @@ def get_white_box_analysis(current_user, current_model_id, graph_type, source_la
             
             imgs_list.append({
                 "image": original_image_base64,
-                "image_id": image_id,
+                "image_id": image_filename,
                 "matches": matches,
             })
         except Exception as e:

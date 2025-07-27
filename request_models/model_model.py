@@ -4,6 +4,7 @@ from typing import List, Optional
 class BatchJob(BaseModel):
     job_graph_type: str
     job_status: str
+    timestamp: str
 
 class ModelRequest(BaseModel):
     model_id: str
