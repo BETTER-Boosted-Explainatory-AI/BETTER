@@ -7,20 +7,6 @@ from utilss.s3_connector.s3_dataset_loader import S3DatasetLoader
 from utilss.enums.datasets_enum import DatasetsEnum
 from utilss.s3_connector.s3_dataset_utils import get_dataset_config
 
-def _load_dataset(dataset_str: str):
-    """
-    Return a Dataset object populated directly from S3.
-    """
-    dataset_config = get_dataset_config(dataset_str)
-
-    dataset_name = dataset_config["dataset"]        # "cifar100" | "imagenet" | …
-    dataset = DatasetFactory.create_dataset(dataset_name)
-    if dataset_str == DatasetsEnum.CIFAR100.value:
-        dataset.load(dataset_name)       
-
-    return dataset
-
-
 def get_dataset_labels(dataset_str: str) -> List[str]:
     """Get dataset labels from S3."""
     dataset_config = get_dataset_config(dataset_str)
